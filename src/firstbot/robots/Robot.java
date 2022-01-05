@@ -1,5 +1,7 @@
 package firstbot.robots;
 
+import battlecode.common.AnomalyScheduleEntry;
+import battlecode.common.AnomalyType;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -43,6 +45,7 @@ public abstract class Robot {
 
   protected final RobotController rc;
   protected final Communicator communicator;
+  protected int pendingMessages;
 
   protected final CreationStats creationStats;
 
@@ -117,9 +120,11 @@ public abstract class Robot {
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
 
+    pendingMessages = communicator.readMessages();
+    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
     runTurn();
     communicator.sendQueuedMessages();
-
+    communicator.updateMetaIntsIfNeeded();
   }
 
   /**
@@ -166,6 +171,8 @@ public abstract class Robot {
       }
       totalSeen += leadSeen;
       if (isNorth) {
+        // check if location is open before adding it to weighting
+        // if (!rc.isLocationOccupied(rc.adjacentLocation(Direction.NORTH))) {
         leadInDirection[Direction.NORTH.ordinal()] += leadSeen;
         if (isEast) {
           leadInDirection[Direction.EAST.ordinal()] += leadSeen;
@@ -216,5 +223,19 @@ public abstract class Robot {
       return true;
     }
     return false;
+  }
+
+  /**
+   * returns the number of rounds since the last anomaly of a certain type
+   * @param type the anomaly to look for
+   * @return the turns since occurence (or roundNum if never occurred)
+   */
+  protected int getRoundsSinceLastAnomaly(AnomalyType type) {
+    int turnsSince = rc.getRoundNum();
+    for (AnomalyScheduleEntry anomaly : rc.getAnomalySchedule()) {
+      if (anomaly.anomalyType == type) turnsSince = rc.getRoundNum() - anomaly.roundNumber;
+      if (anomaly.roundNumber >= rc.getRoundNum()) return turnsSince;
+    }
+    return turnsSince;
   }
 }

@@ -12,15 +12,16 @@ public class Miner extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
+    if (pendingMessages > 0) {
+      SingleIntMessage read = (SingleIntMessage) communicator.getNthLastReceivedMessage(pendingMessages);
+      rc.setIndicatorString("Reading message: " + read.data);
+    }
+
     mineSurroundingGold();
     mineSurroundingLead();
 
     moveToHighLeadProbabilistic();
 //    moveRandomly();
-
-    SingleIntMessage read = (SingleIntMessage) communicator.readMessageAt(0);
-    if (read == null) return;
-    rc.setIndicatorString("Reading message: " + read.data);
   }
 
   /**

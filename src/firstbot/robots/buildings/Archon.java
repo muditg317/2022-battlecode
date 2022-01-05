@@ -1,8 +1,10 @@
 package firstbot.robots.buildings;
 
+import battlecode.common.AnomalyType;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.Utils;
 import firstbot.communications.messages.SingleIntMessage;
@@ -20,16 +22,28 @@ public class Archon extends Building {
 
   @Override
   protected void runTurn() throws GameActionException {
-    // Pick a direction to build in.
-    Direction dir = getBestLeadDirProbabilistic();
-    // Let's try to build a droid.
+    // Repair damaged droid
+    if (rc.isActionReady()) {
+      for (RobotInfo info : rc.senseNearbyRobots()) {
+        if (info.getTeam().isPlayer() && info.getHealth() < info.getType().getMaxHealth(info.getLevel())) { // we see a damaged friendly
+          if (rc.canRepair(info.getLocation())) rc.repair(info.getLocation());
+        }
+      }
+    }
+
+    // Spawn new droid if none to repair
     if (rc.isActionReady()) {
       spawnDroid();
     }
 
+    // send messages
     if (rc.getRoundNum() == 1) {
       communicator.enqueueMessage(new SingleIntMessage(69, 10), 10);
       communicator.enqueueMessage(new SingleIntMessage(420, 20), 20);
+    }
+
+    if (rc.getRoundNum() == 30) {
+      rc.resign();
     }
   }
 
@@ -39,12 +53,17 @@ public class Archon extends Building {
   private void spawnDroid() throws GameActionException {
     if (needMiner()) {
       if (buildRobot(RobotType.MINER, getBestLeadDirProbabilistic())) {
-        rc.setIndicatorString("Build miner!");
+        rc.setIndicatorString("Spawn miner!");
         minersSpawned++;
+      }
+    } else if (needBuilder()) {
+      if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
+        rc.setIndicatorString("Spawn builder!");
+        soldiersSpawned++;
       }
     } else {
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
-        rc.setIndicatorString("Build soldier!");
+        rc.setIndicatorString("Spawn soldier!");
         soldiersSpawned++;
       }
     }
@@ -55,8 +74,20 @@ public class Archon extends Building {
    * @return boolean of necessity of building a miner
    */
   private boolean needMiner() {
-    return rc.getRoundNum() < 100
-        || estimateAvgLeadIncome() / minersSpawned > 5; // spawn miners until we reach less than 5pb/miner income
+    return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && ( // if we have > 2000Pb, just skip miners
+        rc.getRoundNum() < 100
+        || estimateAvgLeadIncome() / minersSpawned > 3 // spawn miners until we reach less than 5pb/miner income
+    );
+  }
+
+  /**
+   * decides if a builder needs to be built
+   *    ASSUMES - needMiner == false
+   * @return boolean of need for builder
+   */
+  private boolean needBuilder() {
+    return rc.getTeamLeadAmount(rc.getTeam()) > 2000 // if lots of lead, make builder to spend that lead
+        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned; // need at least 1 builder per X rounds since charge anomaly
   }
 
   /**
@@ -76,10 +107,11 @@ public class Archon extends Building {
   /**
    * estimates the average lead income per round of the game
    *    based on the estimateTotalLeadInGame
+   *    resets round counter when charges occur (because most miners should be wiped by charge)
    * @return the estimated avg lead/round income
    */
   private int estimateAvgLeadIncome() {
-    return estimateTotalLeadInGame() / rc.getRoundNum();
+    return estimateTotalLeadInGame() / getRoundsSinceLastAnomaly(AnomalyType.CHARGE);
   }
 
 

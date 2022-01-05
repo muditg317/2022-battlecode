@@ -5,6 +5,7 @@ package firstbot.communications.messages;
  * A Communicator can send and read Message instances from the shared array
  */
 public abstract class Message {
+
   /**
    * enum for the different message types that will be sent
    */
@@ -28,10 +29,10 @@ public abstract class Message {
     private static final int NUM_INTS_MAX = 63;
     public final int numInformationInts; // 0-63  -- 6 bits [11,6]
 
-    private static final int ROUND_NUM_START = 6;
+    private static final int ROUND_NUM_START = 0;
     private static final int ROUND_NUM_MAX = 63;
     private static final int ROUND_NUM_CYCLE_SIZE = 64;
-    public final int cyclicRoundNum; // 0-63      -- 6 bits [5,0]
+    public int cyclicRoundNum; // 0-63      -- 6 bits [5,0]
 
     public Header(int priority, MessageType type, int numInformationInts, int roundNum) {
       this.priority = priority;
@@ -56,8 +57,17 @@ public abstract class Message {
           | cyclicRoundNum << ROUND_NUM_START;
     }
 
+    public void rescheduleBy(int roundsToDelay) {
+      cyclicRoundNum = (cyclicRoundNum + roundsToDelay) % ROUND_NUM_CYCLE_SIZE;
+    }
+
     public boolean fromRound(int roundNum) {
       return cyclicRoundNum == roundNum % (ROUND_NUM_MAX+1);
+    }
+
+    @Override
+    public String toString() {
+      return String.format("MessHdr{pr=%d,tp=%s,len=%d,rnd=%d", priority, type, numInformationInts, cyclicRoundNum);
     }
   }
 
@@ -98,4 +108,12 @@ public abstract class Message {
    * @return the complete message encoding - length == header.numInformationBits+1
    */
   public abstract int[] toEncodedInts();
+
+  public void reschedule(int roundsToDelay) {
+    header.rescheduleBy(roundsToDelay);
+  }
+
+  public int size() {
+    return header.numInformationInts + 1;
+  }
 }
