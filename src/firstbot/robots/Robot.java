@@ -1,8 +1,10 @@
 package firstbot.robots;
 
 import battlecode.common.Clock;
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
+import firstbot.Constants;
 import firstbot.communications.Communicator;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
@@ -15,9 +17,9 @@ import firstbot.robots.droids.Soldier;
 public abstract class Robot {
 
   protected final RobotController rc;
-  private final Communicator communicator;
+  protected final Communicator communicator;
 
-  private final int roundCreated;
+  protected final int roundCreated;
 
   /**
    * Create a Robot with the given controller
@@ -63,11 +65,9 @@ public abstract class Robot {
       should never exit - Robot will die otherwise (Clock.yeild() to end turn)
      */
     while (true) {
-//      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
-
       // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
       try {
-        this.runTurn();
+        this.runTurnWrapper();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
@@ -84,8 +84,28 @@ public abstract class Robot {
   }
 
   /**
+   * wrap intern run turn method with generic actions for all robots
+   */
+  private void runTurnWrapper() throws GameActionException {
+//      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
+
+    runTurn();
+    communicator.sendQueuedMessages();
+
+  }
+
+  /**
    * Run a single turn for the robot
    * unique to each robot type
    */
   protected abstract void runTurn() throws GameActionException;
+
+  protected void moveRandomly() throws GameActionException {
+    // Also try to move randomly.
+    Direction dir = Constants.directions[Constants.rng.nextInt(Constants.directions.length)];
+    if (rc.canMove(dir)) {
+      rc.move(dir);
+//      System.out.println("I moved!");
+    }
+  }
 }

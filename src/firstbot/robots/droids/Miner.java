@@ -5,6 +5,8 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import firstbot.Constants;
+import firstbot.communications.messages.Message;
+import firstbot.communications.messages.SingleIntMessage;
 
 public class Miner extends Droid {
   public Miner(RobotController rc) {
@@ -13,27 +15,46 @@ public class Miner extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
+    mineSurroundingGold();
+    mineSurroundingLead();
+
+    moveRandomly();
+
+    SingleIntMessage read = (SingleIntMessage) communicator.readMessageAt(0);
+    if (read == null) return;
+    rc.setIndicatorString("Reading message: " + read.data);
+  }
+
+  /**
+   * subroutine to mine gold from all adjacent tiles
+   */
+  private void mineSurroundingGold() throws GameActionException {
     // Try to mine on squares around us.
     MapLocation me = rc.getLocation();
     for (int dx = -1; dx <= 1; dx++) {
       for (int dy = -1; dy <= 1; dy++) {
         MapLocation mineLocation = new MapLocation(me.x + dx, me.y + dy);
-        // Notice that the Miner's action cooldown is very low.
-        // You can mine multiple times per turn!
         while (rc.canMineGold(mineLocation)) {
           rc.mineGold(mineLocation);
         }
-        while (rc.canMineLead(mineLocation)) {
+      }
+    }
+  }
+
+  /**
+   * subroutine to mine lead from all adjacent tiles
+   * leaves 1pb in every tile
+   */
+  private void mineSurroundingLead() throws GameActionException {
+    // Try to mine on squares around us.
+    MapLocation me = rc.getLocation();
+    for (int dx = -1; dx <= 1; dx++) {
+      for (int dy = -1; dy <= 1; dy++) {
+        MapLocation mineLocation = new MapLocation(me.x + dx, me.y + dy);
+        while (rc.canSenseLocation(mineLocation) && rc.senseLead(mineLocation) > 1 && rc.canMineLead(mineLocation)) {
           rc.mineLead(mineLocation);
         }
       }
-    }
-
-    // Also try to move randomly.
-    Direction dir = Constants.directions[Constants.rng.nextInt(Constants.directions.length)];
-    if (rc.canMove(dir)) {
-      rc.move(dir);
-      System.out.println("I moved!");
     }
   }
 }
