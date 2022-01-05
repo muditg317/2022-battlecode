@@ -36,15 +36,15 @@ public class Archon extends Building {
       spawnDroid();
     }
 
-    // send messages
-    if (rc.getRoundNum() == 1) {
-      communicator.enqueueMessage(new SingleIntMessage(69, 10), 10);
-      communicator.enqueueMessage(new SingleIntMessage(420, 20), 20);
-    }
+    // send test messages
+//    if (rc.getRoundNum() == 1) {
+//      communicator.enqueueMessage(new SingleIntMessage(69, 10), 10);
+//      communicator.enqueueMessage(new SingleIntMessage(420, 20), 20);
+//    }
 
-    if (rc.getRoundNum() == 30) {
-      rc.resign();
-    }
+//    if (rc.getRoundNum() == 30) {
+//      rc.resign();
+//    }
   }
 
   /**
@@ -111,7 +111,7 @@ public class Archon extends Building {
    * @return the estimated avg lead/round income
    */
   private int estimateAvgLeadIncome() {
-    return estimateTotalLeadInGame() / getRoundsSinceLastAnomaly(AnomalyType.CHARGE);
+    return estimateTotalLeadInGame() / (1 + getRoundsSinceLastAnomaly(AnomalyType.CHARGE));
   }
 
 

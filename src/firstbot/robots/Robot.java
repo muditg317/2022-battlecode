@@ -27,8 +27,8 @@ public abstract class Robot {
   protected static class CreationStats {
     public final int roundNum;
     public final MapLocation spawnLocation;
-    private final int health;
-    private final RobotType type;
+    public final int health;
+    public final RobotType type;
 
     public CreationStats(RobotController rc) {
       this.roundNum = rc.getRoundNum();
@@ -62,7 +62,7 @@ public abstract class Robot {
     this.creationStats = new CreationStats(rc);
 
     // Print spawn message
-    System.out.println(this.creationStats);
+//    System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
   }
@@ -121,7 +121,7 @@ public abstract class Robot {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
 
     pendingMessages = communicator.readMessages();
-    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
+//    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
     runTurn();
     communicator.sendQueuedMessages();
     communicator.updateMetaIntsIfNeeded();
@@ -193,8 +193,8 @@ public abstract class Robot {
       }
     }
     totalSeen *= 3; // each location affects 3 direction entries
-    if (totalSeen == 0) {
-      return Utils.randomDirection();
+    if (totalSeen == 0) { // return null if no good lead direction
+      return null; // Utils.randomDirection();
     }
     int randomInt = Utils.rng.nextInt(totalSeen);
     for (int i = 0; i < leadInDirection.length; i++) {
@@ -205,19 +205,32 @@ public abstract class Robot {
     throw new RuntimeException("Weighted sum should be able to choose one a direction");
   }
 
-  protected void moveToHighLeadProbabilistic() throws GameActionException {
+  /**
+   * move to a location with high lead density
+   * @return whether the movement was based on lead or defaulted to random
+   * @throws GameActionException if movement fails
+   */
+  protected boolean moveToHighLeadProbabilistic(boolean defaultToRandomMovement) throws GameActionException {
     Direction dir = getBestLeadDirProbabilistic();
-    if (rc.canMove(dir)) rc.move(dir);
+    if (dir != null) {
+      if (rc.canMove(dir)) {
+        rc.move(dir);
+        return true;
+      }
+    }
+    if (defaultToRandomMovement) moveRandomly();
+    return false;
   }
 
   /**
    * build the specified robot type in the specified direction
    * @param type the robot type to build
-   * @param dir where to build it
+   * @param dir where to build it (if null, choose random direction)
    * @return method success
    * @throws GameActionException when building fails
    */
   protected boolean buildRobot(RobotType type, Direction dir) throws GameActionException {
+    if (dir == null) dir = Utils.randomDirection();
     if (rc.canBuildRobot(type, dir)) {
       rc.buildRobot(type, dir);
       return true;
@@ -233,8 +246,8 @@ public abstract class Robot {
   protected int getRoundsSinceLastAnomaly(AnomalyType type) {
     int turnsSince = rc.getRoundNum();
     for (AnomalyScheduleEntry anomaly : rc.getAnomalySchedule()) {
-      if (anomaly.anomalyType == type) turnsSince = rc.getRoundNum() - anomaly.roundNumber;
       if (anomaly.roundNumber >= rc.getRoundNum()) return turnsSince;
+      if (anomaly.anomalyType == type) turnsSince = rc.getRoundNum() - anomaly.roundNumber;
     }
     return turnsSince;
   }

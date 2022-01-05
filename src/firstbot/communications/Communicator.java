@@ -108,7 +108,7 @@ public class Communicator {
       metaInfo.validRegionStart = -1;
       return 0;
     }
-    System.out.println("Reading messages: " + metaInfo);
+//    System.out.println("Reading messages: " + metaInfo);
     int messages = 0;
     while (origin < ending) {
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
@@ -130,17 +130,29 @@ public class Communicator {
   private Message readMessageAt(int messageOrigin) {
 //     assert messageOrigin < NUM_MESSAGING_INTS; // ensure that the message is within the messaging ints
     int headerInt = sharedBuffer[messageOrigin];
-    Message.Header header = Message.Header.fromReadInt(headerInt);
-    System.out.printf("Read at %d: %s\n", messageOrigin, header);
-    System.out.println("Header int: " + headerInt);
+    Message.Header header;
+    try {
+      header = Message.Header.fromReadInt(headerInt);
+    } catch (Exception e) {
+      System.out.println("Failed to parse header!");
+      System.out.println("Reading bounds: " + metaInfo);
+      System.out.printf("Read at %d\n", messageOrigin);
+      System.out.println("Header int: " + headerInt);
+      throw e;
+    }
     int[] information = new int[header.numInformationInts];
     for (int i = 0; i < header.numInformationInts; i++) {
       information[i] = sharedBuffer[(messageOrigin + i + 1) % NUM_MESSAGING_INTS];
     }
-    switch (header.type) {
-      case SINGLE_INT: return new SingleIntMessage(header, information);
-      default: throw new RuntimeException("Cannot read message with invalid type!");
-    }
+    return Message.fromHeaderAndInfo(header, information);
+  }
+
+  /**
+   * add a message to the internal communicator queue to be sent on this turn
+   * @param message the message to send at the end of this turn (end of robot turn, not the round)
+   */
+  public void enqueueMessage(Message message) {
+    messageQueue.add(new QueuedMessage(message, rc.getRoundNum()));
   }
 
   /**
@@ -187,14 +199,19 @@ public class Communicator {
       return;
     }
     int[] messageBits = message.toEncodedInts();
-    System.out.printf("SEND %s MESSAGE: %s\n", message.header.type, Arrays.toString(messageBits));
-    System.out.println(message.header);
+//    System.out.printf("SEND %s MESSAGE: %s\n", message.header.type, Arrays.toString(messageBits));
+//    System.out.println(message.header);
     int origin = metaInfo.validRegionEnd;
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
       if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
         // reread that message and move validStart past that message!
+//        System.out.printf("Shift valid region start for %s at %d\n", message.header.type, metaInfo.validRegionEnd+1);
+//        System.out.println("From: " + metaInfo);
+//        System.out.println("header: " + Message.Header.fromReadInt(sharedBuffer[origin]));
         metaInfo.validRegionStart += readMessageAt(origin).size();
+        metaInfo.validRegionStart %= NUM_MESSAGING_INTS;
+//        System.out.println("To  : " + metaInfo);
         // TODO: some criteria on deciding not to "evict" that info
       }
       rc.writeSharedArray(origin, messageChunk);
@@ -211,16 +228,27 @@ public class Communicator {
    * updates the meta ints in the shared memory if needed
    *    comunicator is dirty
    *      any messages were written
-   * @throws GameActionException if writing fails
+   * @throws GameActionException if updating fails
    */
   public void updateMetaIntsIfNeeded() throws GameActionException {
     if (intsWritten > 0) {
-      int[] metaInts = metaInfo.encode();
-      for (int i = 0; i < NUM_META_INTS; i++) {
-        rc.writeSharedArray(META_INT_START + i, metaInts[i]);
-      }
-      System.out.println("Update communication metabits: " + metaInfo);
+      updateMetaInts();
     }
+  }
+
+  /**
+   * write metaInfo to the end of the shared array
+   * @throws GameActionException if writing fails
+   */
+  public void updateMetaInts() throws GameActionException {
+    int[] metaInts = metaInfo.encode();
+    for (int i = 0; i < NUM_META_INTS; i++) {
+      if (metaInts[i] > 65535) {
+        System.out.println("FAILED META UPDATE -- " + metaInfo + Arrays.toString(metaInts));
+      }
+      rc.writeSharedArray(META_INT_START + i, metaInts[i]);
+    }
+//    System.out.println("Update meta: " + metaInfo);
   }
 
   /**
