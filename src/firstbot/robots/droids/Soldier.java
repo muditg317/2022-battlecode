@@ -6,7 +6,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.Team;
-import firstbot.Constants;
+import firstbot.Utils;
 
 public class Soldier extends Droid {
   public Soldier(RobotController rc) {
@@ -26,11 +26,6 @@ public class Soldier extends Droid {
       }
     }
 
-    // Also try to move randomly.
-    Direction dir = Constants.directions[Constants.rng.nextInt(Constants.directions.length)];
-    if (rc.canMove(dir)) {
-      rc.move(dir);
-      System.out.println("I moved!");
-    }
+    moveRandomly();
   }
 }

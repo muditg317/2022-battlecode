@@ -65,8 +65,14 @@ public class Communicator {
     sentMessages.add(message);
   }
 
-  public void readMessages() throws GameActionException {
+  /**
+   * read all the messages in the sharedArray
+   * @return the number of messages that were read
+   * @throws GameActionException thrown if readMessageAt fails
+   */
+  public int readMessages() throws GameActionException {
 
+    return 0;
   }
 
   public Message readMessageAt(int messageOrigin) throws GameActionException {

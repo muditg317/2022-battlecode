@@ -3,8 +3,10 @@ package firstbot.robots;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
-import firstbot.Constants;
+import battlecode.common.RobotType;
+import firstbot.Utils;
 import firstbot.communications.Communicator;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
@@ -14,12 +16,36 @@ import firstbot.robots.droids.Miner;
 import firstbot.robots.droids.Sage;
 import firstbot.robots.droids.Soldier;
 
+import java.util.Arrays;
+
 public abstract class Robot {
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+
+  protected static class CreationStats {
+    public final int roundNum;
+    public final MapLocation spawnLocation;
+    private final int health;
+    private final RobotType type;
+
+    public CreationStats(RobotController rc) {
+      this.roundNum = rc.getRoundNum();
+      this.spawnLocation = rc.getLocation();
+      this.health = rc.getHealth();
+      this.type = rc.getType();
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s at %s - HP: %4d", type, spawnLocation, health);
+    }
+  }
 
   protected final RobotController rc;
   protected final Communicator communicator;
 
-  protected final int roundCreated;
+  protected final CreationStats creationStats;
+
 
   /**
    * Create a Robot with the given controller
@@ -30,10 +56,10 @@ public abstract class Robot {
     this.rc = rc;
     this.communicator = new Communicator(rc);
 
-    this.roundCreated = rc.getRoundNum();
+    this.creationStats = new CreationStats(rc);
 
     // Print spawn message
-    System.out.printf("%s at %s - HP: %4d\n", rc.getType(), rc.getLocation(), rc.getHealth());
+    System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
   }
@@ -62,7 +88,7 @@ public abstract class Robot {
    */
   public void runLoop() {
     /*
-      should never exit - Robot will die otherwise (Clock.yeild() to end turn)
+      should never exit - Robot will die otherwise (Clock.yield() to end turn)
      */
     while (true) {
       // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
@@ -72,10 +98,12 @@ public abstract class Robot {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
+        if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
         System.out.println(rc.getType() + " Exception");
         e.printStackTrace();
+        if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
       } finally {
         // end turn - make code wait until next turn
         Clock.yield();
@@ -100,12 +128,93 @@ public abstract class Robot {
    */
   protected abstract void runTurn() throws GameActionException;
 
+  /**
+   * if the robot can move, choose a random direction and move
+   * will try 16 times in case some directions are blocked
+   * @throws GameActionException if movement fails
+   */
   protected void moveRandomly() throws GameActionException {
-    // Also try to move randomly.
-    Direction dir = Constants.directions[Constants.rng.nextInt(Constants.directions.length)];
-    if (rc.canMove(dir)) {
-      rc.move(dir);
-//      System.out.println("I moved!");
+    if (rc.isMovementReady()) {
+      int failedTries = 0;
+      Direction dir;
+      do {
+        dir = Utils.randomDirection();
+      } while (!rc.canMove(dir) && ++failedTries < 16);
+      if (failedTries < 16) { // only move if we didnt fail 16 times and never find a valid direction to move
+        rc.move(dir);
+      }
     }
+  }
+
+  /**
+   * sense all around the robot for lead, choose a direction probabilistically
+   *    weighted by how much lead is reached by moving in that direction
+   *    IGNORES 0-1 Pb
+   * @return the most lead-full direction
+   * @throws GameActionException if some game op fails
+   */
+  protected Direction getBestLeadDirProbabilistic() throws GameActionException {
+    int[] leadInDirection = new int[Utils.directions.length];
+    int totalSeen = 0;
+    MapLocation myLoc = rc.getLocation();
+    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(myLoc, rc.getType().visionRadiusSquared)) {
+      boolean isNorth = loc.y >= myLoc.y;
+      boolean isEast = loc.x >= myLoc.x;
+      int leadSeen = rc.senseLead(loc); // don't check canSense because we know it is valid and in range
+      if (leadSeen <= 1) { // ignore 0-1 Pb
+        continue;
+      }
+      totalSeen += leadSeen;
+      if (isNorth) {
+        leadInDirection[Direction.NORTH.ordinal()] += leadSeen;
+        if (isEast) {
+          leadInDirection[Direction.EAST.ordinal()] += leadSeen;
+          leadInDirection[Direction.NORTHEAST.ordinal()] += leadSeen;
+        } else {
+          leadInDirection[Direction.WEST.ordinal()] += leadSeen;
+          leadInDirection[Direction.NORTHWEST.ordinal()] += leadSeen;
+        }
+      } else {
+        leadInDirection[Direction.SOUTH.ordinal()] += leadSeen;
+        if (isEast) {
+          leadInDirection[Direction.EAST.ordinal()] += leadSeen;
+          leadInDirection[Direction.SOUTHEAST.ordinal()] += leadSeen;
+        } else {
+          leadInDirection[Direction.WEST.ordinal()] += leadSeen;
+          leadInDirection[Direction.SOUTHWEST.ordinal()] += leadSeen;
+        }
+      }
+    }
+    totalSeen *= 3; // each location affects 3 direction entries
+    if (totalSeen == 0) {
+      return Utils.randomDirection();
+    }
+    int randomInt = Utils.rng.nextInt(totalSeen);
+    for (int i = 0; i < leadInDirection.length; i++) {
+      if (randomInt <= leadInDirection[i]) return Utils.directions[i];
+      randomInt -= leadInDirection[i];
+    }
+    System.out.println("WEIGHTED PICK FAILED: " + Arrays.toString(leadInDirection));
+    throw new RuntimeException("Weighted sum should be able to choose one a direction");
+  }
+
+  protected void moveToHighLeadProbabilistic() throws GameActionException {
+    Direction dir = getBestLeadDirProbabilistic();
+    if (rc.canMove(dir)) rc.move(dir);
+  }
+
+  /**
+   * build the specified robot type in the specified direction
+   * @param type the robot type to build
+   * @param dir where to build it
+   * @return method success
+   * @throws GameActionException when building fails
+   */
+  protected boolean buildRobot(RobotType type, Direction dir) throws GameActionException {
+    if (rc.canBuildRobot(type, dir)) {
+      rc.buildRobot(type, dir);
+      return true;
+    }
+    return false;
   }
 }

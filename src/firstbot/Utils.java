@@ -4,7 +4,7 @@ import battlecode.common.Direction;
 
 import java.util.Random;
 
-public class Constants {
+public class Utils {
 
   /** Seeded RNG for use throughout the bot classes */
   public static final Random rng = new Random(69);
@@ -20,4 +20,8 @@ public class Constants {
       Direction.WEST,
       Direction.NORTHWEST,
   };
+
+  public static Direction randomDirection() {
+    return directions[rng.nextInt(directions.length)];
+  }
 }

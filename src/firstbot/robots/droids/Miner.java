@@ -1,11 +1,8 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
-import firstbot.Constants;
-import firstbot.communications.messages.Message;
 import firstbot.communications.messages.SingleIntMessage;
 
 public class Miner extends Droid {
@@ -18,7 +15,8 @@ public class Miner extends Droid {
     mineSurroundingGold();
     mineSurroundingLead();
 
-    moveRandomly();
+    moveToHighLeadProbabilistic();
+//    moveRandomly();
 
     SingleIntMessage read = (SingleIntMessage) communicator.readMessageAt(0);
     if (read == null) return;
