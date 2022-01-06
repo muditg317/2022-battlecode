@@ -1,5 +1,6 @@
 package firstbot;
 
+import battlecode.common.Clock;
 import battlecode.common.Direction;
 
 import java.util.Random;
@@ -23,5 +24,26 @@ public class Utils {
 
   public static Direction randomDirection() {
     return directions[rng.nextInt(directions.length)];
+  }
+
+  private static int start;
+  private static boolean counting = false;
+  public static void startByteCodeCounting() {
+    if (counting) {
+      System.out.println("Already counting bytecodes!!");
+      return;
+    }
+    start = Clock.getBytecodeNum();
+    counting = true;
+  }
+
+  private static int end;
+  public static void finishByteCodeCounting(String reason) {
+    if (!counting) {
+      System.out.println("Not counting bytecodes yet!!!");
+      return;
+    }
+    end = Clock.getBytecodeNum();
+    System.out.printf("%d bytecodes used for %s\n", end-start, reason);
   }
 }

@@ -10,6 +10,7 @@ import firstbot.Utils;
 import firstbot.communications.messages.SingleIntMessage;
 
 public class Archon extends Building {
+  public static final int SUICIDE_ROUND = -1;
 
   private int minersSpawned;
   private int buildersSpawned;
@@ -32,7 +33,7 @@ public class Archon extends Building {
     }
 
     // Spawn new droid if none to repair
-    if (rc.isActionReady()) {
+    if (rc.isActionReady() && rc.getRoundNum() == 1) {
       spawnDroid();
     }
 
@@ -42,9 +43,9 @@ public class Archon extends Building {
 //      communicator.enqueueMessage(new SingleIntMessage(420, 20), 20);
 //    }
 
-//    if (rc.getRoundNum() == 30) {
-//      rc.resign();
-//    }
+    if (rc.getRoundNum() == SUICIDE_ROUND) {
+      rc.resign();
+    }
   }
 
   /**

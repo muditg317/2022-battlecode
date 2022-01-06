@@ -12,7 +12,7 @@ public abstract class Message {
    * enum for the different message types that will be sent
    */
   public enum MessageType {
-    SINGLE_INT, LEAD_FOUND
+    SINGLE_INT, LEAD_FOUND, LEAD_REQUEST
   }
 
   /**
@@ -39,7 +39,7 @@ public abstract class Message {
     private static final int ROUND_NUM_SIZE = 5;
     private static final int ROUND_NUM_START = NUM_INTS_START - ROUND_NUM_SIZE;
     private static final int ROUND_NUM_MAX = (1 << ROUND_NUM_SIZE) - 1;
-    private static final int ROUND_NUM_CYCLE_SIZE = ROUND_NUM_MAX + 1;
+    public static final int ROUND_NUM_CYCLE_SIZE = ROUND_NUM_MAX + 1;
     public int cyclicRoundNum; // 0-31            -- 5 bits [4,0]
 
     public Header(int priority, MessageType type, int numInformationInts, int roundNum) {
@@ -55,6 +55,10 @@ public abstract class Message {
           MessageType.values()[(readInt >>> TYPE_START) & TYPE_MAX],
           (readInt >>> NUM_INTS_START) & NUM_INTS_MAX,
           (readInt >>> ROUND_NUM_START) & ROUND_NUM_MAX);
+    }
+
+    public static int toCyclicRound(int roundNum) {
+      return roundNum % ROUND_NUM_CYCLE_SIZE;
     }
 
     public int toInt() {
@@ -77,6 +81,27 @@ public abstract class Message {
     public String toString() {
       return String.format("MessHdr{pr=%d,tp=%s,len=%d,rnd=%d", priority, type, numInformationInts, cyclicRoundNum);
     }
+
+    /**
+     * checks if the header was sent from a round in (lastAck, maxRound]
+     * @param lastAckdRound last round already ackd
+     * @param maxRoundNum usually current round
+     * @return if within bounds
+     */
+    public boolean within(int lastAckdRound, int maxRoundNum) {
+      return lastAckdRound < cyclicRoundNum && cyclicRoundNum <= maxRoundNum;
+    }
+  }
+
+  /**
+   * information related to the writing of this message in the shared buffer
+   */
+  public static class WriteInfo {
+    public int startIndex;
+
+    public WriteInfo(int startIndex) {
+      this.startIndex = startIndex;
+    }
   }
 
   /**
@@ -85,11 +110,17 @@ public abstract class Message {
   public Header header;
 
   /**
+   * the write information for this message
+   */
+  public WriteInfo writeInfo;
+
+  /**
    * create a message with the given header
    * @param header the message meta-information
    */
   public Message(Header header) {
     this.header = header;
+    this.writeInfo = null;
   }
 
   /**
@@ -107,8 +138,14 @@ public abstract class Message {
     switch (header.type) {
       case SINGLE_INT: return new SingleIntMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
+      case LEAD_REQUEST: return new LeadRequestMessage(header, information);
       default: throw new RuntimeException("Cannot read message with invalid type! " + header.type);
     }
+  }
+
+  public Message setWriteInfo(WriteInfo writeInfo) {
+    this.writeInfo = writeInfo;
+    return this;
   }
 
   /**

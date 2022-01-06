@@ -16,13 +16,13 @@ public class SingleIntMessage extends Message {
     this.data = datum;
   }
 
+  public SingleIntMessage(int datum, int roundNum) {
+    this(PRIORITY, datum, roundNum);
+  }
+
   public SingleIntMessage(Header header, int[] information) {
     super(header);
     this.data = information[0];
-  }
-
-  public SingleIntMessage(int datum, int roundNum) {
-    this(PRIORITY, datum, roundNum);
   }
 
   public int[] toEncodedInts() {

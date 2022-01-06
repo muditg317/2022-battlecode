@@ -3,8 +3,7 @@ package firstbot.communications.messages;
 import battlecode.common.MapLocation;
 
 /**
- * A simple message with a single integer of information
- * primarily used for testing
+ * A message used when a wandering miner finds a good mining position
  */
 public class LeadFoundMessage extends Message {
   public static final int PRIORITY = 1;
@@ -17,13 +16,13 @@ public class LeadFoundMessage extends Message {
     this.location = location;
   }
 
+  public LeadFoundMessage(MapLocation location, int roundNum) {
+    this(PRIORITY, location, roundNum);
+  }
+
   public LeadFoundMessage(Header header, int[] information) {
     super(header);
     this.location = decodeLocation(information[0]);
-  }
-
-  public LeadFoundMessage(MapLocation location, int roundNum) {
-    this(PRIORITY, location, roundNum);
   }
 
   public int[] toEncodedInts() {

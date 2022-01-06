@@ -110,9 +110,12 @@ public class Communicator {
     }
 //    System.out.println("Reading messages: " + metaInfo);
     int messages = 0;
+    int lastAckdRound = received.isEmpty() ? 0 : getNthLastReceivedMessage(1).header.cyclicRoundNum;
+    int maxRoundNum = Message.Header.toCyclicRound(rc.getRoundNum());
+    if (maxRoundNum < lastAckdRound) maxRoundNum += Message.Header.ROUND_NUM_CYCLE_SIZE;
     while (origin < ending) {
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
-      if (message.header.fromRound(rc.getRoundNum())) { // skip stale messages
+      if (message.header.within(lastAckdRound, maxRoundNum)) { // skip stale messages
         received.add(message);
         messages++;
       }
@@ -127,7 +130,7 @@ public class Communicator {
    * @param messageOrigin where the message starts
    * @return the read message
    */
-  private Message readMessageAt(int messageOrigin) {
+  private Message readMessageAt(final int messageOrigin) {
 //     assert messageOrigin < NUM_MESSAGING_INTS; // ensure that the message is within the messaging ints
     int headerInt = sharedBuffer[messageOrigin];
     Message.Header header;
@@ -144,7 +147,7 @@ public class Communicator {
     for (int i = 0; i < header.numInformationInts; i++) {
       information[i] = sharedBuffer[(messageOrigin + i + 1) % NUM_MESSAGING_INTS];
     }
-    return Message.fromHeaderAndInfo(header, information);
+    return Message.fromHeaderAndInfo(header, information).setWriteInfo(new Message.WriteInfo(messageOrigin));
   }
 
   /**
@@ -221,6 +224,7 @@ public class Communicator {
       metaInfo.validRegionStart = origin - message.header.numInformationInts;
     }
     metaInfo.validRegionEnd = origin;
+    message.setWriteInfo(new Message.WriteInfo(Math.floorMod(origin - message.header.numInformationInts, NUM_MESSAGING_INTS)));
     intsWritten += message.size();
   }
 
@@ -258,6 +262,49 @@ public class Communicator {
    */
   public Message getNthLastReceivedMessage(int n) {
     return received.get(received.size() - n);
+  }
+
+  /**
+   * returns true if the integer at the specified index matches the provided message header
+   *    ASSUMES data has already been read into sharedBuffer
+   * @param headerIndex the index to check
+   * @param header the message metadata to verify
+   * @return the sameness
+   */
+  public boolean headerMatches(int headerIndex, Message.Header header) {
+//    System.out.println("Checking header at " + headerIndex + ": " + sharedBuffer[headerIndex] + " -- " + header.toInt());
+    return sharedBuffer[headerIndex] == header.toInt();
+  }
+
+  /**
+   * reads numInts integers starting at startIndex into an integer array and sends them back for use
+   *    reads from ALREADY processed sharedBuffer
+   *    loops around based on NUM_MESSAGING_BITS
+   * @param startIndex where to start
+   * @param numInts the number of ints to read
+   * @return the array of read ints
+   */
+  public int[] readInts(int startIndex, int numInts) {
+//    System.out.println("Read ints at " + startIndex + ": " + numInts);
+    int[] ints = new int[numInts];
+    for (int i = 0; i < numInts; i++) {
+      ints[i] = sharedBuffer[(startIndex+i) % NUM_MESSAGING_INTS];
+    }
+    return ints;
+  }
+
+  /**
+   * write a set of ints into the message buffer starting at the given index
+   *    cycles indices based on NUM_MESSAGING_INTS
+   * @param startIndex where to start writing
+   * @param information the ints to write
+   * @throws GameActionException if writing fails
+   */
+  public void writeInts(int startIndex, int[] information) throws GameActionException {
+//    System.out.println("Write ints at " + startIndex + ": " + Arrays.toString(information));
+    for (int i = 0; i < information.length; i++) {
+      rc.writeSharedArray((startIndex + i) % NUM_MESSAGING_INTS, information[i]);
+    }
   }
 
 }

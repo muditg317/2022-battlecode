@@ -21,8 +21,8 @@ import firstbot.robots.droids.Soldier;
 import java.util.Arrays;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
 
   protected static class CreationStats {
     public final int roundNum;
@@ -101,6 +101,7 @@ public abstract class Robot {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
+        rc.setIndicatorDot(rc.getLocation(), 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
@@ -120,11 +121,16 @@ public abstract class Robot {
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
 
+//    Utils.startByteCodeCounting();
     pendingMessages = communicator.readMessages();
+//    Utils.finishByteCodeCounting("read messages");
 //    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
     runTurn();
+
+//    Utils.startByteCodeCounting();
     communicator.sendQueuedMessages();
     communicator.updateMetaIntsIfNeeded();
+//    Utils.finishByteCodeCounting("send messages and stuff");
   }
 
   /**
@@ -159,14 +165,15 @@ public abstract class Robot {
    * @throws GameActionException if some game op fails
    */
   protected Direction getBestLeadDirProbabilistic() throws GameActionException {
+    final int MIN_LEAD = 1;
     int[] leadInDirection = new int[Utils.directions.length];
     int totalSeen = 0;
     MapLocation myLoc = rc.getLocation();
-    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(myLoc, rc.getType().visionRadiusSquared)) {
+    for (MapLocation loc : rc.senseNearbyLocationsWithLead(creationStats.type.visionRadiusSquared)) {
       boolean isNorth = loc.y >= myLoc.y;
       boolean isEast = loc.x >= myLoc.x;
       int leadSeen = rc.senseLead(loc); // don't check canSense because we know it is valid and in range
-      if (leadSeen <= 1) { // ignore 0-1 Pb
+      if (leadSeen < MIN_LEAD) { // ignore 0 Pb tiles
         continue;
       }
       totalSeen += leadSeen;
