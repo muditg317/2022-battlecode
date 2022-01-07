@@ -10,6 +10,7 @@ public class Builder extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-
+    moveRandomly();
+    rc.disintegrate();
   }
 }

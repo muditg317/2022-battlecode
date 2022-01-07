@@ -3,6 +3,8 @@ package firstbot;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class Utils {
@@ -26,24 +28,37 @@ public class Utils {
     return directions[rng.nextInt(directions.length)];
   }
 
-  private static int start;
-  private static boolean counting = false;
-  public static void startByteCodeCounting() {
-    if (counting) {
-      System.out.println("Already counting bytecodes!!");
-      return;
+  /*
+
+  * / // ================================== TOGGLE THIS OFF/ON
+
+  private static Map<String, Integer> byteCodeMap = new HashMap<>();
+  public static void startByteCodeCounting(String reason) {
+    if (byteCodeMap.putIfAbsent(reason, Clock.getBytecodeNum()) != null) { // we're already counting!
+      System.out.printf("Already counting for %s!!\n", reason);
     }
-    start = Clock.getBytecodeNum();
-    counting = true;
   }
 
-  private static int end;
   public static void finishByteCodeCounting(String reason) {
-    if (!counting) {
-      System.out.println("Not counting bytecodes yet!!!");
+    int end = Clock.getBytecodeNum();
+    Integer start = byteCodeMap.getOrDefault(reason, -1);
+    if (start == -1) {
+      System.out.printf("Not counting bytecodes for %s!!!\n", reason);
       return;
     }
-    end = Clock.getBytecodeNum();
-    System.out.printf("%d bytecodes used for %s\n", end-start, reason);
+    System.out.printf("%4d BC: %s\n", end-start, reason);
+    byteCodeMap.remove(reason);
   }
+
+
+  /*
+
+  */ // ------------------------------ TOGGLE THIS ON/OFF
+
+  public static void startByteCodeCounting(String reason) {}
+  public static void finishByteCodeCounting(String reason) {}
+
+  /*
+   */
+
 }

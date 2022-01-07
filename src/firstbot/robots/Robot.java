@@ -10,6 +10,9 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotType;
 import firstbot.Utils;
 import firstbot.communications.Communicator;
+import firstbot.communications.messages.LeadFoundMessage;
+import firstbot.communications.messages.LeadRequestMessage;
+import firstbot.communications.messages.Message;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
 import firstbot.robots.buildings.Watchtower;
@@ -21,8 +24,8 @@ import firstbot.robots.droids.Soldier;
 import java.util.Arrays;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
 
   protected static class CreationStats {
     public final int roundNum;
@@ -121,17 +124,32 @@ public abstract class Robot {
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
 
-//    Utils.startByteCodeCounting();
+    Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readMessages();
-//    Utils.finishByteCodeCounting("read messages");
+    while (pendingMessages > 0) {
+      Message message = communicator.getNthLastReceivedMessage(pendingMessages);
+      if (message instanceof LeadFoundMessage) { // if lead was found somewhere far
+        ackMessage(message);
+      } else if (message instanceof LeadRequestMessage) {
+        ackMessage(message);
+      }
+      pendingMessages--;
+    }
+    Utils.finishByteCodeCounting("reading");
 //    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
     runTurn();
 
-//    Utils.startByteCodeCounting();
+    Utils.startByteCodeCounting("sending");
     communicator.sendQueuedMessages();
     communicator.updateMetaIntsIfNeeded();
-//    Utils.finishByteCodeCounting("send messages and stuff");
+    Utils.finishByteCodeCounting("sending");
   }
+
+  /**
+   * acknowledge the provided message (happens at turn start)
+   * @param message the message received
+   */
+  protected void ackMessage(Message message) throws GameActionException {}
 
   /**
    * Run a single turn for the robot
@@ -140,21 +158,37 @@ public abstract class Robot {
   protected abstract void runTurn() throws GameActionException;
 
   /**
+   * Wrapper for move() of RobotController that ensures enough bytecodes
+   * @param dir where to move
+   * @return if the robot moved
+   * @throws GameActionException if movement failed
+   */
+  protected boolean move(Direction dir) throws GameActionException {
+    if (Clock.getBytecodesLeft() > 11 && rc.canMove(dir)) {
+      rc.move(dir);
+      return false;
+    }
+    return false;
+  }
+
+  /**
    * if the robot can move, choose a random direction and move
    * will try 16 times in case some directions are blocked
+   * @return if moved
    * @throws GameActionException if movement fails
    */
-  protected void moveRandomly() throws GameActionException {
-    if (rc.isMovementReady()) {
-      int failedTries = 0;
-      Direction dir;
-      do {
-        dir = Utils.randomDirection();
-      } while (!rc.canMove(dir) && ++failedTries < 16);
-      if (failedTries < 16) { // only move if we didnt fail 16 times and never find a valid direction to move
-        rc.move(dir);
-      }
-    }
+  protected boolean moveRandomly() throws GameActionException {
+    return move(Utils.randomDirection());
+//    if (rc.isMovementReady()) {
+//      int failedTries = 0;
+//      Direction dir;
+//      do {
+//        dir = Utils.randomDirection();
+//      } while (!rc.canMove(dir) && ++failedTries < 16);
+//      if (failedTries < 16) { // only move if we didnt fail 16 times and never find a valid direction to move
+//        rc.move(dir);
+//      }
+//    }
   }
 
   /**
@@ -214,19 +248,21 @@ public abstract class Robot {
 
   /**
    * move to a location with high lead density
-   * @return whether the movement was based on lead or defaulted to random
+   * @return if the movement was successfully based on lead presence
    * @throws GameActionException if movement fails
    */
-  protected boolean moveToHighLeadProbabilistic(boolean defaultToRandomMovement) throws GameActionException {
+  protected boolean moveToHighLeadProbabilistic() throws GameActionException {
     Direction dir = getBestLeadDirProbabilistic();
-    if (dir != null) {
-      if (rc.canMove(dir)) {
-        rc.move(dir);
-        return true;
-      }
-    }
-    if (defaultToRandomMovement) moveRandomly();
-    return false;
+    return dir != null && move(dir);
+//
+//    if (dir != null) {
+//      if (rc.canMove(dir)) {
+//        rc.move(dir);
+//        return true;
+//      }
+//    }
+//    if (defaultToRandomMovement) moveRandomly();
+//    return false;
   }
 
   /**

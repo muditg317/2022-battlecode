@@ -29,16 +29,6 @@ public class Miner extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-    while (pendingMessages > 0) {
-      Message message = communicator.getNthLastReceivedMessage(pendingMessages);
-      if (message instanceof LeadFoundMessage) { // if lead was found somewhere far
-        acknowledgeLeadFoundMessage((LeadFoundMessage) message);
-      } else if (message instanceof LeadRequestMessage) {
-        acknowledgeLeadRequestMessage((LeadRequestMessage) message);
-      }
-      pendingMessages--;
-    }
-
     doMining();
 
     if (target == null && leadRequest != null) {
@@ -48,24 +38,40 @@ public class Miner extends Droid {
       }
       leadRequest = null;
     }
-    if (rc.isMovementReady()) {
-      boolean foundLead = followLead();
-      if (foundLead) target = null; // nullify target if we found lead now
-    }
-    if (rc.isMovementReady()) {
-      if (target != null) {
-        goToTarget();
-      }
-    }
-    if (rc.isMovementReady()) {
-      moveRandomly();
+
+
+    if (followLead()) target = null;
+    else if (target != null) goToTarget();
+    else if (moveRandomly()) {
       turnsWandering++;
-      if (needToRequestLead()) {
-        requestLead();
-      }
+      if (needToRequestLead()) requestLead();
     }
+//    if (rc.isMovementReady()) {
+//      boolean foundLead = followLead();
+//      if (foundLead) target = null; // nullify target if we found lead now
+//    }
+//    if (rc.isMovementReady()) {
+//      if (target != null) {
+//        goToTarget();
+//      }
+//    }
+//    if (rc.isMovementReady()) {
+//      if (moveRandomly()) turnsWandering++;
+//      if (needToRequestLead()) {
+//        requestLead();
+//      }
+//    }
 
     doMining();
+  }
+
+  @Override
+  protected void ackMessage(Message message) throws GameActionException {
+    if (message instanceof LeadFoundMessage) { // if lead was found somewhere far
+      acknowledgeLeadFoundMessage((LeadFoundMessage) message);
+    } else if (message instanceof LeadRequestMessage) {
+      acknowledgeLeadRequestMessage((LeadRequestMessage) message);
+    }
   }
 
   /**
@@ -84,6 +90,7 @@ public class Miner extends Droid {
    * @param message the received request for lead
    */
   private void acknowledgeLeadRequestMessage(LeadRequestMessage message) throws GameActionException {
+    rc.setIndicatorString("Got lead request: " + message.answered + "|" + message.location + "|" + turnsWandering);
     if (turnsWandering > 0) { // can't suggest lead if we wandering too
       if (message.answered) registerTarget(message.location); // if we wandering, just take someone elses answer lol
       return;
@@ -92,6 +99,7 @@ public class Miner extends Droid {
 
     // we have a target, forward it to the requester
     MapLocation responseLocation = target != null ? target : rc.getLocation();
+    rc.setIndicatorString("Answer lead request: " + responseLocation);
 
     message.respond(communicator, responseLocation);
     rc.setIndicatorString("Respond to lead request! " + responseLocation);
@@ -171,19 +179,16 @@ public class Miner extends Droid {
     turnsWandering = 0;
     Direction goal = rc.getLocation().directionTo(target);
     rc.setIndicatorString("Approaching target" + target + " -- " + goal);
-    if (rc.canMove(goal)) {
-      rc.move(goal);
-    } else { // if goal is occupied, try instead to move in a semi-close direction
+    if (!move(goal)) { // if goal is occupied, try instead to move in a semi-close direction
       Direction try1 = goal.rotateLeft();
       Direction try2 = goal.rotateRight();
-      if (Utils.rng.nextBoolean()) {
-        goal = try2;
-      } else {
-        goal = try1;
-        try1 = try2;
-      }
-      if (rc.canMove(goal)) rc.move(goal);
-      else if (rc.canMove(try1)) rc.move(try1);
+//      if (Utils.rng.nextBoolean()) {
+//        goal = try2;
+//      } else {
+//        goal = try1;
+//        try1 = try2;
+//      }
+      boolean ignored = move(try1) || move(try2);
     }
     rc.setIndicatorLine(rc.getLocation(), target, 255,10,10);
     rc.setIndicatorDot(target, 0, 255, 0);
@@ -193,7 +198,7 @@ public class Miner extends Droid {
   }
 
   private boolean followLead() throws GameActionException {
-    boolean followedLead = moveToHighLeadProbabilistic(false);
+    boolean followedLead = moveToHighLeadProbabilistic();
     if (followedLead) {
       if (turnsWandering > WANDERING_TURNS_TO_BROADCAST_LEAD) {
         broadcastLead(rc.getLocation());

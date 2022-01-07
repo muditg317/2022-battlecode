@@ -78,7 +78,7 @@ public class LeadRequestMessage extends Message {
    * @throws GameActionException if writing fails
    */
   public void respond(Communicator communicator, MapLocation leadTarget) throws GameActionException {
-//    System.out.println("Respond to request! " + writeInfo.startIndex);
+    System.out.println("Respond to request! " + writeInfo.startIndex);
     communicator.writeInts(writeInfo.startIndex + 1, new int[]{encodeLocation(leadTarget)});
   }
 }

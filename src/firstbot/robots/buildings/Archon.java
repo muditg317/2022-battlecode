@@ -7,10 +7,13 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.Utils;
+import firstbot.communications.messages.Message;
 import firstbot.communications.messages.SingleIntMessage;
 
 public class Archon extends Building {
   public static final int SUICIDE_ROUND = -1;
+
+  private int whichArchonAmI = 0;
 
   private int minersSpawned;
   private int buildersSpawned;
@@ -19,6 +22,7 @@ public class Archon extends Building {
 
   public Archon(RobotController rc) {
     super(rc);
+    System.out.println("Hello from Archon constructor #"+rc.getID() + " at " + rc.getLocation());
   }
 
   @Override
@@ -32,8 +36,12 @@ public class Archon extends Building {
       }
     }
 
+    if (rc.getRoundNum() == 1) {
+      System.out.println("Hello from Archon #"+rc.getID() + " at " + rc.getLocation());
+    }
+
     // Spawn new droid if none to repair
-    if (rc.isActionReady() && rc.getRoundNum() == 1) {
+    if (rc.isActionReady()) {
       spawnDroid();
     }
 
@@ -46,6 +54,11 @@ public class Archon extends Building {
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();
     }
+  }
+
+  @Override
+  protected void ackMessage(Message message) throws GameActionException {
+
   }
 
   /**
