@@ -3,6 +3,7 @@ package firstbot.communications.messages;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import firstbot.Utils;
 import firstbot.communications.Communicator;
 
 import java.util.Arrays;
@@ -38,7 +39,7 @@ public class LeadRequestMessage extends Message {
    */
   private void processInformation(int[] information) {
     answered = checkAnsweredFlag(information);
-    location = answered ? decodeLocation(information[0]) : null;
+    location = answered ? Utils.decodeLocation(information[0]) : null;
   }
 
   private static boolean checkAnsweredFlag(int[] information) {
@@ -50,11 +51,7 @@ public class LeadRequestMessage extends Message {
   }
 
   private static int encodeLocation(MapLocation location) {
-    return location == null ? 0 : (location.x << 8 | location.y << 1 | 1);
-  }
-
-  private static MapLocation decodeLocation(int encoded) {
-    return new MapLocation((encoded >>> 8) & 0xff, (encoded >>> 1) & 0x7f);
+    return location == null ? 0 : (Utils.encodeLocation(location) | 1);
   }
 
   /**

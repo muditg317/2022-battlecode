@@ -1,19 +1,25 @@
 package firstbot.robots.buildings;
 
 import battlecode.common.AnomalyType;
-import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.world.MapSymmetry;
 import firstbot.Utils;
+import firstbot.communications.messages.ArchonHelloMessage;
 import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SingleIntMessage;
+
+import java.util.List;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -1;
+  public static final int SUICIDE_ROUND = 2;
 
-  private int whichArchonAmI = 0;
+  private int whichArchonAmI = 1;
+  private List<MapLocation> archonLocs;
+
+  private MapSymmetry predictedSymmetry;
 
   private int minersSpawned;
   private int buildersSpawned;
@@ -22,11 +28,15 @@ public class Archon extends Building {
 
   public Archon(RobotController rc) {
     super(rc);
-    System.out.println("Hello from Archon constructor #"+rc.getID() + " at " + rc.getLocation());
+//    System.out.println("Hello from Archon constructor #"+rc.getID() + " at " + rc.getLocation());
   }
 
   @Override
   protected void runTurn() throws GameActionException {
+//    if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
+//      return;
+//    }
+
     // Repair damaged droid
     if (rc.isActionReady()) {
       for (RobotInfo info : rc.senseNearbyRobots()) {
@@ -36,9 +46,6 @@ public class Archon extends Building {
       }
     }
 
-    if (rc.getRoundNum() == 1) {
-      System.out.println("Hello from Archon #"+rc.getID() + " at " + rc.getLocation());
-    }
 
     // Spawn new droid if none to repair
     if (rc.isActionReady()) {
@@ -47,8 +54,8 @@ public class Archon extends Building {
 
     // send test messages
 //    if (rc.getRoundNum() == 1) {
-//      communicator.enqueueMessage(new SingleIntMessage(69, 10), 10);
-//      communicator.enqueueMessage(new SingleIntMessage(420, 20), 20);
+//      communicator.enqueueMessage(new ArchonHelloMessage(69, 10), 10);
+//      communicator.enqueueMessage(new ArchonHelloMessage(420, 20), 20);
 //    }
 
     if (rc.getRoundNum() == SUICIDE_ROUND) {
@@ -56,9 +63,55 @@ public class Archon extends Building {
     }
   }
 
+  /**
+   * Run the first turn for this archon
+   * @return if running should continue
+   */
+  private boolean doFirstTurn() {
+//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
+    ArchonHelloMessage helloMessage = generateArchonHello();
+    communicator.enqueueMessage(helloMessage);
+    archonLocs.add(rc.getLocation());
+
+    if (whichArchonAmI == rc.getArchonCount()) {
+      System.out.println("I am the last archon! locs: " + archonLocs);
+
+
+
+    }
+
+    return true;
+  }
+
+  private ArchonHelloMessage generateArchonHello() {
+//    boolean notHoriz = false;
+//    MapLocation myLoc = rc.getLocation();
+//    int width = rc.getMapWidth();
+//    int height = rc.getMapHeight();
+//    int dToPastCenter = Math.abs(myLoc.x - width) + 1;
+//    if (dToPastCenter*dToPastCenter <= rc.getType().visionRadiusSquared) { // can see both sides of the width midpoint
+//      System.out.println("archon at " + myLoc + " - can see width midpoint");
+////      rc.senseRubble()
+//    }
+    return new ArchonHelloMessage(rc.getLocation(), false, false, false);
+  }
+
   @Override
   protected void ackMessage(Message message) throws GameActionException {
+    if (message instanceof ArchonHelloMessage) {
+      ackArchonHello((ArchonHelloMessage) message);
+    }
+  }
 
+  /**
+   * acknowledge a hello from another archon
+   * @param message the hello
+   */
+  public void ackArchonHello(ArchonHelloMessage message) {
+//    if (rc.getRoundNum() == 1)
+      whichArchonAmI++;
+    archonLocs.add(message.location);
+//    System.out.println("Got archon hello!");
   }
 
   /**

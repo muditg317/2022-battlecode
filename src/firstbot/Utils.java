@@ -2,6 +2,7 @@ package firstbot;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
+import battlecode.common.MapLocation;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,6 +27,27 @@ public class Utils {
 
   public static Direction randomDirection() {
     return directions[rng.nextInt(directions.length)];
+  }
+
+  /**
+   * encode the location into an integer where
+   *  bits 15-10 : x
+   *  bits  9-4  : y
+   *  bits  3-0  : free
+   * @param location the location to encode
+   * @return the encoded location as int
+   */
+  public static int encodeLocation(MapLocation location) {
+    return (location.x << 10) | (location.y << 4);
+  }
+
+  /**
+   * decode a location from the provided integer (encoding described above)
+   * @param encoded the integer to extract location from
+   * @return the decoded location
+   */
+  public static MapLocation decodeLocation(int encoded) {
+    return new MapLocation((encoded >> 10) & 0x3f, (encoded >> 4) & 0x3f);
   }
 
   /*

@@ -5,7 +5,6 @@ import battlecode.common.GameConstants;
 import battlecode.common.RobotController;
 import firstbot.Utils;
 import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SingleIntMessage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -273,7 +272,7 @@ public class Communicator {
       return;
     }
     int[] messageBits = message.toEncodedInts();
-//    System.out.printf("SEND %s MESSAGE: %s\n", message.header.type, Arrays.toString(messageBits));
+    System.out.printf("SEND %s MESSAGE: %s\n", message.header.type, Arrays.toString(messageBits));
 //    System.out.println(message.header);
     int origin = metaInfo.validRegionEnd;
     for (int messageChunk : messageBits) {
@@ -288,6 +287,7 @@ public class Communicator {
 //        System.out.println("To  : " + metaInfo);
         // TODO: some criteria on deciding not to "evict" that info
       }
+//      System.out.println("Write to shared " + origin + ": " + messageChunk);
       rc.writeSharedArray(origin, messageChunk);
     }
     sentMessages.add(message);

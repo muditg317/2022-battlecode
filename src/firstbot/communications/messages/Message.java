@@ -1,7 +1,5 @@
 package firstbot.communications.messages;
 
-import battlecode.common.GameConstants;
-
 /**
  * All message types should subclass this class
  * A Communicator can send and read Message instances from the shared array
@@ -12,7 +10,7 @@ public abstract class Message {
    * enum for the different message types that will be sent
    */
   public enum MessageType {
-    SINGLE_INT, LEAD_FOUND, LEAD_REQUEST
+    ARCHON_HELLO, LEAD_FOUND, LEAD_REQUEST
   }
 
   /**
@@ -136,7 +134,7 @@ public abstract class Message {
 
   public static Message fromHeaderAndInfo(Header header, int[] information) {
     switch (header.type) {
-      case SINGLE_INT: return new SingleIntMessage(header, information);
+      case ARCHON_HELLO: return new ArchonHelloMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
       case LEAD_REQUEST: return new LeadRequestMessage(header, information);
       default: throw new RuntimeException("Cannot read message with invalid type! " + header.type);

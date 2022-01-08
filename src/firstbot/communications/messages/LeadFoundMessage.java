@@ -1,6 +1,7 @@
 package firstbot.communications.messages;
 
 import battlecode.common.MapLocation;
+import firstbot.Utils;
 
 /**
  * A message used when a wandering miner finds a good mining position
@@ -22,18 +23,10 @@ public class LeadFoundMessage extends Message {
 
   public LeadFoundMessage(Header header, int[] information) {
     super(header);
-    this.location = decodeLocation(information[0]);
+    this.location = Utils.decodeLocation(information[0]);
   }
 
   public int[] toEncodedInts() {
-    return new int[]{getHeaderInt(), encodeLocation(location)};
-  }
-
-  private static int encodeLocation(MapLocation location) {
-    return location.x << 8 | location.y;
-  }
-
-  private static MapLocation decodeLocation(int encoded) {
-    return new MapLocation((encoded >>> 8) & 0xff, encoded & 0xff);
+    return new int[]{getHeaderInt(), Utils.encodeLocation(location)};
   }
 }

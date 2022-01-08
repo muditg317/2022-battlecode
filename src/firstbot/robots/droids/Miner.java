@@ -4,11 +4,9 @@ import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
-import firstbot.Utils;
 import firstbot.communications.messages.LeadFoundMessage;
 import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SingleIntMessage;
 
 public class Miner extends Droid {
 

@@ -128,11 +128,7 @@ public abstract class Robot {
     pendingMessages = communicator.readMessages();
     while (pendingMessages > 0) {
       Message message = communicator.getNthLastReceivedMessage(pendingMessages);
-      if (message instanceof LeadFoundMessage) { // if lead was found somewhere far
-        ackMessage(message);
-      } else if (message instanceof LeadRequestMessage) {
-        ackMessage(message);
-      }
+      ackMessage(message);
       pendingMessages--;
     }
     Utils.finishByteCodeCounting("reading");
