@@ -123,7 +123,7 @@ public class Archon extends Building {
     } else if (needBuilder()) {
       if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
         rc.setIndicatorString("Spawn builder!");
-        soldiersSpawned++;
+        buildersSpawned++;
       }
     } else {
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
@@ -138,7 +138,7 @@ public class Archon extends Building {
    * @return boolean of necessity of building a miner
    */
   private boolean needMiner() {
-    return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && ( // if we have > 2000Pb, just skip miners
+    return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && minersSpawned < 20 && ( // if we have > 2000Pb, just skip miners
         rc.getRoundNum() < 100
         || estimateAvgLeadIncome() / minersSpawned > 3 // spawn miners until we reach less than 5pb/miner income
     );

@@ -84,9 +84,8 @@ public class Soldier extends Droid {
         }
       }
     } else {
-      {
-        moveInDirLoose(rc.getLocation().directionTo(center));
-      }
+//      moveInDirLoose(rc.getLocation().directionTo(center));
+      moveTowardsAvoidRubble(center);
     }
   }
 
@@ -113,6 +112,11 @@ public class Soldier extends Droid {
     }
   }
 
+  /**
+   * receive a message that a raid is over
+   * @param message raid ending message with a specific raid target
+   * @throws GameActionException if ack fails
+   */
   private void ackEndRaidMessage(EndRaidMessage message) throws GameActionException {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
     if (raidTarget != null && raidTarget.equals(message.location)) {
@@ -125,11 +129,18 @@ public class Soldier extends Droid {
     }
   }
 
+  /**
+   * send a message to start a group raid at the given location
+   * @param location where to raid
+   */
   public void callForRaid(MapLocation location) {
     StartRaidMessage message = new StartRaidMessage(location, rc.getRoundNum());
     communicator.enqueueMessage(message);
   }
 
+  /**
+   * send a message to the team that the current raid is either over or invalid
+   */
   public void broadcastEndRaid() {
     EndRaidMessage message = new EndRaidMessage(raidTarget, rc.getRoundNum());
     communicator.enqueueMessage(message);
@@ -142,7 +153,8 @@ public class Soldier extends Droid {
    */
   private boolean moveForRaid() throws GameActionException {
     rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
-    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
+//    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
+    return moveTowardsAvoidRubble(raidTarget)
         && rc.getLocation().distanceSquaredTo(raidTarget) <= creationStats.visionRad;
   }
 }

@@ -20,6 +20,7 @@ import firstbot.robots.droids.Miner;
 import firstbot.robots.droids.Sage;
 import firstbot.robots.droids.Soldier;
 
+import javax.rmi.CORBA.Util;
 import java.util.Arrays;
 
 public abstract class Robot {
@@ -170,7 +171,7 @@ public abstract class Robot {
   protected boolean move(Direction dir) throws GameActionException {
     if (Clock.getBytecodesLeft() > 11 && rc.canMove(dir)) {
       rc.move(dir);
-      return false;
+      return true;
     }
     return false;
   }
@@ -204,6 +205,51 @@ public abstract class Robot {
   protected boolean moveInDirLoose(Direction dir) throws GameActionException {
     return move(dir) || move(dir.rotateLeft()) || move(dir.rotateRight());
   }
+
+  /**
+   * move towards the given target and avoid rubble naively
+   * @param target the location to move towards
+   * @return if moved
+   * @throws GameActionException if movement fails
+   */
+  protected boolean moveTowardsAvoidRubble(MapLocation target) throws GameActionException {
+    int leastRubbleDirInd = -1;
+    int leastRubble = 101;
+    MapLocation myLoc = rc.getLocation();
+    int dToLoc = myLoc.distanceSquaredTo(target);
+    for (int i = 0; i < Utils.directions.length; i++) {
+      MapLocation newLoc = myLoc.add(Utils.directions[i]);
+      if (newLoc.distanceSquaredTo(target) <= dToLoc) {
+        if (rc.canSenseLocation(newLoc)) {
+          int rubble = rc.senseRubble(newLoc);
+          if (rubble < leastRubble) {
+            leastRubbleDirInd = i;
+            leastRubble = rubble;
+          }
+        }
+      }
+    }
+    if (leastRubbleDirInd != -1) {
+      return move(Utils.directions[leastRubbleDirInd]);
+    }
+
+    // inspired from pnay old code
+    // Potential choices
+    Direction dirToTarget = myLoc.directionTo(target);
+    MapLocation a = myLoc.add(dirToTarget);
+    MapLocation b = myLoc.add(dirToTarget.rotateRight());
+    MapLocation c = myLoc.add(dirToTarget.rotateLeft());
+    int costA = rc.canSenseLocation(a) ? rc.senseRubble(a) : 101;
+    int costB = rc.canSenseLocation(b) ? rc.senseRubble(b) : 101;
+    int costC = rc.canSenseLocation(c) ? rc.senseRubble(c) : 101;
+
+//    return moveInDirLoose(dirToTarget);
+    return (costA <= costB && costA <= costC && move(dirToTarget))
+        || (costB <= costC && move(dirToTarget.rotateRight()))
+        || (move(dirToTarget.rotateLeft()));
+  }
+
+
 
   /**
    * sense all around the robot for lead, choose a direction probabilistically

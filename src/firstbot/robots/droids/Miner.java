@@ -175,9 +175,10 @@ public class Miner extends Droid {
    */
   private void goToTarget() throws GameActionException {
     turnsWandering = 0;
-    Direction goal = rc.getLocation().directionTo(target);
-    rc.setIndicatorString("Approaching target" + target + " -- " + goal);
-    moveInDirLoose(goal);
+//    Direction goal = rc.getLocation().directionTo(target);
+    moveTowardsAvoidRubble(target);
+    rc.setIndicatorString("Approaching target" + target);
+//    moveInDirLoose(goal);
     rc.setIndicatorLine(rc.getLocation(), target, 255,10,10);
     rc.setIndicatorDot(target, 0, 255, 0);
     if (rc.getLocation().distanceSquaredTo(target) < creationStats.type.visionRadiusSquared / 2) { // set target to null if found!

@@ -16,12 +16,16 @@ public class Builder extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-    moveRandomly();
+    if (myBuilding == null) moveRandomly();
 //    rc.disintegrate();
     if (rc.isActionReady()) {
       if (myBuilding != null) {
-        if (rc.senseRobotAtLocation(myBuilding).health < RobotType.WATCHTOWER.getMaxHealth(1) && rc.canRepair(myBuilding)) {
+        int healthNeeded = RobotType.WATCHTOWER.getMaxHealth(1) - rc.senseRobotAtLocation(myBuilding).health;
+        if (healthNeeded > 0 && rc.canRepair(myBuilding)) {
            rc.repair(myBuilding);
+           if (healthNeeded <= -creationStats.type.damage) {
+             myBuilding = null;
+           }
         }
       } else {
         Direction dir = Utils.randomDirection();

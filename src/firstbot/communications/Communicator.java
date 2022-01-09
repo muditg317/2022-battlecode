@@ -301,6 +301,7 @@ public class Communicator {
       rescheduleMessageByRounds(message, 1);
       return;
     }
+//    if (start within where i need to write) { check priority
     boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
     System.out.printf("SEND %s MESSAGE: %s\n", message.header.type, Arrays.toString(messageBits));
