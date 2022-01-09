@@ -6,20 +6,20 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import battlecode.world.MapSymmetry;
 import firstbot.Utils;
 import firstbot.communications.messages.ArchonHelloMessage;
 import firstbot.communications.messages.Message;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = 2;
+  public static final int SUICIDE_ROUND = -5;
 
-  private int whichArchonAmI = 1;
+  private int whichArchonAmI;
   private List<MapLocation> archonLocs;
 
-  private MapSymmetry predictedSymmetry;
+//  private MapSymmetry predictedSymmetry;
 
   private int minersSpawned;
   private int buildersSpawned;
@@ -28,35 +28,34 @@ public class Archon extends Building {
 
   public Archon(RobotController rc) {
     super(rc);
-//    System.out.println("Hello from Archon constructor #"+rc.getID() + " at " + rc.getLocation());
+    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
+    archonLocs = new ArrayList<>();
+//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
   }
 
   @Override
   protected void runTurn() throws GameActionException {
-//    if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
-//      return;
-//    }
+    if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
+      return;
+    }
 
     // Repair damaged droid
     if (rc.isActionReady()) {
-      for (RobotInfo info : rc.senseNearbyRobots()) {
-        if (info.getTeam().isPlayer() && info.getHealth() < info.getType().getMaxHealth(info.getLevel())) { // we see a damaged friendly
-          if (rc.canRepair(info.getLocation())) rc.repair(info.getLocation());
+      for (RobotInfo info : rc.senseNearbyRobots(creationStats.type.actionRadiusSquared, creationStats.myTeam)) {
+        if (creationStats.type.canRepair(info.type) && info.health < info.type.getMaxHealth(info.level)) { // we see a damaged friendly
+          rc.repair(info.location);
+          break;
         }
       }
     }
 
+//    System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
 
     // Spawn new droid if none to repair
-    if (rc.isActionReady()) {
+    if (rc.isActionReady() && (Utils.rng.nextInt(rc.getArchonCount()-whichArchonAmI+2) <= 1)) {
+      //Utils.rng.nextInt(Math.max(1, rc.getArchonCount()-whichArchonAmI)) <= 1
       spawnDroid();
     }
-
-    // send test messages
-//    if (rc.getRoundNum() == 1) {
-//      communicator.enqueueMessage(new ArchonHelloMessage(69, 10), 10);
-//      communicator.enqueueMessage(new ArchonHelloMessage(420, 20), 20);
-//    }
 
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();
@@ -75,8 +74,6 @@ public class Archon extends Building {
 
     if (whichArchonAmI == rc.getArchonCount()) {
       System.out.println("I am the last archon! locs: " + archonLocs);
-
-
 
     }
 
@@ -109,7 +106,7 @@ public class Archon extends Building {
    */
   public void ackArchonHello(ArchonHelloMessage message) {
 //    if (rc.getRoundNum() == 1)
-      whichArchonAmI++;
+//      whichArchonAmI++;
     archonLocs.add(message.location);
 //    System.out.println("Got archon hello!");
   }

@@ -8,10 +8,9 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
+import battlecode.common.Team;
 import firstbot.Utils;
 import firstbot.communications.Communicator;
-import firstbot.communications.messages.LeadFoundMessage;
-import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
@@ -32,12 +31,20 @@ public abstract class Robot {
     public final MapLocation spawnLocation;
     public final int health;
     public final RobotType type;
+    public final Team myTeam;
+    public final Team opponent;
+    public final int visionRad;
+    public final int actionRad;
 
     public CreationStats(RobotController rc) {
       this.roundNum = rc.getRoundNum();
       this.spawnLocation = rc.getLocation();
       this.health = rc.getHealth();
       this.type = rc.getType();
+      this.myTeam = rc.getTeam();
+      this.opponent = myTeam.opponent();
+      this.visionRad = type.visionRadiusSquared;
+      this.actionRad = type.actionRadiusSquared;
     }
 
     @Override
@@ -188,6 +195,16 @@ public abstract class Robot {
   }
 
   /**
+   * move in this direction or an adjacent direction if can't move
+   * @param dir the direction to move in
+   * @return if moved
+   * @throws GameActionException if movement fails
+   */
+  protected boolean moveInDirLoose(Direction dir) throws GameActionException {
+    return move(dir) || move(dir.rotateLeft()) || move(dir.rotateRight());
+  }
+
+  /**
    * sense all around the robot for lead, choose a direction probabilistically
    *    weighted by how much lead is reached by moving in that direction
    *    IGNORES 0-1 Pb
@@ -206,6 +223,14 @@ public abstract class Robot {
       if (leadSeen < MIN_LEAD) { // ignore 0 Pb tiles
         continue;
       }
+      int rubbleThere = rc.senseRubble(loc);
+      int rubbleOnPath = rc.senseRubble(myLoc.add(myLoc.directionTo(loc)));
+      if (rubbleThere >= 5 || rubbleOnPath >= 10) { // ignore rubbly bois
+        continue;
+      }
+      leadSeen *= 100 - rc.senseRubble(loc);
+      leadSeen *= 100 - rc.senseRubble(myLoc.add(myLoc.directionTo(loc)));
+//      leadSeen /= myLoc.distanceSquaredTo(loc)+1;
       totalSeen += leadSeen;
       if (isNorth) {
         // check if location is open before adding it to weighting

@@ -8,9 +8,10 @@ public abstract class Message {
 
   /**
    * enum for the different message types that will be sent
+   * MAX OF 8 types
    */
   public enum MessageType {
-    ARCHON_HELLO, LEAD_FOUND, LEAD_REQUEST
+    ARCHON_HELLO, LEAD_FOUND, LEAD_REQUEST, START_RAID, END_RAID
   }
 
   /**
@@ -137,6 +138,8 @@ public abstract class Message {
       case ARCHON_HELLO: return new ArchonHelloMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
       case LEAD_REQUEST: return new LeadRequestMessage(header, information);
+      case START_RAID: return new StartRaidMessage(header, information);
+      case END_RAID: return new EndRaidMessage(header, information);
       default: throw new RuntimeException("Cannot read message with invalid type! " + header.type);
     }
   }

@@ -177,17 +177,7 @@ public class Miner extends Droid {
     turnsWandering = 0;
     Direction goal = rc.getLocation().directionTo(target);
     rc.setIndicatorString("Approaching target" + target + " -- " + goal);
-    if (!move(goal)) { // if goal is occupied, try instead to move in a semi-close direction
-      Direction try1 = goal.rotateLeft();
-      Direction try2 = goal.rotateRight();
-//      if (Utils.rng.nextBoolean()) {
-//        goal = try2;
-//      } else {
-//        goal = try1;
-//        try1 = try2;
-//      }
-      boolean ignored = move(try1) || move(try2);
-    }
+    moveInDirLoose(goal);
     rc.setIndicatorLine(rc.getLocation(), target, 255,10,10);
     rc.setIndicatorDot(target, 0, 255, 0);
     if (rc.getLocation().distanceSquaredTo(target) < creationStats.type.visionRadiusSquared / 2) { // set target to null if found!
