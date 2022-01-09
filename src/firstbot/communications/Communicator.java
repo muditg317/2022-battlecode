@@ -160,6 +160,30 @@ public class Communicator {
   }
 
   /**
+   * clean out own stale messages if they are at the start of the valid region
+   * @return if cleaned
+   */
+  public boolean cleanStaleMessages() {
+    if (!sentMessages.isEmpty()) {
+      for (Message message : sentMessages) {
+        if (message.writeInfo.startIndex == metaInfo.validRegionStart) {
+          Message last = sentMessages.get(sentMessages.size() - 1);
+          metaInfo.validRegionStart = (last.writeInfo.startIndex + last.header.numInformationInts + 1) % NUM_MESSAGING_INTS;
+          if (((metaInfo.validRegionEnd + 1) % NUM_MESSAGING_INTS) == metaInfo.validRegionStart) {
+            metaInfo.validRegionEnd++;
+          }
+          intsWritten++;
+//          System.out.println("Clearing messages! - starting from " + message.header.type);
+//          System.out.println("new bounds: " + metaInfo);
+          return true;
+        }
+      }
+      sentMessages.clear();
+    }
+    return false;
+  }
+
+  /**
    * read all the messages in the sharedArray
    * @return the number of messages that were read
    * @throws GameActionException thrown if readMessageAt fails
@@ -168,27 +192,33 @@ public class Communicator {
     Utils.startByteCodeCounting("reloadBuffer");
     reloadBuffer();
     Utils.finishByteCodeCounting("reloadBuffer");
+    cleanStaleMessages(); // clean out stale bois
     int origin = metaInfo.validRegionStart;
     int ending = metaInfo.validRegionEnd;
     if (ending < origin) {
       ending += GameConstants.SHARED_ARRAY_LENGTH;
     }
     if (ending == origin) { // no messages to read
-      metaInfo.validRegionEnd = -1;
-      metaInfo.validRegionStart = -1;
       return 0;
     }
 //    System.out.println("Reading messages: " + metaInfo);
     int messages = 0;
-    int lastAckdRound = received.isEmpty() ? 0 : getNthLastReceivedMessage(1).header.cyclicRoundNum;
-    int maxRoundNum = Message.Header.toCyclicRound(rc.getRoundNum());
-    if (maxRoundNum < lastAckdRound) maxRoundNum += Message.Header.ROUND_NUM_CYCLE_SIZE;
+//    int lastAckdRound = received.isEmpty() ? 0 : getNthLastReceivedMessage(1).header.cyclicRoundNum;
+//    if (!received.isEmpty()) {
+//      Message last = getNthLastReceivedMessage(1);
+//      System.out.println("last message: " + last.header.type + "\t -- ");
+//    }
+//    int maxRoundNum = Message.Header.toCyclicRound(rc.getRoundNum());
+//    if (maxRoundNum < lastAckdRound) maxRoundNum += Message.Header.ROUND_NUM_CYCLE_SIZE;
+//    System.out.println("ack messages within: (" + lastAckdRound + ", " + maxRoundNum + "]");
+    int thisRound = rc.getRoundNum();
     while (origin < ending) {
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
-      if (message.header.within(lastAckdRound, maxRoundNum)) { // skip stale messages
+//      if (message.header.withinCyclic(lastAckdRound, maxRoundNum)) { // skip stale messages
+//      if (message.header.withinRounds(thisRound-2,thisRound)) { // skip stale messages
         received.add(message);
         messages++;
-      }
+//      }
       origin += message.size();
     }
     return messages;
@@ -271,6 +301,7 @@ public class Communicator {
       rescheduleMessageByRounds(message, 1);
       return;
     }
+    boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
     System.out.printf("SEND %s MESSAGE: %s\n", message.header.type, Arrays.toString(messageBits));
 //    System.out.println(message.header);
@@ -291,9 +322,10 @@ public class Communicator {
       rc.writeSharedArray(origin, messageChunk);
     }
     sentMessages.add(message);
-    if (metaInfo.validRegionStart == -1) { // first message!
+    if (updateStart) { // first message!
       metaInfo.validRegionStart = origin - message.header.numInformationInts;
     }
+    rc.setIndicatorDot(rc.getLocation(), 0,255,0);
     metaInfo.validRegionEnd = origin;
     message.setWriteInfo(new Message.WriteInfo(Math.floorMod(origin - message.header.numInformationInts, NUM_MESSAGING_INTS)));
     intsWritten += message.size();
@@ -317,13 +349,13 @@ public class Communicator {
    */
   public void updateMetaInts() throws GameActionException {
     int[] metaInts = metaInfo.encode();
+//    System.out.println("Update meta: " + metaInfo + " -- " + Arrays.toString(metaInts));
     for (int i = 0; i < NUM_META_INTS; i++) {
-      if (metaInts[i] > 65535) {
+      if (metaInts[i] < 0 || metaInts[i] > GameConstants.MAX_SHARED_ARRAY_VALUE) {
         System.out.println("FAILED META UPDATE -- " + metaInfo + Arrays.toString(metaInts));
       }
       rc.writeSharedArray(META_INT_START + i, metaInts[i]);
     }
-//    System.out.println("Update meta: " + metaInfo);
   }
 
   /**

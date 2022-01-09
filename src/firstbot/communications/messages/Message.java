@@ -87,8 +87,11 @@ public abstract class Message {
      * @param maxRoundNum usually current round
      * @return if within bounds
      */
-    public boolean within(int lastAckdRound, int maxRoundNum) {
+    public boolean withinCyclic(int lastAckdRound, int maxRoundNum) {
       return lastAckdRound < cyclicRoundNum && cyclicRoundNum <= maxRoundNum;
+    }
+    public boolean withinRounds(int lastAckdRound, int maxRoundNum) {
+      return toCyclicRound(lastAckdRound) < cyclicRoundNum && cyclicRoundNum <= toCyclicRound(maxRoundNum);
     }
   }
 

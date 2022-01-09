@@ -82,7 +82,7 @@ public abstract class Robot {
    * @param rc the controller object
    * @return a custom Robot instance
    */
-  public static Robot fromRC(RobotController rc) {
+  public static Robot fromRC(RobotController rc) throws GameActionException {
     switch (rc.getType()) {
       case ARCHON:     return new Archon(rc);
       case LABORATORY: return new Laboratory(rc);
@@ -131,6 +131,7 @@ public abstract class Robot {
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
 
+//    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readMessages();
     while (pendingMessages > 0) {

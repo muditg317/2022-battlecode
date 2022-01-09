@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -5;
+  public static final int SUICIDE_ROUND = -500;
 
   private int whichArchonAmI;
   private List<MapLocation> archonLocs;
@@ -150,8 +150,10 @@ public class Archon extends Building {
    * @return boolean of need for builder
    */
   private boolean needBuilder() {
-    return rc.getTeamLeadAmount(rc.getTeam()) > 2000 // if lots of lead, make builder to spend that lead
-        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned; // need at least 1 builder per X rounds since charge anomaly
+    return buildersSpawned < 5 && ( // don't spam too many builders
+        rc.getTeamLeadAmount(rc.getTeam()) > 2000 // if lots of lead, make builder to spend that lead
+        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned
+    ); // need at least 1 builder per X rounds since charge anomaly
   }
 
   /**

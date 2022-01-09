@@ -10,9 +10,11 @@ import firstbot.communications.messages.EndRaidMessage;
 import firstbot.communications.messages.Message;
 import firstbot.communications.messages.StartRaidMessage;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class Soldier extends Droid {
 
-  boolean justBorn;
   MapLocation parentArchonLoc;
   MapLocation oppositeLoc;
   final MapLocation center;
@@ -20,25 +22,26 @@ public class Soldier extends Droid {
   int visionSize;
 
   MapLocation raidTarget;
+  boolean raidValidated;
 
-  public Soldier(RobotController rc) {
+  boolean canStartRaid;
+
+  public Soldier(RobotController rc) throws GameActionException {
     super(rc);
-    justBorn = true;
     center = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);
+    visionSize = rc.getAllLocationsWithinRadiusSquared(center, 100).length;
+    for (RobotInfo info : rc.senseNearbyRobots(2, creationStats.myTeam)) {
+      if (info.type == RobotType.ARCHON) {
+        parentArchonLoc = info.location;
+        oppositeLoc = new MapLocation(rc.getMapWidth()-1-parentArchonLoc.x, rc.getMapHeight()-1-parentArchonLoc.y);
+        break;
+      }
+    }
+    canStartRaid = true;
   }
 
   @Override
   protected void runTurn() throws GameActionException {
-    if (justBorn) {
-      visionSize = rc.getAllLocationsWithinRadiusSquared(center, 100).length;
-      for (RobotInfo info : rc.senseNearbyRobots(2, creationStats.myTeam)) {
-        if (info.type == RobotType.ARCHON) {
-          parentArchonLoc = info.location;
-          oppositeLoc = new MapLocation(rc.getMapWidth()-1-parentArchonLoc.x, rc.getMapHeight()-1-parentArchonLoc.y);
-          break;
-        }
-      }
-    }
 
     // Try to attack someone
     if (rc.isActionReady()) {
@@ -55,18 +58,33 @@ public class Soldier extends Droid {
       }
     }
 
-    if (raidTarget != null) {
-      if (moveForRaid()) { // reached target
-//        raidTarget = null;
-      }
-    } else {
+    if (raidTarget == null && canStartRaid) {
       RobotInfo[] nearby = rc.senseNearbyRobots(creationStats.type.visionRadiusSquared, creationStats.myTeam);
-      if (nearby.length > visionSize / 3) { // if many bois nearby (1/3 of vision)
+      if (nearby.length > visionSize / 4) { // if many bois nearby (1/4 of vision)
         rc.setIndicatorString("Ready to raid!");
 //      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
         callForRaid(oppositeLoc);
         raidTarget = oppositeLoc;
-      } else {
+      }
+    }
+
+    if (raidTarget != null) {
+      if (moveForRaid()) { // reached target
+//        raidTarget = null;
+        if (!raidValidated) {
+          for (RobotInfo enemy : rc.senseNearbyRobots(creationStats.visionRad, creationStats.opponent)) {
+            if (enemy.type == RobotType.ARCHON) {
+              raidValidated = true;
+              break;
+            }
+          }
+          if (!raidValidated) {
+            broadcastEndRaid();
+          }
+        }
+      }
+    } else {
+      {
         moveInDirLoose(rc.getLocation().directionTo(center));
       }
     }
@@ -88,13 +106,22 @@ public class Soldier extends Droid {
    */
   private void ackStartRaidMessage(StartRaidMessage message) throws GameActionException {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
+//    System.out.println("Got start raid" + message.location);
     raidTarget = message.location;
+    if (raidTarget.equals(oppositeLoc)) {
+      canStartRaid = false;
+    }
   }
 
   private void ackEndRaidMessage(EndRaidMessage message) throws GameActionException {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
-    if (raidTarget == message.location) {
+    if (raidTarget != null && raidTarget.equals(message.location)) {
       raidTarget = null;
+      raidValidated = false;
+//      System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
+    }
+    if (message.location.equals(oppositeLoc)) {
+      canStartRaid = false;
     }
   }
 
@@ -116,6 +143,6 @@ public class Soldier extends Droid {
   private boolean moveForRaid() throws GameActionException {
     rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
     return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
-        && rc.getLocation().distanceSquaredTo(raidTarget) <= creationStats.actionRad;
+        && rc.getLocation().distanceSquaredTo(raidTarget) <= creationStats.visionRad;
   }
 }
