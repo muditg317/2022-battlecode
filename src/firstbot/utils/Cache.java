@@ -27,7 +27,7 @@ public class Cache {
         Permanent.START_LOCATION = rc.getLocation();
         Permanent.ID = rc.getID();
         Permanent.VISION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.visionRadiusSquared;
-        Permanent.ACTION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.visionRadiusSquared;
+        Permanent.ACTION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.actionRadiusSquared;
         Permanent.MAP_WIDTH = rc.getMapWidth();
         Permanent.MAP_HEIGHT = rc.getMapHeight();
     }

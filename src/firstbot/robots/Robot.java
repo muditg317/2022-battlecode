@@ -282,6 +282,7 @@ public abstract class Robot {
    */
   protected MapLocation getBestLeadLocProbabilistic() throws GameActionException {
     final int MIN_LEAD = 1;
+    final int MAX_LOCS = Clock.getBytecodesLeft() >> (Cache.Permanent.ROBOT_TYPE.isBuilding() ? 8 : 9); // div by 256 = *0.78/100 -- allowed to use 78% of bytecode on this
 //    int[] leadInDirection = new int[Utils.directions.length];
     int avgX = 0;
     int avgY = 0;
@@ -290,7 +291,11 @@ public abstract class Robot {
 
     // for all loations I can sense =>
     // sum up lead and number of current miners, and see if miners > lead / 50: continue if so
-    for (MapLocation loc : rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, MIN_LEAD)) {
+    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, MIN_LEAD);
+    int incr = 1;
+    if (leadLocs.length > MAX_LOCS) incr = leadLocs.length / MAX_LOCS;
+    for (int i = 0, leadLocsLength = Math.min(leadLocs.length, MAX_LOCS * incr); i < leadLocsLength; i+=incr) {
+      MapLocation loc = leadLocs[i];
 
       // if there is a miner within 2x2 blocks of the location, then ignore it
       int leadSeen = rc.senseLead(loc);

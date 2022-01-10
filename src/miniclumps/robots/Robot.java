@@ -25,8 +25,8 @@ import miniclumps.robots.droids.Soldier;
 import java.util.Arrays;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
 
   private static final boolean USE_STOLEN_BFS = false;
 
@@ -238,10 +238,10 @@ public abstract class Robot {
    */
   protected boolean moveTowardsAvoidRubble(MapLocation target) throws GameActionException {
     if (!rc.isMovementReady()) return false;
-    if (USE_STOLEN_BFS) {
-//      stolenbfs.move(target, false);
-      if (!rc.isMovementReady()) return true;
-    }
+//    if (USE_STOLEN_BFS) {
+////      stolenbfs.move(target, false);
+//      if (!rc.isMovementReady()) return true;
+//    }
 
     int bestPosDirInd = -1;
     int bestPosRubble = 101;
