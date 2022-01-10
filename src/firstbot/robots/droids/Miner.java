@@ -1,9 +1,11 @@
 package firstbot.robots.droids;
 
+import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import firstbot.communications.messages.LeadFoundMessage;
 import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
@@ -16,6 +18,8 @@ public class Miner extends Droid {
   MapLocation target;
   private static final int WANDERING_TURNS_TO_FOLLOW_LEAD = 3;
   private static final int MAX_SQDIST_FOR_TARGET = 200;
+
+  MapLocation runAwayTarget;
 
   private LeadRequestMessage leadRequest; // TODO: make a message that the other boi will overwrite (will rely on getting ack within 1 turn or else sad)
 
@@ -38,8 +42,20 @@ public class Miner extends Droid {
       leadRequest = null;
     }
 
-
-    if (followLead()) target = null;
+    int start = Clock.getBytecodeNum();
+    MapLocation enemies = findEnemies();
+    if (enemies != null) {
+      MapLocation myLoc = rc.getLocation();
+      runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
+      Direction backToSelf = runAwayTarget.directionTo(myLoc);
+      while (!rc.canSenseLocation(runAwayTarget)) runAwayTarget = runAwayTarget.add(backToSelf);
+      rc.setIndicatorDot(myLoc, 255,255,0);
+      rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
+    }
+    int end = Clock.getBytecodeNum();
+//    System.out.println("Finding enemies took " + (end-start) + " BC");
+    if (runAwayTarget != null && runAway()) runAwayTarget = null;
+    else if (followLead()) target = null;
     else if (target != null) goToTarget();
     else if (moveRandomly()) {
       turnsWandering++;
@@ -152,6 +168,55 @@ public class Miner extends Droid {
   }
 
   /**
+   * check if there are any enemy (soldiers) to run away from
+   * @return the map location where there are offensive enemies (null if none)
+   */
+  private MapLocation findEnemies() {
+    RobotInfo[] enemies = rc.senseNearbyRobots(-1, creationStats.opponent);
+    if (enemies.length == 0) return null;
+    int avgX = 0;
+    int avgY = 0;
+    int count = 0;
+    for (RobotInfo enemy : enemies) {
+      if (enemy.type.damage > 0) { // enemy can hurt me
+        avgX += enemy.location.x * enemy.type.damage;
+        avgY += enemy.location.y * enemy.type.damage;
+        count += enemy.type.damage;
+      }
+    }
+    if (count == 0) return null;
+    return new MapLocation(avgX / count, avgY / count);
+  }
+
+  /**
+   * run away from enemies based on runaway target
+   * @return true if reached target
+   */
+  private boolean runAway() throws GameActionException {
+    if (moveTowardsAvoidRubble(runAwayTarget)) {
+      rc.setIndicatorString("run away! " + runAwayTarget);
+      return rc.getLocation().isWithinDistanceSquared(runAwayTarget, creationStats.actionRad);
+    }
+    return false;
+  }
+
+  /**
+   * move towards lead with probability
+   * @return if moved towards lead
+   * @throws GameActionException if movement failed
+   */
+  private boolean followLead() throws GameActionException {
+    boolean followedLead = moveToHighLeadProbabilistic();
+    if (followedLead) {
+      if (turnsWandering > WANDERING_TURNS_TO_BROADCAST_LEAD) {
+        broadcastLead(rc.getLocation());
+      }
+      turnsWandering = 0;
+    }
+    return followedLead;
+  }
+
+  /**
    * register the location with the miner with some regulations
    * @param newTarget the target to set
    * @return if the target was set
@@ -188,17 +253,6 @@ public class Miner extends Droid {
     if (rc.getLocation().isWithinDistanceSquared(target, creationStats.type.actionRadiusSquared)) { // set target to null if found!
       target = null;
     }
-  }
-
-  private boolean followLead() throws GameActionException {
-    boolean followedLead = moveToHighLeadProbabilistic();
-    if (followedLead) {
-      if (turnsWandering > WANDERING_TURNS_TO_BROADCAST_LEAD) {
-        broadcastLead(rc.getLocation());
-      }
-      turnsWandering = 0;
-    }
-    return followedLead;
   }
 
   /**

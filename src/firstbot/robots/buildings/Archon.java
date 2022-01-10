@@ -27,16 +27,30 @@ public class Archon extends Building {
   private int soldiersSpawned;
   private int sagesSpawned;
 
+  private int lastTurnStartingLead;
+  private int leadIncome;
+  private int leadSpent;
+
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
 //    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
     localLead = rc.senseNearbyLocationsWithLead(creationStats.visionRad).length;
+
+    lastTurnStartingLead = 0;
+    leadIncome = 0;
+    leadSpent = 0;
   }
 
   @Override
   protected void runTurn() throws GameActionException {
+    leadIncome = rc.getTeamLeadAmount(creationStats.myTeam) - lastTurnStartingLead + leadSpent;
+    lastTurnStartingLead = rc.getTeamLeadAmount(creationStats.myTeam);
+    leadSpent = 0;
+//    if (whichArchonAmI == rc.getArchonCount()) {
+//      System.out.println("Lead income: " + leadIncome);
+//    }
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
     }
@@ -65,6 +79,7 @@ public class Archon extends Building {
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();
     }
+    lastTurnStartingLead = rc.getTeamLeadAmount(creationStats.myTeam);
   }
 
   /**
@@ -124,16 +139,19 @@ public class Archon extends Building {
       if (buildRobot(RobotType.MINER, getBestLeadDirProbabilistic())) {
         rc.setIndicatorString("Spawn miner!");
         minersSpawned++;
+        leadSpent += RobotType.MINER.buildCostLead;
       }
     } else if (needBuilder()) {
       if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
         rc.setIndicatorString("Spawn builder!");
         buildersSpawned++;
+        leadSpent += RobotType.BUILDER.buildCostLead;
       }
     } else {
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
         rc.setIndicatorString("Spawn soldier!");
         soldiersSpawned++;
+        leadSpent += RobotType.SOLDIER.buildCostLead;
       }
     }
   }
@@ -143,10 +161,11 @@ public class Archon extends Building {
    * @return boolean of necessity of building a miner
    */
   private boolean needMiner() throws GameActionException {
-    return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && minersSpawned < 20 && ( // if we have > 2000Pb, just skip miners
+    return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && ( // if we have > 2000Pb, just skip miners
         rc.getRoundNum() < 100
-        || (localLead > 10 && localLead < rc.senseNearbyRobots(creationStats.visionRad, creationStats.myTeam).length) // lots of local lead available
-        || estimateAvgLeadIncome() / minersSpawned > 3 // spawn miners until we reach less than 5pb/miner income
+        || leadIncome < localLead
+//        || (localLead > 10 && localLead < rc.senseNearbyRobots(creationStats.visionRad, creationStats.myTeam).length) // lots of local lead available
+        || estimateAvgLeadIncome() / (minersSpawned+1) > 3 // spawn miners until we reach less than 5pb/miner income
     );
   }
 
@@ -156,9 +175,10 @@ public class Archon extends Building {
    * @return boolean of need for builder
    */
   private boolean needBuilder() {
-    return buildersSpawned < 5 && ( // don't spam too many builders
-        rc.getTeamLeadAmount(rc.getTeam()) > 200 // if lots of lead, make builder to spend that lead
-        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned
+    return rc.getTeamLeadAmount(rc.getTeam()) > 200 && (  // if lots of lead, make builder to spend that lead
+        rc.getRoundNum() % 10 == 0
+        || buildersSpawned < 5
+//        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned
     ); // need at least 1 builder per X rounds since charge anomaly
   }
 

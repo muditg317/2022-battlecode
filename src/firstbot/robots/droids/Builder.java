@@ -4,11 +4,12 @@ import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.Utils;
 
 public class Builder extends Droid {
-  private static final int DIST_TO_WALL_THRESH = 5;
+  private static final int DIST_TO_WALL_THRESH = 6;
 
   MapLocation myBuilding;
   Direction dirToBuild;
@@ -28,22 +29,18 @@ public class Builder extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-    if (myBuilding == null) {
-      moveInDirRandom(dirToBuild);
-      if (!readyToBuild && rc.getLocation().distanceSquaredTo(parentArchonLoc) >= creationStats.type.visionRadiusSquared) {
+    if (myBuilding == null && (moveInDirRandom(dirToBuild) || moveRandomly())) {
+      if (!rc.onTheMap(rc.getLocation().add(dirToBuild))) { // gone to map edge
+        dirToBuild = dirToBuild.opposite();
+      } else if (!readyToBuild && rc.getLocation().distanceSquaredTo(parentArchonLoc) >= creationStats.type.visionRadiusSquared) {
+        // can only be ready to build if not on edge
         readyToBuild = true;
       }
     }
 //    rc.disintegrate();
     if (readyToBuild && rc.isActionReady()) {
       if (myBuilding != null) {
-        int healthNeeded = RobotType.WATCHTOWER.getMaxHealth(1) - rc.senseRobotAtLocation(myBuilding).health;
-        if (healthNeeded > 0 && rc.canRepair(myBuilding)) {
-           rc.repair(myBuilding);
-           if (healthNeeded <= -creationStats.type.damage) {
-             myBuilding = null;
-           }
-        }
+        if (repairBuilding()) myBuilding = null;
       } else {
         Direction dir = Utils.randomDirection();
         if (rc.canBuildRobot(RobotType.WATCHTOWER, dir)) {
@@ -52,5 +49,21 @@ public class Builder extends Droid {
         }
       }
     }
+  }
+
+  /**
+   * repair the building at myBuilding
+   * @return true if done repairing
+   */
+  private boolean repairBuilding() throws GameActionException {
+    RobotInfo toRepair = rc.senseRobotAtLocation(myBuilding);
+    if (toRepair == null) return true; // stop repairing here
+    int healthNeeded = RobotType.WATCHTOWER.getMaxHealth(1) - toRepair.health;
+    boolean needsRepair = healthNeeded > 0;
+    if (needsRepair && rc.canRepair(myBuilding)) {
+      rc.repair(myBuilding);
+      return healthNeeded <= -creationStats.type.damage;
+    }
+    return needsRepair;
   }
 }

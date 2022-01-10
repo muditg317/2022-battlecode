@@ -5,17 +5,14 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import battlecode.common.Team;
+import firstbot.Utils;
 import firstbot.communications.messages.EndRaidMessage;
 import firstbot.communications.messages.Message;
 import firstbot.communications.messages.StartRaidMessage;
 
-import java.util.HashSet;
-import java.util.Set;
-
 public class Soldier extends Droid {
 
-  MapLocation oppositeLoc;
+  MapLocation myPotentialTarget;
   final MapLocation center;
 
   int visionSize;
@@ -27,9 +24,21 @@ public class Soldier extends Droid {
 
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
-    center = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);
+    int mapW = rc.getMapWidth();
+    int mapH = rc.getMapHeight();
+    center = new MapLocation(mapW/2, mapH/2);
     visionSize = rc.getAllLocationsWithinRadiusSquared(center, 100).length;
-    oppositeLoc = new MapLocation(rc.getMapWidth()-1-parentArchonLoc.x, rc.getMapHeight()-1-parentArchonLoc.y);
+    if (Math.abs(mapW - mapH) > 3) { // not a square default to flip sym for targetting
+      switch (Utils.rng.nextInt(2)) {
+        case 0:
+          myPotentialTarget = new MapLocation(mapW-1-parentArchonLoc.x, parentArchonLoc.y);
+          break;
+        default:
+          myPotentialTarget = new MapLocation(parentArchonLoc.x, mapH - 1 - parentArchonLoc.y);
+      }
+    } else {
+      myPotentialTarget = new MapLocation(mapW-1-parentArchonLoc.x, mapH-1-parentArchonLoc.y);
+    }
     canStartRaid = true;
   }
 
@@ -53,11 +62,15 @@ public class Soldier extends Droid {
 
     if (raidTarget == null && canStartRaid) {
       RobotInfo[] nearby = rc.senseNearbyRobots(creationStats.type.visionRadiusSquared, creationStats.myTeam);
-      if (nearby.length > visionSize / 4) { // if many bois nearby (1/4 of vision)
+      int nearbySoldiers = 0;
+      for (RobotInfo friend : nearby) {
+        if (friend.type == RobotType.SOLDIER) nearbySoldiers++;
+      }
+      if (nearbySoldiers > visionSize / 4) { // if many bois nearby (1/4 of vision)
         rc.setIndicatorString("Ready to raid!");
 //      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
-        callForRaid(oppositeLoc);
-        raidTarget = oppositeLoc;
+        callForRaid(myPotentialTarget);
+        raidTarget = myPotentialTarget;
       }
     }
 
@@ -101,7 +114,7 @@ public class Soldier extends Droid {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
 //    System.out.println("Got start raid" + message.location);
     raidTarget = message.location;
-    if (raidTarget.equals(oppositeLoc)) {
+    if (raidTarget.equals(myPotentialTarget)) {
       canStartRaid = false;
     }
   }
@@ -118,7 +131,7 @@ public class Soldier extends Droid {
       raidValidated = false;
 //      System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
     }
-    if (message.location.equals(oppositeLoc)) {
+    if (message.location.equals(myPotentialTarget)) {
       canStartRaid = false;
     }
   }
