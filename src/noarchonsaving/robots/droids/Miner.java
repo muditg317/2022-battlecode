@@ -1,13 +1,14 @@
-package firstbot.robots.droids;
+package noarchonsaving.robots.droids;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
-import firstbot.communications.messages.LeadFoundMessage;
-import firstbot.communications.messages.LeadRequestMessage;
-import firstbot.communications.messages.Message;
+import battlecode.common.RobotInfo;
+import noarchonsaving.communications.messages.LeadFoundMessage;
+import noarchonsaving.communications.messages.LeadRequestMessage;
+import noarchonsaving.communications.messages.Message;
 
 public class Miner extends Droid {
 
@@ -35,14 +36,14 @@ public class Miner extends Droid {
     if (target == null && leadRequest != null) {
       rc.setIndicatorString("Checking request response!");
       if (leadRequest.readSharedResponse(communicator)) {
-        System.out.println("Got request response!!" + leadRequest.location);
+        //System.out.println("Got request response!!" + leadRequest.location);
         registerTarget(leadRequest.location);
       }
       leadRequest = null;
     }
 
     int start = Clock.getBytecodeNum();
-    MapLocation enemies = offensiveEnemyCentroid();
+    MapLocation enemies = findEnemies();
     if (enemies != null) {
       MapLocation myLoc = rc.getLocation();
       runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
@@ -52,7 +53,7 @@ public class Miner extends Droid {
       rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
     }
     int end = Clock.getBytecodeNum();
-//    System.out.println("Finding enemies took " + (end-start) + " BC");
+//    //System.out.println("Finding enemies took " + (end-start) + " BC");
     if (runAwayTarget != null && runAway()) runAwayTarget = null;
     else if (followLead()) target = null;
     else if (target != null) goToTarget();
@@ -167,6 +168,27 @@ public class Miner extends Droid {
   }
 
   /**
+   * check if there are any enemy (soldiers) to run away from
+   * @return the map location where there are offensive enemies (null if none)
+   */
+  private MapLocation findEnemies() {
+    RobotInfo[] enemies = rc.senseNearbyRobots(-1, creationStats.opponent);
+    if (enemies.length == 0) return null;
+    int avgX = 0;
+    int avgY = 0;
+    int count = 0;
+    for (RobotInfo enemy : enemies) {
+      if (enemy.type.damage > 0) { // enemy can hurt me
+        avgX += enemy.location.x * enemy.type.damage;
+        avgY += enemy.location.y * enemy.type.damage;
+        count += enemy.type.damage;
+      }
+    }
+    if (count == 0) return null;
+    return new MapLocation(avgX / count, avgY / count);
+  }
+
+  /**
    * run away from enemies based on runaway target
    * @return true if reached target
    */
@@ -241,7 +263,7 @@ public class Miner extends Droid {
 //    communicator.enqueueMessage(new LeadFoundMessage(location, rc.getRoundNum()));
 //    rc.setIndicatorDot(location, 0, 255, 0);
 //    rc.setIndicatorString("Broadcast lead! " + location);
-//    System.out.println("Broadcast lead! " + location);
+//    //System.out.println("Broadcast lead! " + location);
   }
 
   /**
@@ -263,6 +285,6 @@ public class Miner extends Droid {
     communicator.enqueueMessage(leadRequest);
     rc.setIndicatorDot(rc.getLocation(), 0, 0, 255);
     rc.setIndicatorString("Requesting lead!");
-    System.out.println("Requesting lead!");
+    //System.out.println("Requesting lead!");
   }
 }
