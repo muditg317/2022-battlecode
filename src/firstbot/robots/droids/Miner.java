@@ -1,16 +1,11 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
+import battlecode.common.*;
 import firstbot.Cache;
 import firstbot.Utils;
 import firstbot.communications.messages.LeadFoundMessage;
-import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
+import firstbot.communications.messages.LeadRequestMessage;
 
 public class Miner extends Droid {
 
