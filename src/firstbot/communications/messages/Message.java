@@ -11,7 +11,15 @@ public abstract class Message {
    * MAX OF 8 types
    */
   public enum MessageType {
-    ARCHON_HELLO, LEAD_FOUND, LEAD_REQUEST, START_RAID, END_RAID
+    ARCHON_HELLO(ArchonHelloMessage.MESSAGE_LENGTH),
+    LEAD_FOUND(LeadFoundMessage.MESSAGE_LENGTH),
+    LEAD_REQUEST(LeadRequestMessage.MESSAGE_LENGTH),
+    START_RAID(StartRaidMessage.MESSAGE_LENGTH),
+    END_RAID(EndRaidMessage.MESSAGE_LENGTH);
+    public final int standardSize;
+    MessageType(int standardSize) {
+      this.standardSize = standardSize;
+    }
   }
 
   /**
@@ -92,6 +100,12 @@ public abstract class Message {
     }
     public boolean withinRounds(int lastAckdRound, int maxRoundNum) {
       return toCyclicRound(lastAckdRound) < cyclicRoundNum && cyclicRoundNum <= toCyclicRound(maxRoundNum);
+    }
+
+    public void validate() {
+      if (type.standardSize != -1 && type.standardSize != numInformationInts) {
+        throw new RuntimeException("Invalid message header!");
+      }
     }
   }
 

@@ -19,6 +19,7 @@ public class Archon extends Building {
   private int whichArchonAmI;
   private List<MapLocation> archonLocs;
 
+  private final int localLead;
 //  private MapSymmetry predictedSymmetry;
 
   private int minersSpawned;
@@ -26,11 +27,12 @@ public class Archon extends Building {
   private int soldiersSpawned;
   private int sagesSpawned;
 
-  public Archon(RobotController rc) {
+  public Archon(RobotController rc) throws GameActionException {
     super(rc);
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
 //    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
+    localLead = rc.senseNearbyLocationsWithLead(creationStats.visionRad).length;
   }
 
   @Override
@@ -52,8 +54,11 @@ public class Archon extends Building {
 //    System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
 
     // Spawn new droid if none to repair
-    if (rc.isActionReady() && (Utils.rng.nextInt(rc.getArchonCount()-whichArchonAmI+2) <= 1)) {
-      //Utils.rng.nextInt(Math.max(1, rc.getArchonCount()-whichArchonAmI)) <= 1
+    int archons = rc.getArchonCount();
+    if (rc.isActionReady() && rc.getRoundNum() % archons == whichArchonAmI % archons) {
+//    if (rc.isActionReady() && (Utils.rng.nextInt(rc.getArchonCount()-whichArchonAmI+2) <= 1)) {
+//    if (rc.isActionReady() && (Utils.rng.nextInt((rc.getArchonCount()>>1)|1) <= whichArchonAmI>>1)) {
+        //Utils.rng.nextInt(Math.max(1, rc.getArchonCount()-whichArchonAmI)) <= 1
       spawnDroid();
     }
 
@@ -137,9 +142,10 @@ public class Archon extends Building {
    * decides if more miners are needed currently
    * @return boolean of necessity of building a miner
    */
-  private boolean needMiner() {
+  private boolean needMiner() throws GameActionException {
     return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && minersSpawned < 20 && ( // if we have > 2000Pb, just skip miners
         rc.getRoundNum() < 100
+        || (localLead > 10 && localLead < rc.senseNearbyRobots(creationStats.visionRad, creationStats.myTeam).length) // lots of local lead available
         || estimateAvgLeadIncome() / minersSpawned > 3 // spawn miners until we reach less than 5pb/miner income
     );
   }
@@ -151,7 +157,7 @@ public class Archon extends Building {
    */
   private boolean needBuilder() {
     return buildersSpawned < 5 && ( // don't spam too many builders
-        rc.getTeamLeadAmount(rc.getTeam()) > 2000 // if lots of lead, make builder to spend that lead
+        rc.getTeamLeadAmount(rc.getTeam()) > 200 // if lots of lead, make builder to spend that lead
         || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned
     ); // need at least 1 builder per X rounds since charge anomaly
   }

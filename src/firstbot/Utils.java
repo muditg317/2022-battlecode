@@ -50,6 +50,50 @@ public class Utils {
     return new MapLocation((encoded >> 10) & 0x3f, (encoded >> 4) & 0x3f);
   }
 
+  /**
+   * flip the x component of a direction
+   * @param toFlip the direction to slip x
+   * @return the x-flipped direction
+   */
+  public static Direction flipDirX(Direction toFlip) {
+    switch (toFlip) {
+      case NORTH: return toFlip;
+      case NORTHEAST: return Direction.NORTHWEST;
+      case EAST: return Direction.WEST;
+      case SOUTHEAST: return Direction.SOUTHWEST;
+      case SOUTH: return toFlip;
+      case SOUTHWEST: return Direction.SOUTHEAST;
+      case WEST: return Direction.EAST;
+      case NORTHWEST: return Direction.NORTHEAST;
+      case CENTER: return Direction.CENTER;
+    }
+    throw new RuntimeException("Cannot flip x of invalid Direction! " + toFlip);
+  }
+
+  /**
+   * flip the y component of a direction
+   * @param toFlip the direction to slip y
+   * @return the y-flipped direction
+   */
+  public static Direction flipDirY(Direction toFlip) {
+    switch (toFlip) {
+      case NORTH: return Direction.SOUTH;
+      case NORTHEAST: return Direction.SOUTHEAST;
+      case EAST: return Direction.EAST;
+      case SOUTHEAST: return Direction.NORTHEAST;
+      case SOUTH: return Direction.NORTH;
+      case SOUTHWEST: return Direction.NORTHWEST;
+      case WEST: return Direction.WEST;
+      case NORTHWEST: return Direction.SOUTHWEST;
+      case CENTER: return Direction.CENTER;
+    }
+    throw new RuntimeException("Cannot flip y of invalid Direction! " + toFlip);
+  }
+
+  public static int maxSingleAxisDist(MapLocation a, MapLocation b) {
+    return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+  }
+
   /*
 
   * / // ================================== TOGGLE THIS OFF/ON

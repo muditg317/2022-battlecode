@@ -7,7 +7,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 
 public class Watchtower extends Building {
-  public Watchtower(RobotController rc) {
+  public Watchtower(RobotController rc) throws GameActionException {
     super(rc);
   }
 

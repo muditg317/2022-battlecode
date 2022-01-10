@@ -12,6 +12,8 @@ import battlecode.common.Team;
 import firstbot.Utils;
 import firstbot.communications.Communicator;
 import firstbot.communications.messages.Message;
+import firstbot.pathfinding.StolenBFS;
+import firstbot.pathfinding.StolenBFS2;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
 import firstbot.robots.buildings.Watchtower;
@@ -26,6 +28,8 @@ import java.util.Arrays;
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
   private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+
+  private static final boolean USE_STOLEN_BFS = false;
 
   protected static class CreationStats {
     public final int roundNum;
@@ -60,6 +64,7 @@ public abstract class Robot {
 
   protected final CreationStats creationStats;
 
+  protected final StolenBFS2 stolenbfs;
 
   /**
    * Create a Robot with the given controller
@@ -72,6 +77,7 @@ public abstract class Robot {
 
     this.creationStats = new CreationStats(rc);
 
+    this.stolenbfs = new StolenBFS2(rc);
     // Print spawn message
 //    System.out.println(this.creationStats);
     // Set indicator message
@@ -131,7 +137,7 @@ public abstract class Robot {
    */
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
-
+    stolenbfs.initTurn();
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readMessages();
@@ -207,30 +213,61 @@ public abstract class Robot {
   }
 
   /**
+   * move randomly in this general direction
+   * @param dir the direction to move in
+   * @return if moved
+   * @throws GameActionException if movement fails
+   */
+  protected boolean moveInDirRandom(Direction dir) throws GameActionException {
+    switch (Utils.rng.nextInt(4)) {
+      case 0:
+      case 1:
+        if (move(dir)) return true;
+      case 2:
+        if (move(dir.rotateLeft())) return true;
+      case 3:
+        return move(dir.rotateRight());
+    }
+    return false;
+  }
+
+  /**
    * move towards the given target and avoid rubble naively
    * @param target the location to move towards
    * @return if moved
    * @throws GameActionException if movement fails
    */
   protected boolean moveTowardsAvoidRubble(MapLocation target) throws GameActionException {
-    int leastRubbleDirInd = -1;
-    int leastRubble = 101;
+    if (!rc.isMovementReady()) return false;
+    if (USE_STOLEN_BFS) {
+      stolenbfs.move(target, false);
+      if (!rc.isMovementReady()) return true;
+    }
+
+    int bestPosDirInd = -1;
+    int bestPosRubble = 101;
+    int bestPosDist = -1;
     MapLocation myLoc = rc.getLocation();
     int dToLoc = myLoc.distanceSquaredTo(target);
+
+    MapLocation newLoc; // temp
+    int newLocDist; // temp
     for (int i = 0; i < Utils.directions.length; i++) {
-      MapLocation newLoc = myLoc.add(Utils.directions[i]);
-      if (newLoc.distanceSquaredTo(target) <= dToLoc) {
+      newLoc = myLoc.add(Utils.directions[i]);
+      newLocDist = newLoc.distanceSquaredTo(target);
+      if (rc.canMove(Utils.directions[i]) && newLocDist <= dToLoc) {
         if (rc.canSenseLocation(newLoc)) {
           int rubble = rc.senseRubble(newLoc);
-          if (rubble < leastRubble) {
-            leastRubbleDirInd = i;
-            leastRubble = rubble;
+          if (rubble < bestPosRubble || (rubble == bestPosRubble && newLocDist < bestPosDist)) {
+            bestPosDirInd = i;
+            bestPosRubble = rubble;
+            bestPosDist = newLocDist;
           }
         }
       }
     }
-    if (leastRubbleDirInd != -1) {
-      return move(Utils.directions[leastRubbleDirInd]);
+    if (bestPosDirInd != -1) {
+      return move(Utils.directions[bestPosDirInd]);
     }
 
     // inspired from pnay old code
@@ -249,6 +286,23 @@ public abstract class Robot {
         || (move(dirToTarget.rotateLeft()));
   }
 
+//  protected boolean moveSafely(MapLocation loc, int rad){
+//    if (loc == null) return false;
+//    int d = rc.getLocation().distanceSquaredTo(loc);
+//    d = Math.min(d, rad);
+//    boolean[] imp = new boolean[Utils.directions.length];
+//    boolean greedy = false;
+//    for (int i = Utils.directions.length; i-- > 0; ){
+//      MapLocation newLoc = rc.getLocation().add(Utils.directions[i]);
+//      if (newLoc.distanceSquaredTo(loc) <= d){
+//        imp[i] = true;
+//        greedy = true;
+//      }
+//    }
+//    stolenbfs.path.setImpassable(imp);
+//    stolenbfs.move(loc, greedy);
+//    return true;
+//  }
 
 
   /**

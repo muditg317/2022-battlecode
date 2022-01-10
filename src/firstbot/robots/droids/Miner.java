@@ -12,7 +12,7 @@ public class Miner extends Droid {
 
   int turnsWandering;
   private static final int WANDERING_TURNS_TO_BROADCAST_LEAD = 10; // if the miner wanders for >= 10 turns, it will broadcast when lead is found
-  private static final int MAX_WANDERING_REQUEST_LEAD = 5; // if wandering for 5+ turns, request lead broadcast
+  private static final int MAX_WANDERING_REQUEST_LEAD = 8; // if wandering for 5+ turns, request lead broadcast
   MapLocation target;
   private static final int WANDERING_TURNS_TO_FOLLOW_LEAD = 3;
   private static final int MAX_SQDIST_FOR_TARGET = 200;
@@ -32,6 +32,7 @@ public class Miner extends Droid {
     if (target == null && leadRequest != null) {
       rc.setIndicatorString("Checking request response!");
       if (leadRequest.readSharedResponse(communicator)) {
+        System.out.println("Got request response!!" + leadRequest.location);
         registerTarget(leadRequest.location);
       }
       leadRequest = null;
@@ -95,8 +96,11 @@ public class Miner extends Droid {
     }
     if (message.answered) return; // some other miner already satisfied this request
 
+
     // we have a target, forward it to the requester
     MapLocation responseLocation = target != null ? target : rc.getLocation();
+    if (message.from.distanceSquaredTo(responseLocation) > MAX_SQDIST_FOR_TARGET) return; // don't answer if too far
+
     rc.setIndicatorString("Answer lead request: " + responseLocation);
 
     message.respond(communicator, responseLocation);
@@ -181,7 +185,7 @@ public class Miner extends Droid {
 //    moveInDirLoose(goal);
     rc.setIndicatorLine(rc.getLocation(), target, 255,10,10);
     rc.setIndicatorDot(target, 0, 255, 0);
-    if (rc.getLocation().distanceSquaredTo(target) < creationStats.type.visionRadiusSquared / 2) { // set target to null if found!
+    if (rc.getLocation().isWithinDistanceSquared(target, creationStats.type.actionRadiusSquared)) { // set target to null if found!
       target = null;
     }
   }
@@ -223,7 +227,7 @@ public class Miner extends Droid {
    * send a RequestLeadMessage
    */
   private void requestLead() {
-    leadRequest = new LeadRequestMessage(rc.getRoundNum());
+    leadRequest = new LeadRequestMessage(rc.getLocation(), rc.getRoundNum());
     communicator.enqueueMessage(leadRequest);
     rc.setIndicatorDot(rc.getLocation(), 0, 0, 255);
     rc.setIndicatorString("Requesting lead!");

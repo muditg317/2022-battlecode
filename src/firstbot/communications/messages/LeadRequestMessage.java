@@ -2,11 +2,8 @@ package firstbot.communications.messages;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
 import firstbot.Utils;
 import firstbot.communications.Communicator;
-
-import java.util.Arrays;
 
 /**
  * A message sent by wandering miners looking for information about where to go
@@ -14,18 +11,21 @@ import java.util.Arrays;
 public class LeadRequestMessage extends Message {
   public static final int PRIORITY = 1;
   public static final MessageType TYPE = MessageType.LEAD_REQUEST;
-  public static final int MESSAGE_LENGTH = 1;
+  public static final int MESSAGE_LENGTH = 2;
+
+  public MapLocation from;
   public MapLocation location;
   public boolean answered;
 
-  public LeadRequestMessage(int priority, int roundNum) {
+  public LeadRequestMessage(int priority, MapLocation from, int roundNum) {
     super(priority, TYPE, MESSAGE_LENGTH, roundNum);
+    this.from = from;
     location = null;
     answered = false;
   }
 
-  public LeadRequestMessage(int roundNum) {
-    this(PRIORITY, roundNum);
+  public LeadRequestMessage(MapLocation from, int roundNum) {
+    this(PRIORITY, from, roundNum);
   }
 
   public LeadRequestMessage(Header header, int[] information) {
@@ -38,19 +38,20 @@ public class LeadRequestMessage extends Message {
    * @param information the ints
    */
   private void processInformation(int[] information) {
+    from = Utils.decodeLocation(information[0]);
     answered = checkAnsweredFlag(information);
-    location = answered ? Utils.decodeLocation(information[0]) : null;
+    location = answered ? Utils.decodeLocation(information[1]) : null;
   }
 
   private static boolean checkAnsweredFlag(int[] information) {
-    return (information[0] & 1) == 1;
+    return (information[1] & 1) == 1;
   }
 
   public int[] toEncodedInts() {
-    return new int[]{getHeaderInt(), encodeLocation(location)};
+    return new int[]{getHeaderInt(), Utils.encodeLocation(from), encodeResponse(location)};
   }
 
-  private static int encodeLocation(MapLocation location) {
+  private static int encodeResponse(MapLocation location) {
     return location == null ? 0 : (Utils.encodeLocation(location) | 1);
   }
 
@@ -61,10 +62,10 @@ public class LeadRequestMessage extends Message {
    */
   public boolean readSharedResponse(Communicator communicator) {
     if (!communicator.headerMatches(writeInfo.startIndex, header)) return false; // return false if the message is no longer valid
-//    System.out.println("Read response at " + (writeInfo.startIndex+1));
+    System.out.println("Read response at " + (writeInfo.startIndex+1));
     int[] information = communicator.readInts(writeInfo.startIndex+1, header.numInformationInts);
-//    System.out.println("Process request response: " + Arrays.toString(information));
     processInformation(information);
+    System.out.println("Process request response: " + location);
     return answered;
   }
 
@@ -75,7 +76,7 @@ public class LeadRequestMessage extends Message {
    * @throws GameActionException if writing fails
    */
   public void respond(Communicator communicator, MapLocation leadTarget) throws GameActionException {
-    System.out.println("Respond to request! " + writeInfo.startIndex);
-    communicator.writeInts(writeInfo.startIndex + 1, new int[]{encodeLocation(leadTarget)});
+    System.out.println("Respond to request! " + writeInfo.startIndex + ": " + leadTarget);
+    communicator.writeInts(writeInfo.startIndex + 2, new int[]{encodeResponse(leadTarget)});
   }
 }

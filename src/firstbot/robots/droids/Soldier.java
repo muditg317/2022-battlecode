@@ -15,7 +15,6 @@ import java.util.Set;
 
 public class Soldier extends Droid {
 
-  MapLocation parentArchonLoc;
   MapLocation oppositeLoc;
   final MapLocation center;
 
@@ -30,13 +29,7 @@ public class Soldier extends Droid {
     super(rc);
     center = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);
     visionSize = rc.getAllLocationsWithinRadiusSquared(center, 100).length;
-    for (RobotInfo info : rc.senseNearbyRobots(2, creationStats.myTeam)) {
-      if (info.type == RobotType.ARCHON) {
-        parentArchonLoc = info.location;
-        oppositeLoc = new MapLocation(rc.getMapWidth()-1-parentArchonLoc.x, rc.getMapHeight()-1-parentArchonLoc.y);
-        break;
-      }
-    }
+    oppositeLoc = new MapLocation(rc.getMapWidth()-1-parentArchonLoc.x, rc.getMapHeight()-1-parentArchonLoc.y);
     canStartRaid = true;
   }
 
@@ -83,6 +76,7 @@ public class Soldier extends Droid {
           }
         }
       }
+      rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
     } else {
 //      moveInDirLoose(rc.getLocation().directionTo(center));
       moveTowardsAvoidRubble(center);
