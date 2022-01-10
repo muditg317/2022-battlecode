@@ -1,18 +1,17 @@
-package firstbot;
+package noarchonsaving;
 
+import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class Utils {
 
   /** Seeded RNG for use throughout the bot classes */
-  public static Random rng;
-  public static RobotController rc;
-  public static int mapWidth;
-  public static int mapHeight;
+  public static final Random rng = new Random(69);
 
   /** Array of the 8 possible directions. */
   public static final Direction[] directions = {
@@ -26,22 +25,9 @@ public class Utils {
       Direction.NORTHWEST,
   };
 
-  public static void setUpStatics(RobotController rc) {
-    Utils.rc = rc;
-    rng = new Random(rc.getID());
-    mapWidth = rc.getMapWidth();
-    mapHeight = rc.getMapHeight();
-  }
-
   public static Direction randomDirection() {
     return directions[rng.nextInt(directions.length)];
   }
-
-  public static MapLocation randomMapLocation() { return new MapLocation(randomMapLocationX(), randomMapLocationY());}
-
-  public static int randomMapLocationX() { return rng.nextInt(mapWidth);}
-
-  public static int randomMapLocationY() { return rng.nextInt(mapHeight);}
 
   /**
    * encode the location into an integer where
@@ -104,25 +90,8 @@ public class Utils {
     throw new RuntimeException("Cannot flip y of invalid Direction! " + toFlip);
   }
 
-  /**
-   * calculate the distance between two locations based on the largest difference on a single axis
-   * @param a first location
-   * @param b second location
-   * @return the distance metric
-   */
   public static int maxSingleAxisDist(MapLocation a, MapLocation b) {
     return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-  }
-
-  /**
-   * do a lerp between the locations
-   * @param from the location to start from
-   * @param to the location to end at
-   * @param amount the lerping distance
-   * @return the lerped location
-   */
-  public static MapLocation lerpLocations(MapLocation from, MapLocation to, double amount) {
-    return new MapLocation((int) ((to.x - from.x) * amount) + from.x, (int) ((to.y - from.y) * amount) + from.y);
   }
 
   /*
@@ -132,7 +101,7 @@ public class Utils {
   private static Map<String, Integer> byteCodeMap = new HashMap<>();
   public static void startByteCodeCounting(String reason) {
     if (byteCodeMap.putIfAbsent(reason, Clock.getBytecodeNum()) != null) { // we're already counting!
-      System.out.printf("Already counting for %s!!\n", reason);
+      //System.out.printf("Already counting for %s!!\n", reason);
     }
   }
 
@@ -140,10 +109,10 @@ public class Utils {
     int end = Clock.getBytecodeNum();
     Integer start = byteCodeMap.getOrDefault(reason, -1);
     if (start == -1) {
-      System.out.printf("Not counting bytecodes for %s!!!\n", reason);
+      //System.out.printf("Not counting bytecodes for %s!!!\n", reason);
       return;
     }
-    System.out.printf("%4d BC: %s\n", end-start, reason);
+    //System.out.printf("%4d BC: %s\n", end-start, reason);
     byteCodeMap.remove(reason);
   }
 

@@ -6,28 +6,32 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.Utils;
+import firstbot.communications.messages.ArchonSavedMessage;
 import firstbot.communications.messages.EndRaidMessage;
 import firstbot.communications.messages.Message;
+import firstbot.communications.messages.SaveMeMessage;
 import firstbot.communications.messages.StartRaidMessage;
 
 public class Soldier extends Droid {
+  /* fraction of distance to the target where bots should meet up */
+  public static final double MEETUP_FACTOR = 0.25;
 
   MapLocation myPotentialTarget;
-  final MapLocation center;
+  final MapLocation meetupPoint;
 
   int visionSize;
 
+  boolean canStartRaid;
   MapLocation raidTarget;
   boolean raidValidated;
 
-  boolean canStartRaid;
+
+  MapLocation archonToSave;
 
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
     int mapW = rc.getMapWidth();
     int mapH = rc.getMapHeight();
-    center = new MapLocation(mapW/2, mapH/2);
-    visionSize = rc.getAllLocationsWithinRadiusSquared(center, 100).length;
     if (Math.abs(mapW - mapH) > 3) { // not a square default to flip sym for targetting
       switch (Utils.rng.nextInt(2)) {
         case 0:
@@ -39,6 +43,8 @@ public class Soldier extends Droid {
     } else {
       myPotentialTarget = new MapLocation(mapW-1-parentArchonLoc.x, mapH-1-parentArchonLoc.y);
     }
+    meetupPoint = Utils.lerpLocations(rc.getLocation(), myPotentialTarget, MEETUP_FACTOR);
+    visionSize = rc.getAllLocationsWithinRadiusSquared(meetupPoint, 100).length;
     canStartRaid = true;
   }
 
@@ -46,35 +52,20 @@ public class Soldier extends Droid {
   protected void runTurn() throws GameActionException {
 
     // Try to attack someone
-    if (rc.isActionReady()) {
-      for (RobotInfo enemy : rc.senseNearbyRobots(creationStats.actionRad, creationStats.opponent)) {
-        MapLocation toAttack = enemy.location;
-        if (rc.canAttack(toAttack)) {
-          rc.attack(toAttack);
-          if (raidTarget != null && enemy.health < creationStats.type.getDamage(0)) { // we killed it
-            if (enemy.type == RobotType.ARCHON && enemy.location.distanceSquaredTo(raidTarget) <= creationStats.actionRad) {
-              broadcastEndRaid();
-            }
-          }
-        }
-      }
-    }
+    if (raidTarget != null) attackTarget(raidTarget);
 
-    if (raidTarget == null && canStartRaid) {
-      RobotInfo[] nearby = rc.senseNearbyRobots(creationStats.type.visionRadiusSquared, creationStats.myTeam);
-      int nearbySoldiers = 0;
-      for (RobotInfo friend : nearby) {
-        if (friend.type == RobotType.SOLDIER) nearbySoldiers++;
-      }
-      if (nearbySoldiers > visionSize / 4) { // if many bois nearby (1/4 of vision)
-        rc.setIndicatorString("Ready to raid!");
-//      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
-        callForRaid(myPotentialTarget);
-        raidTarget = myPotentialTarget;
-      }
-    }
+    checkForAndCallRaid();
 
-    if (raidTarget != null) {
+    if (archonToSave != null) {
+      if (raidTarget != null) {
+        broadcastEndRaid();
+        raidTarget = null;
+      }
+      if (moveTowardsAvoidRubble(archonToSave) && checkDoneSaving()) {
+        finishSaving();
+      }
+      attackTarget(archonToSave);
+    } else if (raidTarget != null) {
       if (moveForRaid()) { // reached target
 //        raidTarget = null;
         if (!raidValidated) {
@@ -92,8 +83,10 @@ public class Soldier extends Droid {
       rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
     } else {
 //      moveInDirLoose(rc.getLocation().directionTo(center));
-      moveTowardsAvoidRubble(center);
+      moveTowardsAvoidRubble(meetupPoint);
     }
+
+    attackNearby();
   }
 
   @Override
@@ -102,6 +95,10 @@ public class Soldier extends Droid {
       ackStartRaidMessage((StartRaidMessage) message);
     } else if (message instanceof EndRaidMessage) {
       ackEndRaidMessage((EndRaidMessage) message);
+    } else if (message instanceof SaveMeMessage) {
+      ackSaveMeMessage((SaveMeMessage) message);
+    } else if (message instanceof ArchonSavedMessage) {
+      ackArchonSavedMessage((ArchonSavedMessage) message);
     }
   }
 
@@ -137,12 +134,83 @@ public class Soldier extends Droid {
   }
 
   /**
+   * acknowledge an archon that needs saving
+   * @param message the request for saving from an archon
+   */
+  private void ackSaveMeMessage(SaveMeMessage message) {
+    if (archonToSave == null || Utils.rng.nextInt(5) < 2) { // not already saving or 2/5 chance to switch
+      archonToSave = message.location;
+    }
+  }
+
+  /**
+   * acknowledge an archon is done being saved
+   * @param message the message to stop saving an archon
+   */
+  private void ackArchonSavedMessage(ArchonSavedMessage message) {
+    if (archonToSave != null && archonToSave.equals(message.location)) { // not already saving or 2/5 chance to switch
+      archonToSave = null;
+    }
+  }
+
+  /**
+   * checks if the archon has been saved
+   * @return true if saving is done
+   * @throws GameActionException if checking fails
+   */
+  private boolean checkDoneSaving() throws GameActionException {
+    if (!archonToSave.isWithinDistanceSquared(rc.getLocation(), creationStats.actionRad)) return false;
+    RobotInfo archon = rc.senseRobotAtLocation(archonToSave);
+    if (archon == null) return true;
+    return !offensiveEnemiesNearby();
+  }
+
+  /**
+   * stop saving the archon
+   * update internals and broadcast message
+   * @throws GameActionException if updating or messaging fails
+   */
+  private void finishSaving() throws GameActionException {
+    if (archonToSave == null) return;
+    communicator.enqueueMessage(new ArchonSavedMessage(archonToSave, rc.getRoundNum()));
+    archonToSave = null;
+  }
+
+  /**
+   * check if this soldier is allowed to trigger a raid based on its internals
+   * @return true if allowed to trigger raid
+   */
+  private boolean canCallRaid() {
+    if (archonToSave != null || raidTarget != null || !canStartRaid) return false;
+    RobotInfo[] nearby = rc.senseNearbyRobots(creationStats.type.visionRadiusSquared, creationStats.myTeam);
+    int nearbySoldiers = 0;
+    for (RobotInfo friend : nearby) {
+      if (friend.type == RobotType.SOLDIER) nearbySoldiers++;
+    }
+    // if many bois nearby (1/4 of vision)
+    return nearbySoldiers > visionSize / 4;
+  }
+
+  /**
    * send a message to start a group raid at the given location
    * @param location where to raid
    */
-  public void callForRaid(MapLocation location) {
+  private void callForRaid(MapLocation location) {
     StartRaidMessage message = new StartRaidMessage(location, rc.getRoundNum());
     communicator.enqueueMessage(message);
+  }
+
+  /**
+   * check if the soldier can trigger a raid, then do so
+   * @return true if a raid was called
+   */
+  private boolean checkForAndCallRaid() {
+    if (!canCallRaid()) return false;
+    rc.setIndicatorString("Ready to raid!");
+//      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
+    callForRaid(myPotentialTarget);
+    raidTarget = myPotentialTarget;
+    return true;
   }
 
   /**
@@ -163,5 +231,39 @@ public class Soldier extends Droid {
 //    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
     return moveTowardsAvoidRubble(raidTarget)
         && rc.getLocation().distanceSquaredTo(raidTarget) <= creationStats.visionRad;
+  }
+
+  /**
+   * attack the specified target
+   * @param target the location to try attacking
+   * @return true if attacked the given target
+   */
+  private boolean attackTarget(MapLocation target) throws GameActionException {
+    if (target == null || !rc.canAttack(target)) return false;
+    rc.attack(target);
+    return true;
+  }
+
+  /**
+   * attack a nearby enemy (kinda random based on order from sense function)
+   * @return true if attacked
+   * @throws GameActionException if attacking fails
+   */
+  private boolean attackNearby() throws GameActionException {
+    if (!rc.isActionReady()) return false;
+
+    for (RobotInfo enemy : rc.senseNearbyRobots(creationStats.actionRad, creationStats.opponent)) {
+      MapLocation toAttack = enemy.location;
+      if (rc.canAttack(toAttack)) {
+        rc.attack(toAttack);
+        if (raidTarget != null && enemy.health < creationStats.type.getDamage(0)) { // we killed it
+          if (enemy.type == RobotType.ARCHON && enemy.location.distanceSquaredTo(raidTarget) <= creationStats.actionRad) {
+            broadcastEndRaid();
+          }
+        }
+        return true;
+      }
+    }
+    return false;
   }
 }

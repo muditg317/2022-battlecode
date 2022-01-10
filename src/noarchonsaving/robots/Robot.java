@@ -1,4 +1,4 @@
-package firstbot.robots;
+package noarchonsaving.robots;
 
 import battlecode.common.AnomalyScheduleEntry;
 import battlecode.common.AnomalyType;
@@ -7,27 +7,27 @@ import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
-import firstbot.Cache;
-import firstbot.Utils;
-import firstbot.communications.Communicator;
-import firstbot.communications.messages.Message;
-import firstbot.pathfinding.StolenBFS2;
-import firstbot.robots.buildings.Archon;
-import firstbot.robots.buildings.Laboratory;
-import firstbot.robots.buildings.Watchtower;
-import firstbot.robots.droids.Builder;
-import firstbot.robots.droids.Miner;
-import firstbot.robots.droids.Sage;
-import firstbot.robots.droids.Soldier;
+import noarchonsaving.Utils;
+import noarchonsaving.communications.Communicator;
+import noarchonsaving.communications.messages.Message;
+import noarchonsaving.pathfinding.StolenBFS;
+import noarchonsaving.pathfinding.StolenBFS2;
+import noarchonsaving.robots.buildings.Archon;
+import noarchonsaving.robots.buildings.Laboratory;
+import noarchonsaving.robots.buildings.Watchtower;
+import noarchonsaving.robots.droids.Builder;
+import noarchonsaving.robots.droids.Miner;
+import noarchonsaving.robots.droids.Sage;
+import noarchonsaving.robots.droids.Soldier;
 
+import javax.rmi.CORBA.Util;
 import java.util.Arrays;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
 
   private static final boolean USE_STOLEN_BFS = false;
 
@@ -71,18 +71,17 @@ public abstract class Robot {
    * Perform various setup tasks generic to ny robot (building/droid)
    * @param rc the controller
    */
-  public Robot(RobotController rc) throws GameActionException {
+  public Robot(RobotController rc) {
     this.rc = rc;
     this.communicator = new Communicator(rc);
-    Utils.setUpStatics(rc);
+
     this.creationStats = new CreationStats(rc);
 
     this.stolenbfs = new StolenBFS2(rc);
     // Print spawn message
-//    System.out.println(this.creationStats);
+//    //System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
-    Cache.init(rc);
   }
 
   /**
@@ -117,13 +116,13 @@ public abstract class Robot {
         this.runTurnWrapper();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
-        System.out.println(rc.getType() + " GameActionException");
+        //System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
         rc.setIndicatorDot(rc.getLocation(), 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
-        System.out.println(rc.getType() + " Exception");
+        //System.out.println(rc.getType() + " Exception");
         e.printStackTrace();
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
       } finally {
@@ -137,9 +136,8 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
-//      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
+//      //System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
     stolenbfs.initTurn();
-    Cache.loop();
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readMessages();
@@ -149,7 +147,7 @@ public abstract class Robot {
       pendingMessages--;
     }
     Utils.finishByteCodeCounting("reading");
-//    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
+//    if (pendingMessages > 0) //System.out.println("Got " + pendingMessages + " messages!");
     runTurn();
 
     Utils.startByteCodeCounting("sending");
@@ -366,7 +364,7 @@ public abstract class Robot {
       if (randomInt <= leadInDirection[i]) return Utils.directions[i];
       randomInt -= leadInDirection[i];
     }
-    System.out.println("WEIGHTED PICK FAILED: " + Arrays.toString(leadInDirection));
+    //System.out.println("WEIGHTED PICK FAILED: " + Arrays.toString(leadInDirection));
     throw new RuntimeException("Weighted sum should be able to choose one a direction");
   }
 
@@ -403,35 +401,6 @@ public abstract class Robot {
       return true;
     }
     return false;
-  }
-
-  /**
-   * check if there are any enemy (soldiers) to run away from
-   * @return the map location where there are offensive enemies (null if none)
-   */
-  protected MapLocation offensiveEnemyCentroid() {
-    RobotInfo[] enemies = rc.senseNearbyRobots(-1, creationStats.opponent);
-    if (enemies.length == 0) return null;
-    int avgX = 0;
-    int avgY = 0;
-    int count = 0;
-    for (RobotInfo enemy : enemies) {
-      if (enemy.type.damage > 0) { // enemy can hurt me
-        avgX += enemy.location.x * enemy.type.damage;
-        avgY += enemy.location.y * enemy.type.damage;
-        count += enemy.type.damage;
-      }
-    }
-    if (count == 0) return null;
-    return new MapLocation(avgX / count, avgY / count);
-  }
-
-  /**
-   * checks if there are offensive enemies nearby
-   * @return true if there are enemies in vision
-   */
-  protected boolean offensiveEnemiesNearby() {
-    return offensiveEnemyCentroid() != null;
   }
 
   /**

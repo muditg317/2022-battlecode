@@ -1,9 +1,9 @@
-package firstbot.communications.messages;
+package noarchonsaving.communications.messages;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
-import firstbot.Utils;
-import firstbot.communications.Communicator;
+import noarchonsaving.Utils;
+import noarchonsaving.communications.Communicator;
 
 /**
  * A message sent by wandering miners looking for information about where to go
@@ -62,10 +62,10 @@ public class LeadRequestMessage extends Message {
    */
   public boolean readSharedResponse(Communicator communicator) {
     if (!communicator.headerMatches(writeInfo.startIndex, header)) return false; // return false if the message is no longer valid
-    System.out.println("Read response at " + (writeInfo.startIndex+1));
+    //System.out.println("Read response at " + (writeInfo.startIndex+1));
     int[] information = communicator.readInts(writeInfo.startIndex+1, header.numInformationInts);
     processInformation(information);
-    System.out.println("Process request response: " + location);
+    //System.out.println("Process request response: " + location);
     return answered;
   }
 
@@ -76,7 +76,7 @@ public class LeadRequestMessage extends Message {
    * @throws GameActionException if writing fails
    */
   public void respond(Communicator communicator, MapLocation leadTarget) throws GameActionException {
-    System.out.println("Respond to request! " + writeInfo.startIndex + ": " + leadTarget + " - " + encodeResponse(leadTarget));
+    //System.out.println("Respond to request! " + writeInfo.startIndex + ": " + leadTarget);
     communicator.writeInts(writeInfo.startIndex + 2, new int[]{encodeResponse(leadTarget)});
   }
 }

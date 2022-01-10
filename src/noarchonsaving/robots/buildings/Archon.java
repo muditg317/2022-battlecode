@@ -1,4 +1,4 @@
-package firstbot.robots.buildings;
+package noarchonsaving.robots.buildings;
 
 import battlecode.common.AnomalyType;
 import battlecode.common.GameActionException;
@@ -6,11 +6,9 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.Utils;
-import firstbot.communications.messages.ArchonHelloMessage;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
+import noarchonsaving.Utils;
+import noarchonsaving.communications.messages.ArchonHelloMessage;
+import noarchonsaving.communications.messages.Message;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,24 +29,18 @@ public class Archon extends Building {
 
   private int lastTurnStartingLead;
   private int leadIncome;
-  private int totalIncome;
   private int leadSpent;
-
-  private SaveMeMessage saveMeRequest;
 
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
-//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
+//    //System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
     localLead = rc.senseNearbyLocationsWithLead(creationStats.visionRad).length;
 
     lastTurnStartingLead = 0;
     leadIncome = 0;
     leadSpent = 0;
-    totalIncome = 0;
-
-    saveMeRequest = null;
   }
 
   @Override
@@ -56,26 +48,12 @@ public class Archon extends Building {
     leadIncome = rc.getTeamLeadAmount(creationStats.myTeam) - lastTurnStartingLead + leadSpent;
     lastTurnStartingLead = rc.getTeamLeadAmount(creationStats.myTeam);
     leadSpent = 0;
-    totalIncome += leadIncome;
 //    if (whichArchonAmI == rc.getArchonCount()) {
-//      System.out.println("Lead income: " + leadIncome);
+//      //System.out.println("Lead income: " + leadIncome);
 //    }
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
     }
-
-    if (saveMeRequest != null || offensiveEnemiesNearby()) {
-      broadcastSaveMe();
-      if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
-        rc.setIndicatorString("Spawn soldier!");
-        soldiersSpawned++;
-        leadSpent += RobotType.SOLDIER.buildCostLead;
-      }
-    }
-
-//    if (saveMeRequest != null) {
-//      broadcastSaveMe();
-//    }
 
     // Repair damaged droid
     if (rc.isActionReady()) {
@@ -87,7 +65,7 @@ public class Archon extends Building {
       }
     }
 
-//    System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
+//    //System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
 
     // Spawn new droid if none to repair
     int archons = rc.getArchonCount();
@@ -109,13 +87,13 @@ public class Archon extends Building {
    * @return if running should continue
    */
   private boolean doFirstTurn() {
-//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
+//    //System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);
     archonLocs.add(rc.getLocation());
 
     if (whichArchonAmI == rc.getArchonCount()) {
-      System.out.println("I am the last archon! locs: " + archonLocs);
+      //System.out.println("I am the last archon! locs: " + archonLocs);
 
     }
 
@@ -129,7 +107,7 @@ public class Archon extends Building {
 //    int height = rc.getMapHeight();
 //    int dToPastCenter = Math.abs(myLoc.x - width) + 1;
 //    if (dToPastCenter*dToPastCenter <= rc.getType().visionRadiusSquared) { // can see both sides of the width midpoint
-//      System.out.println("archon at " + myLoc + " - can see width midpoint");
+//      //System.out.println("archon at " + myLoc + " - can see width midpoint");
 ////      rc.senseRubble()
 //    }
     return new ArchonHelloMessage(rc.getLocation(), false, false, false);
@@ -139,8 +117,6 @@ public class Archon extends Building {
   protected void ackMessage(Message message) throws GameActionException {
     if (message instanceof ArchonHelloMessage) {
       ackArchonHello((ArchonHelloMessage) message);
-    } else if (message instanceof ArchonSavedMessage) {
-      ackArchonSaved((ArchonSavedMessage) message);
     }
   }
 
@@ -152,30 +128,7 @@ public class Archon extends Building {
 //    if (rc.getRoundNum() == 1)
 //      whichArchonAmI++;
     archonLocs.add(message.location);
-//    System.out.println("Got archon hello!");
-  }
-
-  /**
-   * acknowledge save message
-   * if saved self, then stop requesting saving
-   * @param message the location of the archon that was saved
-   */
-  private void ackArchonSaved(ArchonSavedMessage message) {
-    if (saveMeRequest != null && message.location.equals(saveMeRequest.location)) {
-      saveMeRequest = null;
-//    } else {
-//      System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
-    }
-  }
-
-  /**
-   * archon is bouta die, request saving
-   * store request internally
-   * @throws GameActionException if messaging fails
-   */
-  private void broadcastSaveMe() throws GameActionException {
-    saveMeRequest = new SaveMeMessage(rc.getLocation(), rc.getRoundNum());
-    communicator.enqueueMessage(saveMeRequest);
+//    //System.out.println("Got archon hello!");
   }
 
   /**
@@ -210,8 +163,8 @@ public class Archon extends Building {
   private boolean needMiner() throws GameActionException {
     return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && ( // if we have > 2000Pb, just skip miners
         rc.getRoundNum() < 100
-//        || totalIncome/rc.getRoundNum() < localLead
-        || (localLead > 10 && localLead < rc.senseNearbyRobots(creationStats.visionRad, creationStats.myTeam).length) // lots of local lead available
+        || leadIncome < localLead
+//        || (localLead > 10 && localLead < rc.senseNearbyRobots(creationStats.visionRad, creationStats.myTeam).length) // lots of local lead available
         || estimateAvgLeadIncome() / (minersSpawned+1) > 3 // spawn miners until we reach less than 5pb/miner income
     );
   }

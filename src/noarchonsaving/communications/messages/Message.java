@@ -1,7 +1,4 @@
-package firstbot.communications.messages;
-
-//import java.lang.reflect.Constructor;
-//import java.lang.reflect.InvocationTargetException;
+package noarchonsaving.communications.messages;
 
 /**
  * All message types should subclass this class
@@ -14,33 +11,14 @@ public abstract class Message {
    * MAX OF 8 types
    */
   public enum MessageType {
-    ARCHON_HELLO(ArchonHelloMessage.class, ArchonHelloMessage.MESSAGE_LENGTH),
-    LEAD_FOUND(LeadFoundMessage.class, LeadFoundMessage.MESSAGE_LENGTH),
-    LEAD_REQUEST(LeadRequestMessage.class, LeadRequestMessage.MESSAGE_LENGTH),
-    START_RAID(StartRaidMessage.class, StartRaidMessage.MESSAGE_LENGTH),
-    END_RAID(EndRaidMessage.class, EndRaidMessage.MESSAGE_LENGTH),
-    SAVE_ME(SaveMeMessage.class, SaveMeMessage.MESSAGE_LENGTH),
-    ARCHON_SAVED(ArchonSavedMessage.class, ArchonSavedMessage.MESSAGE_LENGTH),
-    ;
-    public final Class<? extends Message> messageClass;
+    ARCHON_HELLO(ArchonHelloMessage.MESSAGE_LENGTH),
+    LEAD_FOUND(LeadFoundMessage.MESSAGE_LENGTH),
+    LEAD_REQUEST(LeadRequestMessage.MESSAGE_LENGTH),
+    START_RAID(StartRaidMessage.MESSAGE_LENGTH),
+    END_RAID(EndRaidMessage.MESSAGE_LENGTH);
     public final int standardSize;
-//    public final Constructor<? extends Message> messageConstructor;
-    public final int ordinal;
-
-    public static final MessageType[] values = MessageType.values();
-
-    MessageType(Class<? extends Message> messageClass, int standardSize) {
+    MessageType(int standardSize) {
       this.standardSize = standardSize;
-      this.messageClass = messageClass;
-//      Constructor<? extends Message> messageConstructorTemp;
-//      try {
-//        messageConstructorTemp = messageClass.getConstructor(Header.class, int[].class);
-//      } catch (NoSuchMethodException e) {
-//        messageConstructorTemp = null;
-//        e.printStackTrace();
-//      }
-//      this.messageConstructor = messageConstructorTemp;
-      this.ordinal = ordinal();
     }
   }
 
@@ -81,7 +59,7 @@ public abstract class Message {
     public static Header fromReadInt(int readInt) {
       return new Header(
           (readInt >>> PRIORITY_START) & PRIORITY_MAX,
-          MessageType.values[(readInt >>> TYPE_START) & TYPE_MAX],
+          MessageType.values()[(readInt >>> TYPE_START) & TYPE_MAX],
           (readInt >>> NUM_INTS_START) & NUM_INTS_MAX,
           (readInt >>> ROUND_NUM_START) & ROUND_NUM_MAX);
     }
@@ -93,7 +71,7 @@ public abstract class Message {
     public int toInt() {
       return
             priority << PRIORITY_START
-          | type.ordinal << TYPE_START
+          | type.ordinal() << TYPE_START
           | numInformationInts << NUM_INTS_START
           | cyclicRoundNum << ROUND_NUM_START;
     }
@@ -173,15 +151,12 @@ public abstract class Message {
   }
 
   public static Message fromHeaderAndInfo(Header header, int[] information) {
-//    return header.type.messageConstructor.newInstance(header, information);
     switch (header.type) {
       case ARCHON_HELLO: return new ArchonHelloMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
       case LEAD_REQUEST: return new LeadRequestMessage(header, information);
       case START_RAID: return new StartRaidMessage(header, information);
       case END_RAID: return new EndRaidMessage(header, information);
-      case SAVE_ME: return new SaveMeMessage(header, information);
-      case ARCHON_SAVED: return new ArchonSavedMessage(header, information);
       default: throw new RuntimeException("Cannot read message with invalid type! " + header.type);
     }
   }
