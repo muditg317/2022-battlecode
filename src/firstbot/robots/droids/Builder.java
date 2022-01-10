@@ -15,7 +15,7 @@ public class Builder extends Droid {
   Direction dirToBuild;
   boolean readyToBuild;
 
-  public Builder(RobotController rc) {
+  public Builder(RobotController rc) throws GameActionException {
     super(rc);
     MapLocation myLoc = rc.getLocation();
     dirToBuild = parentArchonLoc.directionTo(rc.getLocation());

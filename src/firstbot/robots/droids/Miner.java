@@ -6,6 +6,11 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import firstbot.Cache;
+import firstbot.Utils;
 import firstbot.communications.messages.LeadFoundMessage;
 import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
@@ -16,6 +21,8 @@ public class Miner extends Droid {
   private static final int WANDERING_TURNS_TO_BROADCAST_LEAD = 10; // if the miner wanders for >= 10 turns, it will broadcast when lead is found
   private static final int MAX_WANDERING_REQUEST_LEAD = 8; // if wandering for 5+ turns, request lead broadcast
   MapLocation target;
+  boolean reachedTarget;
+  int bestSquaredDistanceToTarget;
   private static final int WANDERING_TURNS_TO_FOLLOW_LEAD = 3;
   private static final int MAX_SQDIST_FOR_TARGET = 200;
 
@@ -23,61 +30,48 @@ public class Miner extends Droid {
 
   private LeadRequestMessage leadRequest; // TODO: make a message that the other boi will overwrite (will rely on getting ack within 1 turn or else sad)
 
-  public Miner(RobotController rc) {
+  public Miner(RobotController rc) throws GameActionException {
     super(rc);
-    target = null;
+    target = Utils.randomMapLocation();
+    bestSquaredDistanceToTarget = rc.getLocation().distanceSquaredTo(target);
     leadRequest = null;
   }
 
+
+  /*
+
+  1) call executeMining() => mine gold and then lead if possible
+  2) if there is an enemy attacking unit, move away (and set new random location?)
+  3) if there is >1 lead in sense, move to mine location
+  4) if I have exhausted the mine (executeMining() returns false), continue moving to random location
+  5) call executeMining() again
+  6) if at location, new location
+
+   */
   @Override
   protected void runTurn() throws GameActionException {
-    doMining();
+    executeMining(); // performs action of mining gold and then lead until cooldown is reached
+    // executeLeadTarget(); // if miner doesnt already have a target and has a pending request that it sent last turn
+    executeRunFromEnemy(); // set runAwayTarget if enemy attacking unit is within robot range (possibly bugged rn)
+    boolean resourcesLeft = checkIfResourcesLeft(); // check if any gold or lead (>1) is within robot range, return true if so
 
-    if (target == null && leadRequest != null) {
-      rc.setIndicatorString("Checking request response!");
-      if (leadRequest.readSharedResponse(communicator)) {
-        System.out.println("Got request response!!" + leadRequest.location);
-        registerTarget(leadRequest.location);
-      }
-      leadRequest = null;
+    // lets remove target if we havent gotten closer to it in 5 moves?
+
+    if (runAwayTarget != null) { // if enemy attacking unit is within range
+      target = Utils.randomMapLocation(); // new random target
+      if (runAway()) runAwayTarget = null; // runAway() is true iff we move away
+    } else if (resourcesLeft) {
+      followLead(); // performs action of moving to lead
+    } else {
+      reachedTarget = goToTarget(); // performs action of moving to target location
     }
 
-    int start = Clock.getBytecodeNum();
-    MapLocation enemies = findEnemies();
-    if (enemies != null) {
-      MapLocation myLoc = rc.getLocation();
-      runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
-      Direction backToSelf = runAwayTarget.directionTo(myLoc);
-      while (!rc.canSenseLocation(runAwayTarget)) runAwayTarget = runAwayTarget.add(backToSelf);
-      rc.setIndicatorDot(myLoc, 255,255,0);
-      rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
-    }
-    int end = Clock.getBytecodeNum();
-//    System.out.println("Finding enemies took " + (end-start) + " BC");
-    if (runAwayTarget != null && runAway()) runAwayTarget = null;
-    else if (followLead()) target = null;
-    else if (target != null) goToTarget();
-    else if (moveRandomly()) {
-      turnsWandering++;
-      if (needToRequestLead()) requestLead();
-    }
-//    if (rc.isMovementReady()) {
-//      boolean foundLead = followLead();
-//      if (foundLead) target = null; // nullify target if we found lead now
-//    }
-//    if (rc.isMovementReady()) {
-//      if (target != null) {
-//        goToTarget();
-//      }
-//    }
-//    if (rc.isMovementReady()) {
-//      if (moveRandomly()) turnsWandering++;
-//      if (needToRequestLead()) {
-//        requestLead();
-//      }
-//    }
+    executeMining();
 
-    doMining();
+    if (reachedTarget) {
+      target = Utils.randomMapLocation(); // new random target
+    }
+    
   }
 
   @Override
@@ -125,7 +119,8 @@ public class Miner extends Droid {
     rc.setIndicatorLine(rc.getLocation(), responseLocation, 0,255,0);
   }
 
-  private void doMining() throws GameActionException {
+
+  private void executeMining() throws GameActionException {
     if (rc.isActionReady()) {
       mineSurroundingGold();
     }
@@ -167,6 +162,30 @@ public class Miner extends Droid {
     }
   }
 
+  private void executeLeadTarget() {
+    if (target == null && leadRequest != null) {
+      rc.setIndicatorString("Checking request response!");
+      if (leadRequest.readSharedResponse(communicator)) {
+        System.out.println("Got request response!!" + leadRequest.location);
+        registerTarget(leadRequest.location);
+      }
+      leadRequest = null;
+    }
+  }
+
+  private void executeRunFromEnemy() {
+    MapLocation enemies = findEnemies();
+    if (enemies != null) {
+      MapLocation myLoc = rc.getLocation();
+      runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
+      Direction backToSelf = runAwayTarget.directionTo(myLoc);
+      while (!rc.canSenseLocation(runAwayTarget)) runAwayTarget = runAwayTarget.add(backToSelf);
+      rc.setIndicatorDot(myLoc, 255,255,0);
+      rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
+    }
+  }
+
+
   /**
    * check if there are any enemy (soldiers) to run away from
    * @return the map location where there are offensive enemies (null if none)
@@ -197,6 +216,19 @@ public class Miner extends Droid {
       rc.setIndicatorString("run away! " + runAwayTarget);
       return rc.getLocation().isWithinDistanceSquared(runAwayTarget, creationStats.actionRad);
     }
+    return false;
+  }
+
+   /*
+   * @return true iff there are resources that can be mined (gold > 0 || lead > 1)
+   * @throws GameActionException
+   */
+  private boolean checkIfResourcesLeft() throws GameActionException {
+    MapLocation me = rc.getLocation();
+    int goldLocationsLength = rc.senseNearbyLocationsWithGold(Cache.VISION_RADIUS_SQUARED).length;
+    if (goldLocationsLength > 0) return true;
+    int leadLocationsLength = rc.senseNearbyLocationsWithLead(Cache.VISION_RADIUS_SQUARED, 2).length;
+    if (leadLocationsLength > 0) return true;
     return false;
   }
 
@@ -238,11 +270,13 @@ public class Miner extends Droid {
   }
 
   /**
+   * 
    * assuming there is a target for the miner, approach it
    *    currently very naive -- should use path finding!
+   * @return if the miner is within the action radius of the target
    * @throws GameActionException if movement or line indication fails
    */
-  private void goToTarget() throws GameActionException {
+  private boolean goToTarget() throws GameActionException {
     turnsWandering = 0;
 //    Direction goal = rc.getLocation().directionTo(target);
     moveTowardsAvoidRubble(target);
@@ -250,9 +284,7 @@ public class Miner extends Droid {
 //    moveInDirLoose(goal);
     rc.setIndicatorLine(rc.getLocation(), target, 255,10,10);
     rc.setIndicatorDot(target, 0, 255, 0);
-    if (rc.getLocation().isWithinDistanceSquared(target, creationStats.type.actionRadiusSquared)) { // set target to null if found!
-      target = null;
-    }
+    return rc.getLocation().isWithinDistanceSquared(target, creationStats.type.actionRadiusSquared); // set target to null if found!
   }
 
   /**

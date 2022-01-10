@@ -4,7 +4,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
 
 public class Sage extends Droid {
-  public Sage(RobotController rc) {
+  public Sage(RobotController rc) throws GameActionException {
     super(rc);
   }
 

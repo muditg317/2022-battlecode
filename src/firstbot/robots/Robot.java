@@ -9,6 +9,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
+import firstbot.Cache;
 import firstbot.Utils;
 import firstbot.communications.Communicator;
 import firstbot.communications.messages.Message;
@@ -26,8 +27,8 @@ import javax.rmi.CORBA.Util;
 import java.util.Arrays;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
 
   private static final boolean USE_STOLEN_BFS = false;
 
@@ -71,10 +72,10 @@ public abstract class Robot {
    * Perform various setup tasks generic to ny robot (building/droid)
    * @param rc the controller
    */
-  public Robot(RobotController rc) {
+  public Robot(RobotController rc) throws GameActionException {
     this.rc = rc;
     this.communicator = new Communicator(rc);
-
+    Utils.setUpStatics(rc);
     this.creationStats = new CreationStats(rc);
 
     this.stolenbfs = new StolenBFS2(rc);
@@ -82,6 +83,7 @@ public abstract class Robot {
 //    System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
+    Cache.init(rc);
   }
 
   /**
@@ -138,6 +140,7 @@ public abstract class Robot {
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
     stolenbfs.initTurn();
+    Cache.loop();
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readMessages();

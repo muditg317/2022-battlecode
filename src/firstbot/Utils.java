@@ -3,6 +3,7 @@ package firstbot;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +12,10 @@ import java.util.Random;
 public class Utils {
 
   /** Seeded RNG for use throughout the bot classes */
-  public static final Random rng = new Random(69);
+  public static Random rng;
+  public static RobotController rc;
+  public static int mapWidth;
+  public static int mapHeight;
 
   /** Array of the 8 possible directions. */
   public static final Direction[] directions = {
@@ -25,9 +29,22 @@ public class Utils {
       Direction.NORTHWEST,
   };
 
+  public static void setUpStatics(RobotController rc) {
+    Utils.rc = rc;
+    rng = new Random(rc.getID());
+    mapWidth = rc.getMapWidth();
+    mapHeight = rc.getMapHeight();
+  }
+
   public static Direction randomDirection() {
     return directions[rng.nextInt(directions.length)];
   }
+
+  public static MapLocation randomMapLocation() { return new MapLocation(randomMapLocationX(), randomMapLocationY());}
+
+  public static int randomMapLocationX() { return rng.nextInt(mapWidth);}
+
+  public static int randomMapLocationY() { return rng.nextInt(mapHeight);}
 
   /**
    * encode the location into an integer where

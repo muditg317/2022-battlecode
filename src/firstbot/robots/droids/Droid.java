@@ -1,16 +1,13 @@
 package firstbot.robots.droids;
 
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
+import battlecode.common.*;
 import firstbot.robots.Robot;
 
 public abstract class Droid extends Robot {
 
   protected MapLocation parentArchonLoc;
 
-  public Droid(RobotController rc) {
+  public Droid(RobotController rc) throws GameActionException {
     super(rc);
     for (RobotInfo info : rc.senseNearbyRobots(2, creationStats.myTeam)) {
       if (info.type == RobotType.ARCHON) {
