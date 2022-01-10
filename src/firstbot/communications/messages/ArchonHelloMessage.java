@@ -1,7 +1,7 @@
 package firstbot.communications.messages;
 
 import battlecode.common.MapLocation;
-import firstbot.Utils;
+import firstbot.utils.Utils;
 
 /**
  * A simple message with a single integer of information

@@ -1,7 +1,7 @@
 package firstbot.communications.messages;
 
 import battlecode.common.MapLocation;
-import firstbot.Utils;
+import firstbot.utils.Utils;
 
 /**
  * A message used when a wandering miner finds a good mining position

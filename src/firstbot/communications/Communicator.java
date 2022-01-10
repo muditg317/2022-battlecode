@@ -3,8 +3,8 @@ package firstbot.communications;
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.RobotController;
-import battlecode.common.RobotType;
-import firstbot.Utils;
+import firstbot.utils.Global;
+import firstbot.utils.Utils;
 import firstbot.communications.messages.Message;
 
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ public class Communicator {
     public int validRegionStart; // 0-62    -- 6 bits [15,10]
     public int validRegionEnd; // 0-62      -- 6 bits [9,4]
 
-    public MetaInfo(RobotController rc) {
+    public MetaInfo() {
     }
 
     /**
@@ -69,10 +69,10 @@ public class Communicator {
 
   private int intsWritten;
 
-  public Communicator(RobotController rc) {
-    this.rc = rc;
+  public Communicator() {
+    this.rc = Global.rc;
     sharedBuffer = new int[GameConstants.SHARED_ARRAY_LENGTH];
-    metaInfo = new MetaInfo(rc);
+    metaInfo = new MetaInfo();
 
     messageQueue = new PriorityQueue<>();
     sentMessages = new ArrayList<>();

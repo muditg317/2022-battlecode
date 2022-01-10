@@ -1,7 +1,14 @@
 package firstbot.robots.buildings;
 
-import battlecode.common.*;
-import firstbot.Utils;
+import battlecode.common.AnomalyType;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
+import firstbot.utils.Cache;
+import firstbot.utils.Utils;
 import firstbot.communications.messages.ArchonHelloMessage;
 import firstbot.communications.messages.ArchonSavedMessage;
 import firstbot.communications.messages.Message;
@@ -36,7 +43,7 @@ public class Archon extends Building {
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
 //    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
-    localLead = rc.senseNearbyLocationsWithLead(creationStats.visionRad).length;
+    localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
     lastTurnStartingLead = 0;
     leadIncome = 0;
@@ -48,8 +55,8 @@ public class Archon extends Building {
 
   @Override
   protected void runTurn() throws GameActionException {
-    leadIncome = rc.getTeamLeadAmount(creationStats.myTeam) - lastTurnStartingLead + leadSpent;
-    lastTurnStartingLead = rc.getTeamLeadAmount(creationStats.myTeam);
+    leadIncome = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) - lastTurnStartingLead + leadSpent;
+    lastTurnStartingLead = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM);
     leadSpent = 0;
     totalIncome += leadIncome;
 //    if (whichArchonAmI == rc.getArchonCount()) {
@@ -74,8 +81,8 @@ public class Archon extends Building {
 
     // Repair damaged droid
     if (rc.isActionReady()) {
-      for (RobotInfo info : rc.senseNearbyRobots(creationStats.type.actionRadiusSquared, creationStats.myTeam)) {
-        if (creationStats.type.canRepair(info.type) && info.health < info.type.getMaxHealth(info.level)) { // we see a damaged friendly
+      for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
+        if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < info.type.getMaxHealth(info.level)) { // we see a damaged friendly
           rc.repair(info.location);
           break;
         }
@@ -96,7 +103,6 @@ public class Archon extends Building {
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();
     }
-    lastTurnStartingLead = rc.getTeamLeadAmount(creationStats.myTeam);
   }
 
   /**
@@ -208,7 +214,7 @@ public class Archon extends Building {
     return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && ( // if we have > 2000Pb, just skip miners
         rc.getRoundNum() < 100
 //        || totalIncome/rc.getRoundNum() < localLead
-        || (localLead > 10 && localLead < rc.senseNearbyRobots(creationStats.visionRad, creationStats.myTeam).length) // lots of local lead available
+        || (localLead > 10 && localLead < rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM).length) // lots of local lead available
         || estimateAvgLeadIncome() / (minersSpawned+1) > 3 // spawn miners until we reach less than 5pb/miner income
     );
   }

@@ -1,11 +1,19 @@
 package firstbot.robots;
 
-import battlecode.common.*;
-import firstbot.Cache;
-import firstbot.Utils;
+import battlecode.common.AnomalyScheduleEntry;
+import battlecode.common.AnomalyType;
+import battlecode.common.Clock;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
+import firstbot.utils.Cache;
+import firstbot.utils.Global;
+import firstbot.utils.Utils;
 import firstbot.communications.Communicator;
 import firstbot.communications.messages.Message;
-//import firstbot.pathfinding.StolenBFS2;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
 import firstbot.robots.buildings.Watchtower;
@@ -18,40 +26,9 @@ public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
   private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
 
-  private static final boolean USE_STOLEN_BFS = false;
-
-  protected static class CreationStats {
-    public final int roundNum;
-    public final MapLocation spawnLocation;
-    public final int health;
-    public final RobotType type;
-    public final Team myTeam;
-    public final Team opponent;
-    public final int visionRad;
-    public final int actionRad;
-
-    public CreationStats(RobotController rc) {
-      this.roundNum = rc.getRoundNum();
-      this.spawnLocation = rc.getLocation();
-      this.health = rc.getHealth();
-      this.type = rc.getType();
-      this.myTeam = rc.getTeam();
-      this.opponent = myTeam.opponent();
-      this.visionRad = type.visionRadiusSquared;
-      this.actionRad = type.actionRadiusSquared;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("%s at %s - HP: %4d", type, spawnLocation, health);
-    }
-  }
-
   protected final RobotController rc;
   protected final Communicator communicator;
   protected int pendingMessages;
-
-  protected final CreationStats creationStats;
 
 //  protected final StolenBFS2 stolenbfs;
 
@@ -61,17 +38,17 @@ public abstract class Robot {
    * @param rc the controller
    */
   public Robot(RobotController rc) throws GameActionException {
-    this.rc = rc;
-    this.communicator = new Communicator(rc);
+    Global.setupGlobals(rc);
     Utils.setUpStatics(rc);
-    this.creationStats = new CreationStats(rc);
+    Cache.setup(rc);
+    this.rc = rc;
+    this.communicator = Global.communicator;
 
 //    this.stolenbfs = new StolenBFS2(rc);
     // Print spawn message
 //    System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
-    Cache.init(rc);
   }
 
   /**
@@ -128,7 +105,7 @@ public abstract class Robot {
   private void runTurnWrapper() throws GameActionException {
 //      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
 //    stolenbfs.initTurn();
-    Cache.loop();
+    Cache.updateOnTurn();
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readMessages();
@@ -313,13 +290,13 @@ public abstract class Robot {
 
     // for all loations I can sense =>
     // sum up lead and number of current miners, and see if miners > lead / 50: continue if so
-    for (MapLocation loc : rc.senseNearbyLocationsWithLead(creationStats.type.visionRadiusSquared, MIN_LEAD)) {
+    for (MapLocation loc : rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, MIN_LEAD)) {
 
       // if there is a miner within 2x2 blocks of the location, then ignore it
       int leadSeen = rc.senseLead(loc);
 
       int minersThere = 0;
-      for (RobotInfo friend : rc.senseNearbyRobots(loc, 8, creationStats.myTeam)) {
+      for (RobotInfo friend : rc.senseNearbyRobots(loc, 8, Cache.Permanent.OUR_TEAM)) {
         if (friend.type == RobotType.MINER) minersThere++;
       }
       if (minersThere > leadSeen / 75) continue;
@@ -392,7 +369,7 @@ public abstract class Robot {
    * @return the map location where there are offensive enemies (null if none)
    */
   protected MapLocation offensiveEnemyCentroid() {
-    RobotInfo[] enemies = rc.senseNearbyRobots(-1, creationStats.opponent);
+    RobotInfo[] enemies = rc.senseNearbyRobots(-1, Cache.Permanent.OPPONENT_TEAM);
     if (enemies.length == 0) return null;
     int avgX = 0;
     int avgY = 0;

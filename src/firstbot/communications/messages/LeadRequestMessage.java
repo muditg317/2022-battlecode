@@ -2,8 +2,9 @@ package firstbot.communications.messages;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
-import firstbot.Utils;
-import firstbot.communications.Communicator;
+import firstbot.utils.Global;
+import firstbot.utils.Utils;
+
 
 /**
  * A message sent by wandering miners looking for information about where to go
@@ -57,13 +58,12 @@ public class LeadRequestMessage extends Message {
 
   /**
    * use the given communicator to check if this message has been responded to
-   * @param communicator the communicator that has access to the shared array
    * @return whether the message has a response or not
    */
-  public boolean readSharedResponse(Communicator communicator) {
-    if (!communicator.headerMatches(writeInfo.startIndex, header)) return false; // return false if the message is no longer valid
+  public boolean readSharedResponse() {
+    if (!Global.communicator.headerMatches(writeInfo.startIndex, header)) return false; // return false if the message is no longer valid
     System.out.println("Read response at " + (writeInfo.startIndex+1));
-    int[] information = communicator.readInts(writeInfo.startIndex+1, header.numInformationInts);
+    int[] information = Global.communicator.readInts(writeInfo.startIndex+1, header.numInformationInts);
     processInformation(information);
     System.out.println("Process request response: " + location);
     return answered;
@@ -71,12 +71,11 @@ public class LeadRequestMessage extends Message {
 
   /**
    * use the given communicator to write a response into the shared buffer with the provided lead location
-   * @param communicator the communicator to use for shared memory writing
    * @param leadTarget the found lead of the response
    * @throws GameActionException if writing fails
    */
-  public void respond(Communicator communicator, MapLocation leadTarget) throws GameActionException {
+  public void respond(MapLocation leadTarget) throws GameActionException {
     System.out.println("Respond to request! " + writeInfo.startIndex + ": " + leadTarget + " - " + encodeResponse(leadTarget));
-    communicator.writeInts(writeInfo.startIndex + 2, new int[]{encodeResponse(leadTarget)});
+    Global.communicator.writeInts(writeInfo.startIndex + 2, new int[]{encodeResponse(leadTarget)});
   }
 }

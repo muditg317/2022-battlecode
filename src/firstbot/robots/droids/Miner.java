@@ -1,11 +1,15 @@
 package firstbot.robots.droids;
 
-import battlecode.common.*;
-import firstbot.Cache;
-import firstbot.Utils;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import firstbot.utils.Cache;
+import firstbot.utils.Utils;
 import firstbot.communications.messages.LeadFoundMessage;
-import firstbot.communications.messages.Message;
 import firstbot.communications.messages.LeadRequestMessage;
+import firstbot.communications.messages.Message;
 
 public class Miner extends Droid {
 
@@ -107,7 +111,7 @@ public class Miner extends Droid {
 
     rc.setIndicatorString("Answer lead request: " + responseLocation);
 
-    message.respond(communicator, responseLocation);
+    message.respond(responseLocation);
     rc.setIndicatorString("Respond to lead request! " + responseLocation);
     rc.setIndicatorDot(responseLocation, 0,255,0);
     rc.setIndicatorLine(rc.getLocation(), responseLocation, 0,255,0);
@@ -159,7 +163,7 @@ public class Miner extends Droid {
   private void executeLeadTarget() {
     if (target == null && leadRequest != null) {
       rc.setIndicatorString("Checking request response!");
-      if (leadRequest.readSharedResponse(communicator)) {
+      if (leadRequest.readSharedResponse()) {
         System.out.println("Got request response!!" + leadRequest.location);
         registerTarget(leadRequest.location);
       }
@@ -185,7 +189,7 @@ public class Miner extends Droid {
    * @return the map location where there are offensive enemies (null if none)
    */
   private MapLocation findEnemies() {
-    RobotInfo[] enemies = rc.senseNearbyRobots(-1, creationStats.opponent);
+    RobotInfo[] enemies = rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM);
     if (enemies.length == 0) return null;
     int avgX = 0;
     int avgY = 0;
@@ -208,7 +212,7 @@ public class Miner extends Droid {
   private boolean runAway() throws GameActionException {
     if (moveTowardsAvoidRubble(runAwayTarget)) {
       rc.setIndicatorString("run away! " + runAwayTarget);
-      return rc.getLocation().isWithinDistanceSquared(runAwayTarget, creationStats.actionRad);
+      return rc.getLocation().isWithinDistanceSquared(runAwayTarget, Cache.Permanent.ACTION_RADIUS_SQUARED);
     }
     return false;
   }
@@ -219,9 +223,9 @@ public class Miner extends Droid {
    */
   private boolean checkIfResourcesLeft() throws GameActionException {
     MapLocation me = rc.getLocation();
-    int goldLocationsLength = rc.senseNearbyLocationsWithGold(Cache.VISION_RADIUS_SQUARED).length;
+    int goldLocationsLength = rc.senseNearbyLocationsWithGold(Cache.Permanent.VISION_RADIUS_SQUARED).length;
     if (goldLocationsLength > 0) return true;
-    int leadLocationsLength = rc.senseNearbyLocationsWithLead(Cache.VISION_RADIUS_SQUARED, 2).length;
+    int leadLocationsLength = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2).length;
     if (leadLocationsLength > 0) return true;
     return false;
   }
@@ -279,7 +283,7 @@ public class Miner extends Droid {
       rc.setIndicatorLine(rc.getLocation(), target, 255, 10, 10);
       rc.setIndicatorDot(target, 0, 255, 0);
     }
-    return rc.getLocation().isWithinDistanceSquared(target, creationStats.type.actionRadiusSquared); // set target to null if found!
+    return rc.getLocation().isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
   }
 
   /**
@@ -301,7 +305,7 @@ public class Miner extends Droid {
    */
   private boolean needToRequestLead() throws GameActionException {
     return turnsWandering > MAX_WANDERING_REQUEST_LEAD
-        && rc.senseNearbyLocationsWithLead(creationStats.type.visionRadiusSquared).length == 0;
+        && rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length == 0;
   }
 
   /**

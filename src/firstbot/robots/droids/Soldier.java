@@ -5,7 +5,8 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.Utils;
+import firstbot.utils.Cache;
+import firstbot.utils.Utils;
 import firstbot.communications.messages.ArchonSavedMessage;
 import firstbot.communications.messages.EndRaidMessage;
 import firstbot.communications.messages.Message;
@@ -69,7 +70,7 @@ public class Soldier extends Droid {
       if (moveForRaid()) { // reached target
 //        raidTarget = null;
         if (!raidValidated) {
-          for (RobotInfo enemy : rc.senseNearbyRobots(creationStats.visionRad, creationStats.opponent)) {
+          for (RobotInfo enemy : rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
             if (enemy.type == RobotType.ARCHON) {
               raidValidated = true;
               break;
@@ -159,7 +160,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if checking fails
    */
   private boolean checkDoneSaving() throws GameActionException {
-    if (!archonToSave.isWithinDistanceSquared(rc.getLocation(), creationStats.actionRad)) return false;
+    if (!archonToSave.isWithinDistanceSquared(rc.getLocation(), Cache.Permanent.ACTION_RADIUS_SQUARED)) return false;
     RobotInfo archon = rc.senseRobotAtLocation(archonToSave);
     if (archon == null) return true;
     return !offensiveEnemiesNearby();
@@ -182,7 +183,7 @@ public class Soldier extends Droid {
    */
   private boolean canCallRaid() {
     if (archonToSave != null || raidTarget != null || !canStartRaid) return false;
-    RobotInfo[] nearby = rc.senseNearbyRobots(creationStats.type.visionRadiusSquared, creationStats.myTeam);
+    RobotInfo[] nearby = rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM);
     int nearbySoldiers = 0;
     for (RobotInfo friend : nearby) {
       if (friend.type == RobotType.SOLDIER) nearbySoldiers++;
@@ -230,7 +231,7 @@ public class Soldier extends Droid {
     rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
 //    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
     return moveTowardsAvoidRubble(raidTarget)
-        && rc.getLocation().distanceSquaredTo(raidTarget) <= creationStats.visionRad;
+        && rc.getLocation().distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
   }
 
   /**
@@ -252,12 +253,12 @@ public class Soldier extends Droid {
   private boolean attackNearby() throws GameActionException {
     if (!rc.isActionReady()) return false;
 
-    for (RobotInfo enemy : rc.senseNearbyRobots(creationStats.actionRad, creationStats.opponent)) {
+    for (RobotInfo enemy : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
       MapLocation toAttack = enemy.location;
       if (rc.canAttack(toAttack)) {
         rc.attack(toAttack);
-        if (raidTarget != null && enemy.health < creationStats.type.getDamage(0)) { // we killed it
-          if (enemy.type == RobotType.ARCHON && enemy.location.distanceSquaredTo(raidTarget) <= creationStats.actionRad) {
+        if (raidTarget != null && enemy.health < Cache.Permanent.ROBOT_TYPE.damage) { // we killed it
+          if (enemy.type == RobotType.ARCHON && enemy.location.distanceSquaredTo(raidTarget) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
             broadcastEndRaid();
           }
         }

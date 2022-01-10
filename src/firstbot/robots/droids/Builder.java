@@ -6,7 +6,8 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.Utils;
+import firstbot.utils.Cache;
+import firstbot.utils.Utils;
 
 public class Builder extends Droid {
   private static final int DIST_TO_WALL_THRESH = 6;
@@ -32,7 +33,7 @@ public class Builder extends Droid {
     if (myBuilding == null && (moveInDirRandom(dirToBuild) || moveRandomly())) {
       if (!rc.onTheMap(rc.getLocation().add(dirToBuild))) { // gone to map edge
         dirToBuild = dirToBuild.opposite();
-      } else if (!readyToBuild && rc.getLocation().distanceSquaredTo(parentArchonLoc) >= creationStats.type.visionRadiusSquared) {
+      } else if (!readyToBuild && rc.getLocation().distanceSquaredTo(parentArchonLoc) >= Cache.Permanent.VISION_RADIUS_SQUARED) {
         // can only be ready to build if not on edge
         readyToBuild = true;
       }
@@ -62,7 +63,7 @@ public class Builder extends Droid {
     boolean needsRepair = healthNeeded > 0;
     if (needsRepair && rc.canRepair(myBuilding)) {
       rc.repair(myBuilding);
-      return healthNeeded <= -creationStats.type.damage;
+      return healthNeeded <= -Cache.Permanent.ROBOT_TYPE.damage;
     }
     return needsRepair;
   }
