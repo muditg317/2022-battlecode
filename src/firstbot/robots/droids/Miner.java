@@ -48,12 +48,14 @@ public class Miner extends Droid {
     boolean resourcesLeft = checkIfResourcesLeft(); // check if any gold or lead (>1) is within robot range, return true if so
 
     // lets remove target if we havent gotten closer to it in 5 moves?
-
+//    if (rc.getID() == 10001) {
+//      System.out.println("target: " + target + " reached: " + reachedTarget + " resourcesLeft: " + resourcesLeft);
+//    }
     if (runAwayTarget != null) { // if enemy attacking unit is within range
       target = Utils.randomMapLocation(); // new random target
       if (runAway()) runAwayTarget = null; // runAway() is true iff we move away
-    } else if (resourcesLeft) {
-      followLead(); // performs action of moving to lead
+    } else if (resourcesLeft && followLead()) {
+      // performs action of moving to lead
     } else {
       reachedTarget = goToTarget(); // performs action of moving to target location
     }
@@ -271,11 +273,12 @@ public class Miner extends Droid {
   private boolean goToTarget() throws GameActionException {
     turnsWandering = 0;
 //    Direction goal = rc.getLocation().directionTo(target);
-    moveTowardsAvoidRubble(target);
-    rc.setIndicatorString("Approaching target" + target);
+    if (moveTowardsAvoidRubble(target)) {
+      rc.setIndicatorString("Approaching target" + target);
 //    moveInDirLoose(goal);
-    rc.setIndicatorLine(rc.getLocation(), target, 255,10,10);
-    rc.setIndicatorDot(target, 0, 255, 0);
+      rc.setIndicatorLine(rc.getLocation(), target, 255, 10, 10);
+      rc.setIndicatorDot(target, 0, 255, 0);
+    }
     return rc.getLocation().isWithinDistanceSquared(target, creationStats.type.actionRadiusSquared); // set target to null if found!
   }
 

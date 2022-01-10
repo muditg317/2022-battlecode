@@ -1,15 +1,6 @@
 package firstbot.robots;
 
-import battlecode.common.AnomalyScheduleEntry;
-import battlecode.common.AnomalyType;
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import battlecode.common.Team;
+import battlecode.common.*;
 import firstbot.Cache;
 import firstbot.Utils;
 import firstbot.communications.Communicator;
@@ -22,8 +13,6 @@ import firstbot.robots.droids.Builder;
 import firstbot.robots.droids.Miner;
 import firstbot.robots.droids.Sage;
 import firstbot.robots.droids.Soldier;
-
-import java.util.Arrays;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
@@ -308,66 +297,56 @@ public abstract class Robot {
 
 
   /**
-   * sense all around the robot for lead, choose a direction probabilistically
-   *    weighted by how much lead is reached by moving in that direction
-   *    IGNORES 0-1 Pb
-   * @return the most lead-full direction
+   * sense all around the robot for lead, choose a location probabilistically
+   *    weighted by how much lead is reached and how much rubble in the way
+   *    IGNORES 0Pb
+   * @return the most tile in the center of most lead
    * @throws GameActionException if some game op fails
    */
-  protected Direction getBestLeadDirProbabilistic() throws GameActionException {
+  protected MapLocation getBestLeadLocProbabilistic() throws GameActionException {
     final int MIN_LEAD = 1;
-    int[] leadInDirection = new int[Utils.directions.length];
+//    int[] leadInDirection = new int[Utils.directions.length];
+    int avgX = 0;
+    int avgY = 0;
     int totalSeen = 0;
     MapLocation myLoc = rc.getLocation();
+
+    // for all loations I can sense =>
+    // sum up lead and number of current miners, and see if miners > lead / 50: continue if so
     for (MapLocation loc : rc.senseNearbyLocationsWithLead(creationStats.type.visionRadiusSquared, MIN_LEAD)) {
-      boolean isNorth = loc.y >= myLoc.y;
-      boolean isEast = loc.x >= myLoc.x;
-      int leadSeen = rc.senseLead(loc); // don't check canSense because we know it is valid and in range
-//      if (leadSeen < MIN_LEAD) { // ignore 0 Pb tiles
-//        continue;
-//      }
+
+      // if there is a miner within 2x2 blocks of the location, then ignore it
+      int leadSeen = rc.senseLead(loc);
+
+      int minersThere = 0;
+      for (RobotInfo friend : rc.senseNearbyRobots(loc, 8, creationStats.myTeam)) {
+        if (friend.type == RobotType.MINER) minersThere++;
+      }
+      if (minersThere > leadSeen / 75) continue;
+
+
       int rubbleThere = rc.senseRubble(loc);
       int rubbleOnPath = rc.senseRubble(myLoc.add(myLoc.directionTo(loc)));
-      if (rubbleThere >= 5 || rubbleOnPath >= 10) { // ignore rubbly bois
-        continue;
-      }
-      leadSeen *= 100 - rc.senseRubble(loc);
-      leadSeen *= 100 - rc.senseRubble(myLoc.add(myLoc.directionTo(loc)));
+
+      leadSeen *= 100 - rubbleThere;
+      leadSeen *= 100 - rubbleOnPath;
 //      leadSeen /= myLoc.distanceSquaredTo(loc)+1;
+      avgX += loc.x * leadSeen;
+      avgY += loc.y * leadSeen;
       totalSeen += leadSeen;
-      if (isNorth) {
-        // check if location is open before adding it to weighting
-        // if (!rc.isLocationOccupied(rc.adjacentLocation(Direction.NORTH))) {
-        leadInDirection[Direction.NORTH.ordinal()] += leadSeen;
-        if (isEast) {
-          leadInDirection[Direction.EAST.ordinal()] += leadSeen;
-          leadInDirection[Direction.NORTHEAST.ordinal()] += leadSeen;
-        } else {
-          leadInDirection[Direction.WEST.ordinal()] += leadSeen;
-          leadInDirection[Direction.NORTHWEST.ordinal()] += leadSeen;
-        }
-      } else {
-        leadInDirection[Direction.SOUTH.ordinal()] += leadSeen;
-        if (isEast) {
-          leadInDirection[Direction.EAST.ordinal()] += leadSeen;
-          leadInDirection[Direction.SOUTHEAST.ordinal()] += leadSeen;
-        } else {
-          leadInDirection[Direction.WEST.ordinal()] += leadSeen;
-          leadInDirection[Direction.SOUTHWEST.ordinal()] += leadSeen;
-        }
-      }
     }
-    totalSeen *= 3; // each location affects 3 direction entries
+//    totalSeen *= 3; // each location affects 3 direction entries
     if (totalSeen == 0) { // return null if no good lead direction
       return null; // Utils.randomDirection();
     }
-    int randomInt = Utils.rng.nextInt(totalSeen);
-    for (int i = 0; i < leadInDirection.length; i++) {
-      if (randomInt <= leadInDirection[i]) return Utils.directions[i];
-      randomInt -= leadInDirection[i];
-    }
-    System.out.println("WEIGHTED PICK FAILED: " + Arrays.toString(leadInDirection));
-    throw new RuntimeException("Weighted sum should be able to choose one a direction");
+    return new MapLocation(avgX / totalSeen, avgY / totalSeen);
+//    int randomInt = Utils.rng.nextInt(totalSeen);
+//    for (int i = 0; i < leadInDirection.length; i++) {
+//      if (randomInt <= leadInDirection[i]) return Utils.directions[i];
+//      randomInt -= leadInDirection[i];
+//    }
+//    System.out.println("WEIGHTED PICK FAILED: " + Arrays.toString(leadInDirection));
+//    throw new RuntimeException("Weighted sum should be able to choose one a direction");
   }
 
   /**
@@ -376,8 +355,11 @@ public abstract class Robot {
    * @throws GameActionException if movement fails
    */
   protected boolean moveToHighLeadProbabilistic() throws GameActionException {
-    Direction dir = getBestLeadDirProbabilistic();
-    return dir != null && move(dir);
+    MapLocation highLead = getBestLeadLocProbabilistic();
+//    if (rc.getID() == 10001) {
+//      System.out.println("high lead: " + highLead);
+//    }
+    return highLead != null && moveTowardsAvoidRubble(highLead);
 //
 //    if (dir != null) {
 //      if (rc.canMove(dir)) {

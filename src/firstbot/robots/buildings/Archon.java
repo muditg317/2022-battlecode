@@ -1,11 +1,6 @@
 package firstbot.robots.buildings;
 
-import battlecode.common.AnomalyType;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
+import battlecode.common.*;
 import firstbot.Utils;
 import firstbot.communications.messages.ArchonHelloMessage;
 import firstbot.communications.messages.ArchonSavedMessage;
@@ -183,7 +178,9 @@ public class Archon extends Building {
    */
   private void spawnDroid() throws GameActionException {
     if (needMiner()) {
-      if (buildRobot(RobotType.MINER, getBestLeadDirProbabilistic())) {
+      MapLocation bestLead = getBestLeadLocProbabilistic();
+      Direction dir = bestLead == null ? Utils.randomDirection() : rc.getLocation().directionTo(bestLead);
+      if (buildRobot(RobotType.MINER, dir)) {
         rc.setIndicatorString("Spawn miner!");
         minersSpawned++;
         leadSpent += RobotType.MINER.buildCostLead;
