@@ -1,4 +1,4 @@
-package firstbot.robots.droids;
+package spawnorder.robots.droids;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -6,8 +6,8 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import spawnorder.utils.Cache;
+import spawnorder.utils.Utils;
 
 public class Builder extends Droid {
   private static final int DIST_TO_WALL_THRESH = 6;

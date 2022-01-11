@@ -1,4 +1,4 @@
-package firstbot.utils;
+package spawnorder.utils;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
@@ -41,16 +41,10 @@ public class Cache {
         public static int LEVEL;
 
         public static void whenMoved() {
-            // don't need to update
-            if (PerTurn.CURRENT_LOCATION != null && Global.rc.getLocation().equals(PerTurn.CURRENT_LOCATION)) {
-                return;
-            }
-
-            // do the update
-            PerTurn.CURRENT_LOCATION = Global.rc.getLocation();
             PerTurn.ALL_NEARBY_ROBOTS = Global.rc.senseNearbyRobots();
             PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS = Global.rc.senseNearbyRobots(-1, Permanent.OUR_TEAM);
             PerTurn.ALL_NEARBY_ENEMY_ROBOTS = Global.rc.senseNearbyRobots(-1, Permanent.OPPONENT_TEAM);
+            PerTurn.CURRENT_LOCATION = Global.rc.getLocation();
         }
     }
 

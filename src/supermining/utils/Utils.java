@@ -1,4 +1,4 @@
-package firstbot.utils;
+package supermining.utils;
 
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
@@ -23,54 +23,12 @@ public class Utils {
       Direction.NORTHWEST,
   };
 
-  public static final int DSQ_1by1 = 4; // technically 3x3 but a 1tile boundary around center
-  public static final int DSQ_2by2 = 8;
-  public static final int DSQ_3by3plus = 18; // contains some extra tiles
-//  public static final int DSQ_3by3 = 32;
-//  public static final int DSQ_3by3 = 32;
-
   public static void setUpStatics(RobotController rc) {
     rng = new Random(rc.getID());
   }
 
   public static Direction randomDirection() {
     return directions[rng.nextInt(directions.length)];
-  }
-
-  /**
-   * generate a direction either same as dir or random rotation to left/right
-   *    uniform chance
-   * @param dir base direction
-   * @return the randomized direction
-   */
-  public static Direction randomSimilarDirection(Direction dir) {
-    switch (Utils.rng.nextInt(3)) {
-      default:
-      case 0:
-        return dir;
-      case 1:
-        return dir.rotateLeft();
-      case 2:
-        return dir.rotateRight();
-    }
-  }
-
-  /**
-   * generate a direction either same as dir or random rotation to left/right
-   *    prefers passed in direction with 50% (25% each rotation)
-   * @param dir base direction
-   * @return the randomized direction
-   */
-  public static Direction randomSimilarDirectionPrefer(Direction dir) {
-    switch (Utils.rng.nextInt(4)) {
-      default:
-      case 1:
-        return dir;
-      case 2:
-        return dir.rotateLeft();
-      case 3:
-        return dir.rotateRight();
-    }
   }
 
   public static MapLocation randomMapLocation() { return new MapLocation(randomMapLocationX(), randomMapLocationY());}
@@ -168,7 +126,7 @@ public class Utils {
   private static Map<String, Integer> byteCodeMap = new HashMap<>();
   public static void startByteCodeCounting(String reason) {
     if (byteCodeMap.putIfAbsent(reason, Clock.getBytecodeNum()) != null) { // we're already counting!
-      System.out.printf("Already counting for %s!!\n", reason);
+      //System.out.printf("Already counting for %s!!\n", reason);
     }
   }
 
@@ -176,10 +134,10 @@ public class Utils {
     int end = Clock.getBytecodeNum();
     Integer start = byteCodeMap.getOrDefault(reason, -1);
     if (start == -1) {
-      System.out.printf("Not counting bytecodes for %s!!!\n", reason);
+      //System.out.printf("Not counting bytecodes for %s!!!\n", reason);
       return;
     }
-    System.out.printf("%4d BC: %s\n", end-start, reason);
+    //System.out.printf("%4d BC: %s\n", end-start, reason);
     byteCodeMap.remove(reason);
   }
 

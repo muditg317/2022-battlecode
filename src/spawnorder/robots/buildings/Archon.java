@@ -1,4 +1,4 @@
-package firstbot.robots.buildings;
+package spawnorder.robots.buildings;
 
 import battlecode.common.AnomalyType;
 import battlecode.common.Direction;
@@ -7,12 +7,12 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
-import firstbot.communications.messages.ArchonHelloMessage;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
+import spawnorder.utils.Cache;
+import spawnorder.utils.Utils;
+import spawnorder.communications.messages.ArchonHelloMessage;
+import spawnorder.communications.messages.ArchonSavedMessage;
+import spawnorder.communications.messages.Message;
+import spawnorder.communications.messages.SaveMeMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +45,7 @@ public class Archon extends Building {
     super(rc);
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
-//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
+//    //System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
     lastTurnStartingLead = 0;
@@ -68,7 +68,7 @@ public class Archon extends Building {
     movingAvgIncome = movingTotalIncome / INCOME_HISTORY_LENGTH;
     rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
 //    if (whichArchonAmI == rc.getArchonCount()) {
-//      System.out.println("Lead income: " + leadIncome);
+//      //System.out.println("Lead income: " + leadIncome);
 //    }
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
@@ -97,7 +97,7 @@ public class Archon extends Building {
       }
     }
 
-//    System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
+//    //System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
 
     // Spawn new droid if none to repair
     int archons = rc.getArchonCount();
@@ -118,13 +118,13 @@ public class Archon extends Building {
    * @return if running should continue
    */
   private boolean doFirstTurn() {
-//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
+//    //System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);
     archonLocs.add(rc.getLocation());
 
     if (whichArchonAmI == rc.getArchonCount()) {
-      System.out.println("I am the last archon! locs: " + archonLocs);
+      //System.out.println("I am the last archon! locs: " + archonLocs);
 
     }
 
@@ -138,7 +138,7 @@ public class Archon extends Building {
 //    int height = rc.getMapHeight();
 //    int dToPastCenter = Math.abs(myLoc.x - width) + 1;
 //    if (dToPastCenter*dToPastCenter <= rc.getType().visionRadiusSquared) { // can see both sides of the width midpoint
-//      System.out.println("archon at " + myLoc + " - can see width midpoint");
+//      //System.out.println("archon at " + myLoc + " - can see width midpoint");
 ////      rc.senseRubble()
 //    }
     return new ArchonHelloMessage(rc.getLocation(), false, false, false);
@@ -161,7 +161,7 @@ public class Archon extends Building {
 //    if (rc.getRoundNum() == 1)
 //      whichArchonAmI++;
     archonLocs.add(message.location);
-//    System.out.println("Got archon hello!");
+//    //System.out.println("Got archon hello!");
   }
 
   /**
@@ -173,7 +173,7 @@ public class Archon extends Building {
     if (saveMeRequest != null && message.location.equals(saveMeRequest.location)) {
       saveMeRequest = null;
 //    } else {
-//      System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
+//      //System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
     }
   }
 

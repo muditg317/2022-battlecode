@@ -1,4 +1,4 @@
-package firstbot.robots.droids;
+package supermining.robots.droids;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -6,8 +6,8 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import supermining.utils.Cache;
+import supermining.utils.Utils;
 
 public class Builder extends Droid {
   private static final int DIST_TO_WALL_THRESH = 6;
@@ -15,7 +15,6 @@ public class Builder extends Droid {
   MapLocation myBuilding;
   Direction dirToBuild;
   boolean readyToBuild;
-  boolean hasSpaceToBuild;
 
   public Builder(RobotController rc) throws GameActionException {
     super(rc);
@@ -32,21 +31,18 @@ public class Builder extends Droid {
   @Override
   protected void runTurn() throws GameActionException {
     if (myBuilding == null && (moveInDirRandom(dirToBuild) || moveRandomly())) {
-      if (!rc.onTheMap(rc.getLocation().add(dirToBuild)) || offensiveEnemiesNearby()) { // gone to map edge
-        dirToBuild = dirToBuild.rotateRight();
+      if (!rc.onTheMap(rc.getLocation().add(dirToBuild))) { // gone to map edge
+        dirToBuild = dirToBuild.opposite();
       } else if (!readyToBuild && rc.getLocation().distanceSquaredTo(parentArchonLoc) >= Cache.Permanent.VISION_RADIUS_SQUARED) {
         // can only be ready to build if not on edge
         readyToBuild = true;
-        hasSpaceToBuild = checkSpaceToBuild();
-      } else if (readyToBuild) {
-        hasSpaceToBuild = checkSpaceToBuild();
       }
     }
 //    rc.disintegrate();
     if (readyToBuild && rc.isActionReady()) {
       if (myBuilding != null) {
         if (repairBuilding()) myBuilding = null;
-      } else if (hasSpaceToBuild) {
+      } else {
         Direction dir = Utils.randomDirection();
         if (rc.canBuildRobot(RobotType.WATCHTOWER, dir)) {
           rc.buildRobot(RobotType.WATCHTOWER, dir);
@@ -54,20 +50,6 @@ public class Builder extends Droid {
         }
       }
     }
-  }
-
-  /**
-   * check around the miner if it has space to build
-   *    currently just checks no other buildings within 2x2 square
-   * @return true if enough space to build around self
-   */
-  private boolean checkSpaceToBuild() throws GameActionException {
-    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-      if (friend.type.isBuilding() && friend.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /**

@@ -1,4 +1,4 @@
-package firstbot.robots.buildings;
+package supermining.robots.buildings;
 
 import battlecode.common.AnomalyType;
 import battlecode.common.Direction;
@@ -7,12 +7,12 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
-import firstbot.communications.messages.ArchonHelloMessage;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
+import supermining.utils.Cache;
+import supermining.utils.Utils;
+import supermining.communications.messages.ArchonHelloMessage;
+import supermining.communications.messages.ArchonSavedMessage;
+import supermining.communications.messages.Message;
+import supermining.communications.messages.SaveMeMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,13 +31,10 @@ public class Archon extends Building {
   private int soldiersSpawned;
   private int sagesSpawned;
 
-  private static final int INCOME_HISTORY_LENGTH = 10;
   private int lastTurnStartingLead;
-  private int[] incomeHistory;
   private int leadIncome;
-  private int movingTotalIncome;
+  private int totalIncome;
   private int leadSpent;
-  private int movingAvgIncome;
 
   private SaveMeMessage saveMeRequest;
 
@@ -45,15 +42,13 @@ public class Archon extends Building {
     super(rc);
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
-//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
+//    //System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
     lastTurnStartingLead = 0;
-    incomeHistory = new int[INCOME_HISTORY_LENGTH];
     leadIncome = 0;
     leadSpent = 0;
-    movingTotalIncome = 0;
-    movingAvgIncome = 0;
+    totalIncome = 0;
 
     saveMeRequest = null;
   }
@@ -63,12 +58,9 @@ public class Archon extends Building {
     leadIncome = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) - lastTurnStartingLead + leadSpent;
     lastTurnStartingLead = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM);
     leadSpent = 0;
-    movingTotalIncome += leadIncome - incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH];
-    incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH] = leadIncome;
-    movingAvgIncome = movingTotalIncome / INCOME_HISTORY_LENGTH;
-    rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
+    totalIncome += leadIncome;
 //    if (whichArchonAmI == rc.getArchonCount()) {
-//      System.out.println("Lead income: " + leadIncome);
+//      //System.out.println("Lead income: " + leadIncome);
 //    }
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
@@ -97,7 +89,7 @@ public class Archon extends Building {
       }
     }
 
-//    System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
+//    //System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
 
     // Spawn new droid if none to repair
     int archons = rc.getArchonCount();
@@ -118,13 +110,13 @@ public class Archon extends Building {
    * @return if running should continue
    */
   private boolean doFirstTurn() {
-//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
+//    //System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);
     archonLocs.add(rc.getLocation());
 
     if (whichArchonAmI == rc.getArchonCount()) {
-      System.out.println("I am the last archon! locs: " + archonLocs);
+      //System.out.println("I am the last archon! locs: " + archonLocs);
 
     }
 
@@ -138,7 +130,7 @@ public class Archon extends Building {
 //    int height = rc.getMapHeight();
 //    int dToPastCenter = Math.abs(myLoc.x - width) + 1;
 //    if (dToPastCenter*dToPastCenter <= rc.getType().visionRadiusSquared) { // can see both sides of the width midpoint
-//      System.out.println("archon at " + myLoc + " - can see width midpoint");
+//      //System.out.println("archon at " + myLoc + " - can see width midpoint");
 ////      rc.senseRubble()
 //    }
     return new ArchonHelloMessage(rc.getLocation(), false, false, false);
@@ -161,7 +153,7 @@ public class Archon extends Building {
 //    if (rc.getRoundNum() == 1)
 //      whichArchonAmI++;
     archonLocs.add(message.location);
-//    System.out.println("Got archon hello!");
+//    //System.out.println("Got archon hello!");
   }
 
   /**
@@ -173,7 +165,7 @@ public class Archon extends Building {
     if (saveMeRequest != null && message.location.equals(saveMeRequest.location)) {
       saveMeRequest = null;
 //    } else {
-//      System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
+//      //System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
     }
   }
 
@@ -219,11 +211,9 @@ public class Archon extends Building {
    * @return boolean of necessity of building a miner
    */
   private boolean needMiner() throws GameActionException {
-    return rc.getTeamLeadAmount(rc.getTeam()) < 500 && ( // if we have > 2000Pb, just skip miners
-//        movingAvgIncome < 10
-        (rc.getRoundNum() < 100 && localLead > 15 && movingAvgIncome < rc.getRoundNum()*1.5)
-        || (rc.getRoundNum() < 100 && localLead < 15)
-//        || movingAvgIncome < localLead
+    return rc.getTeamLeadAmount(rc.getTeam()) < 2000 && ( // if we have > 2000Pb, just skip miners
+        rc.getRoundNum() < 100
+//        || totalIncome/rc.getRoundNum() < localLead
         || (localLead > 10 && localLead < rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM).length) // lots of local lead available
         || estimateAvgLeadIncome() / (minersSpawned+1) > 3 // spawn miners until we reach less than 5pb/miner income
     );

@@ -1,17 +1,17 @@
-package firstbot.robots.droids;
+package spawnorder.robots.droids;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.EndRaidMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
-import firstbot.communications.messages.StartRaidMessage;
+import spawnorder.utils.Cache;
+import spawnorder.utils.Utils;
+import spawnorder.communications.messages.ArchonSavedMessage;
+import spawnorder.communications.messages.EndRaidMessage;
+import spawnorder.communications.messages.Message;
+import spawnorder.communications.messages.SaveMeMessage;
+import spawnorder.communications.messages.StartRaidMessage;
 
 public class Soldier extends Droid {
   /* fraction of distance to the target where bots should meet up */
@@ -69,7 +69,7 @@ public class Soldier extends Droid {
       if (moveTowardsAvoidRubble(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
-      attackNearby();
+      attackTarget(archonToSave);
     } else if (raidTarget != null) {
       if (moveForRaid()) { // reached target
 //        raidTarget = null;
@@ -126,7 +126,7 @@ public class Soldier extends Droid {
    */
   private void ackStartRaidMessage(StartRaidMessage message) throws GameActionException {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
-//    System.out.println("Got start raid" + message.location);
+//    //System.out.println("Got start raid" + message.location);
 //    if (raidValidated) {
 //      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //        if (enemy.type == RobotType.ARCHON && raidTarget.equals(enemy.location)) { // already raiding a different archon
@@ -150,7 +150,7 @@ public class Soldier extends Droid {
     if (raidTarget != null && raidTarget.equals(message.location)) {
       raidTarget = null;
       raidValidated = false;
-//      System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
+//      //System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
     }
     if (message.location.equals(myPotentialTarget)) {
       canStartRaid = false;
