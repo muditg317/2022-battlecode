@@ -19,12 +19,12 @@ public class Builder extends Droid {
 
   public Builder(RobotController rc) throws GameActionException {
     super(rc);
-    MapLocation myLoc = rc.getLocation();
-    dirToBuild = parentArchonLoc.directionTo(rc.getLocation());
-    if ((myLoc.x < DIST_TO_WALL_THRESH && dirToBuild.dx < 0) || (rc.getMapWidth() - myLoc.x < DIST_TO_WALL_THRESH && dirToBuild.dx > 0)) {
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
+    dirToBuild = parentArchonLoc.directionTo(Cache.PerTurn.CURRENT_LOCATION);
+    if ((myLoc.x < DIST_TO_WALL_THRESH && dirToBuild.dx < 0) || (Cache.Permanent.MAP_WIDTH - myLoc.x < DIST_TO_WALL_THRESH && dirToBuild.dx > 0)) {
       dirToBuild = Utils.flipDirX(dirToBuild);
     }
-    if ((myLoc.y < DIST_TO_WALL_THRESH && dirToBuild.dy < 0) || (rc.getMapHeight() - myLoc.y < DIST_TO_WALL_THRESH && dirToBuild.dy > 0)) {
+    if ((myLoc.y < DIST_TO_WALL_THRESH && dirToBuild.dy < 0) || (Cache.Permanent.MAP_HEIGHT - myLoc.y < DIST_TO_WALL_THRESH && dirToBuild.dy > 0)) {
       dirToBuild = Utils.flipDirY(dirToBuild);
     }
   }
@@ -32,9 +32,9 @@ public class Builder extends Droid {
   @Override
   protected void runTurn() throws GameActionException {
     if (myBuilding == null && (moveInDirRandom(dirToBuild) || moveRandomly())) {
-      if (!rc.onTheMap(rc.getLocation().add(dirToBuild)) || offensiveEnemiesNearby()) { // gone to map edge
+      if (!rc.onTheMap(Cache.PerTurn.CURRENT_LOCATION.add(dirToBuild)) || offensiveEnemiesNearby()) { // gone to map edge
         dirToBuild = dirToBuild.rotateRight();
-      } else if (!readyToBuild && rc.getLocation().distanceSquaredTo(parentArchonLoc) >= Cache.Permanent.VISION_RADIUS_SQUARED) {
+      } else if (!readyToBuild && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(parentArchonLoc) >= Cache.Permanent.VISION_RADIUS_SQUARED) {
         // can only be ready to build if not on edge
         readyToBuild = true;
         hasSpaceToBuild = checkSpaceToBuild();
@@ -50,7 +50,7 @@ public class Builder extends Droid {
         Direction dir = Utils.randomDirection();
         if (rc.canBuildRobot(RobotType.WATCHTOWER, dir)) {
           rc.buildRobot(RobotType.WATCHTOWER, dir);
-          myBuilding = rc.getLocation().add(dir);
+          myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dir);
         }
       }
     }

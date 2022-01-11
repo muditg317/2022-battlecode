@@ -39,13 +39,15 @@ public class Archon extends Building {
   private int leadSpent;
   private int movingAvgIncome;
 
+  private int lastTurnHealth;
+  private int healthLostThisTurn;
   private SaveMeMessage saveMeRequest;
 
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
     whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
-//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + rc.getLocation());
+//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
     lastTurnStartingLead = 0;
@@ -55,26 +57,19 @@ public class Archon extends Building {
     movingTotalIncome = 0;
     movingAvgIncome = 0;
 
+    lastTurnHealth = 0;
+    healthLostThisTurn = 0;
     saveMeRequest = null;
   }
 
   @Override
   protected void runTurn() throws GameActionException {
-    leadIncome = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) - lastTurnStartingLead + leadSpent;
-    lastTurnStartingLead = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM);
-    leadSpent = 0;
-    movingTotalIncome += leadIncome - incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH];
-    incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH] = leadIncome;
-    movingAvgIncome = movingTotalIncome / INCOME_HISTORY_LENGTH;
-    rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
-//    if (whichArchonAmI == rc.getArchonCount()) {
-//      System.out.println("Lead income: " + leadIncome);
-//    }
+    updateHistories();
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
     }
 
-    if (saveMeRequest != null || offensiveEnemiesNearby()) {
+    if (healthLostThisTurn < Cache.PerTurn.HEALTH && (saveMeRequest != null || offensiveEnemiesNearby())) {
       broadcastSaveMe();
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
         rc.setIndicatorString("Spawn soldier!");
@@ -114,14 +109,34 @@ public class Archon extends Building {
   }
 
   /**
+   * update whatever internal history values that this archon stores
+   */
+  private void updateHistories() {
+    leadIncome = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) - lastTurnStartingLead + leadSpent;
+    lastTurnStartingLead = rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM);
+    leadSpent = 0;
+    movingTotalIncome += leadIncome - incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH];
+    incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH] = leadIncome;
+    movingAvgIncome = movingTotalIncome / INCOME_HISTORY_LENGTH;
+//    rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
+//    if (whichArchonAmI == rc.getArchonCount()) {
+//      System.out.println("Lead income: " + leadIncome);
+//    }
+
+    healthLostThisTurn = lastTurnHealth - Cache.PerTurn.HEALTH;
+    rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
+    lastTurnHealth = Cache.PerTurn.HEALTH;
+  }
+
+  /**
    * Run the first turn for this archon
    * @return if running should continue
    */
   private boolean doFirstTurn() {
-//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + rc.getLocation());
+//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);
-    archonLocs.add(rc.getLocation());
+    archonLocs.add(Cache.PerTurn.CURRENT_LOCATION);
 
     if (whichArchonAmI == rc.getArchonCount()) {
       System.out.println("I am the last archon! locs: " + archonLocs);
@@ -133,15 +148,15 @@ public class Archon extends Building {
 
   private ArchonHelloMessage generateArchonHello() {
 //    boolean notHoriz = false;
-//    MapLocation myLoc = rc.getLocation();
-//    int width = rc.getMapWidth();
-//    int height = rc.getMapHeight();
+//    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
+//    int width = Cache.Permanent.MAP_WIDTH;
+//    int height = Cache.Permanent.MAP_HEIGHT;
 //    int dToPastCenter = Math.abs(myLoc.x - width) + 1;
 //    if (dToPastCenter*dToPastCenter <= rc.getType().visionRadiusSquared) { // can see both sides of the width midpoint
 //      System.out.println("archon at " + myLoc + " - can see width midpoint");
 ////      rc.senseRubble()
 //    }
-    return new ArchonHelloMessage(rc.getLocation(), false, false, false);
+    return new ArchonHelloMessage(Cache.PerTurn.CURRENT_LOCATION, false, false, false);
   }
 
   @Override
@@ -183,7 +198,7 @@ public class Archon extends Building {
    * @throws GameActionException if messaging fails
    */
   private void broadcastSaveMe() throws GameActionException {
-    saveMeRequest = new SaveMeMessage(rc.getLocation(), rc.getRoundNum());
+    saveMeRequest = new SaveMeMessage(Cache.PerTurn.CURRENT_LOCATION, rc.getRoundNum());
     communicator.enqueueMessage(saveMeRequest);
   }
 
@@ -193,7 +208,7 @@ public class Archon extends Building {
   private void spawnDroid() throws GameActionException {
     if (needMiner()) {
       MapLocation bestLead = getBestLeadLocProbabilistic();
-      Direction dir = bestLead == null ? Utils.randomDirection() : rc.getLocation().directionTo(bestLead);
+      Direction dir = bestLead == null ? Utils.randomDirection() : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
       if (buildRobot(RobotType.MINER, dir)) {
         rc.setIndicatorString("Spawn miner!");
         minersSpawned++;
