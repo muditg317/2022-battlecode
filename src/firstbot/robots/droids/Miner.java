@@ -1,10 +1,16 @@
 package firstbot.robots.droids;
 
-import battlecode.common.*;
+import battlecode.common.Clock;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
 import firstbot.communications.messages.LeadFoundMessage;
 import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
-import firstbot.containers.HashMap;
+import firstbot.containers.HashSet;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
@@ -45,7 +51,7 @@ public class Miner extends Droid {
     // and then 2 more on each side because we do not want a miner within 2x2 square (this is just a buffer and will always be 0)
     friendMinerRobots = new int[13][13];
     frindMinerDP = new int[13][13];
-//    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
+    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 
 
@@ -326,40 +332,194 @@ public class Miner extends Droid {
   }
 
 //  private Set<MapLocation> rejectedLocations = new HashSet<>();
+//  HashMap<MapLocation, Integer> leads = new HashMap<>(32);
+  int[] leadByLocationMap = new int[121];
+//  int maxLeadMapVal = 0;
   private MapLocation getBestLeadWithHash() throws GameActionException {
-    MapLocation[] leadByLocationMap = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2);
-    HashMap<MapLocation, Integer> leads = new HashMap<>(leadByLocationMap.length);
+//    System.out.println("GET TROLLED!!\nMy location: " + rc.getLocation() + "\n-- Lead centered at 0,0: " + Arrays.toString(rc.senseNearbyLocationsWithLead(new MapLocation(0,0), -1)));
+    System.out.println("Miner start getBestLeadWithHash(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2);
+    System.out.println("Miner start create map(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    HashMap<MapLocation, Integer> leadByLocationMap = new HashMap<>(32);
+//    leads.clear();
+    // clear out array
+    {
+      leadByLocationMap[0] = 0;
+      leadByLocationMap[1] = 0;
+      leadByLocationMap[2] = 0;
+      leadByLocationMap[3] = 0;
+      leadByLocationMap[4] = 0;
+      leadByLocationMap[5] = 0;
+      leadByLocationMap[6] = 0;
+      leadByLocationMap[7] = 0;
+      leadByLocationMap[8] = 0;
+      leadByLocationMap[9] = 0;
+      leadByLocationMap[10] = 0;
+      leadByLocationMap[11] = 0;
+      leadByLocationMap[12] = 0;
+      leadByLocationMap[13] = 0;
+      leadByLocationMap[14] = 0;
+      leadByLocationMap[15] = 0;
+      leadByLocationMap[16] = 0;
+      leadByLocationMap[17] = 0;
+      leadByLocationMap[18] = 0;
+      leadByLocationMap[19] = 0;
+      leadByLocationMap[20] = 0;
+      leadByLocationMap[21] = 0;
+      leadByLocationMap[22] = 0;
+      leadByLocationMap[23] = 0;
+      leadByLocationMap[24] = 0;
+      leadByLocationMap[25] = 0;
+      leadByLocationMap[26] = 0;
+      leadByLocationMap[27] = 0;
+      leadByLocationMap[28] = 0;
+      leadByLocationMap[29] = 0;
+      leadByLocationMap[30] = 0;
+      leadByLocationMap[31] = 0;
+      leadByLocationMap[32] = 0;
+      leadByLocationMap[33] = 0;
+      leadByLocationMap[34] = 0;
+      leadByLocationMap[35] = 0;
+      leadByLocationMap[36] = 0;
+      leadByLocationMap[37] = 0;
+      leadByLocationMap[38] = 0;
+      leadByLocationMap[39] = 0;
+      leadByLocationMap[40] = 0;
+      leadByLocationMap[41] = 0;
+      leadByLocationMap[42] = 0;
+      leadByLocationMap[43] = 0;
+      leadByLocationMap[44] = 0;
+      leadByLocationMap[45] = 0;
+      leadByLocationMap[46] = 0;
+      leadByLocationMap[47] = 0;
+      leadByLocationMap[48] = 0;
+      leadByLocationMap[49] = 0;
+      leadByLocationMap[50] = 0;
+      leadByLocationMap[51] = 0;
+      leadByLocationMap[52] = 0;
+      leadByLocationMap[53] = 0;
+      leadByLocationMap[54] = 0;
+      leadByLocationMap[55] = 0;
+      leadByLocationMap[56] = 0;
+      leadByLocationMap[57] = 0;
+      leadByLocationMap[58] = 0;
+      leadByLocationMap[59] = 0;
+      leadByLocationMap[60] = 0;
+      leadByLocationMap[61] = 0;
+      leadByLocationMap[62] = 0;
+      leadByLocationMap[63] = 0;
+      leadByLocationMap[64] = 0;
+      leadByLocationMap[65] = 0;
+      leadByLocationMap[66] = 0;
+      leadByLocationMap[67] = 0;
+      leadByLocationMap[68] = 0;
+      leadByLocationMap[69] = 0;
+      leadByLocationMap[70] = 0;
+      leadByLocationMap[71] = 0;
+      leadByLocationMap[72] = 0;
+      leadByLocationMap[73] = 0;
+      leadByLocationMap[74] = 0;
+      leadByLocationMap[75] = 0;
+      leadByLocationMap[76] = 0;
+      leadByLocationMap[77] = 0;
+      leadByLocationMap[78] = 0;
+      leadByLocationMap[79] = 0;
+      leadByLocationMap[80] = 0;
+      leadByLocationMap[81] = 0;
+      leadByLocationMap[82] = 0;
+      leadByLocationMap[83] = 0;
+      leadByLocationMap[84] = 0;
+      leadByLocationMap[85] = 0;
+      leadByLocationMap[86] = 0;
+      leadByLocationMap[87] = 0;
+      leadByLocationMap[88] = 0;
+      leadByLocationMap[89] = 0;
+      leadByLocationMap[90] = 0;
+      leadByLocationMap[91] = 0;
+      leadByLocationMap[92] = 0;
+      leadByLocationMap[93] = 0;
+      leadByLocationMap[94] = 0;
+      leadByLocationMap[95] = 0;
+      leadByLocationMap[96] = 0;
+      leadByLocationMap[97] = 0;
+      leadByLocationMap[98] = 0;
+      leadByLocationMap[99] = 0;
+      leadByLocationMap[100] = 0;
+      leadByLocationMap[101] = 0;
+      leadByLocationMap[102] = 0;
+      leadByLocationMap[103] = 0;
+      leadByLocationMap[104] = 0;
+      leadByLocationMap[105] = 0;
+      leadByLocationMap[106] = 0;
+      leadByLocationMap[108] = 0;
+      leadByLocationMap[109] = 0;
+      leadByLocationMap[110] = 0;
+      leadByLocationMap[111] = 0;
+      leadByLocationMap[112] = 0;
+      leadByLocationMap[113] = 0;
+      leadByLocationMap[114] = 0;
+      leadByLocationMap[115] = 0;
+      leadByLocationMap[116] = 0;
+      leadByLocationMap[117] = 0;
+      leadByLocationMap[118] = 0;
+      leadByLocationMap[119] = 0;
+      leadByLocationMap[120] = 0;
+    }
     System.out.println("Miner start populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
-    for (MapLocation lead : leadByLocationMap) {
+//    System.out.println("Max lead value = " + maxLeadMapVal);
+    for (MapLocation lead : leadLocs) {
 //      if (rejectedLocations.contains(lead)) continue; // ignore lead if we got rejected earlier
       int leadThere = rc.senseLead(lead);
       for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(lead, Utils.DSQ_1by1)) {
-        int befadd = Clock.getBytecodeNum();
-        leads.increment(local, leadThere);
-        System.out.println("Cost to put in map: " + (Clock.getBytecodeNum() - befadd));
+        if (Utils.maxSingleAxisDist(local, Cache.PerTurn.CURRENT_LOCATION) > 5) continue;
+//        int befadd = Clock.getBytecodeNum();
+//        System.out.println("Mapping " + local + " to [" + (5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) + "," + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y) + "] (rel to " + Cache.PerTurn.CURRENT_LOCATION + ")-- " + ((5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y)));
+        leadByLocationMap[(5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y)] += leadThere;
+//        leadByLocationMap.increment(local, leadThere);
+//        System.out.println("Cost to increment in map: " + (Clock.getBytecodeNum() - befadd));
+//        int befcontain = Clock.getBytecodeNum();
+//        if (leads.contains(local)) {
+//          System.out.println("Cost to check contains in map: " + (Clock.getBytecodeNum() - befcontain));
+//          int befadd = Clock.getBytecodeNum();
+//          leads.increment(local, leadThere);
+//          System.out.println("Cost to increment in map: " + (Clock.getBytecodeNum() - befadd));
+//        } else {
+//          System.out.println("Cost to check contains in map: " + (Clock.getBytecodeNum() - befcontain));
+//          int befadd = Clock.getBytecodeNum();
+//          leads.put(local, leadThere);
+//          System.out.println("Cost to put in map: " + (Clock.getBytecodeNum() - befadd));
+//        }
       }
     }
     System.out.println("Miner finish populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 //    System.out.println("Considering lead locations: " + leads);
-    for (MapLocation lead : leadByLocationMap) {
-      for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(lead, Utils.DSQ_1by1)) {
-        System.out.println("Map Value at " + local + " -- " + leads.get(local));
-      }
-    }
+//    for (MapLocation lead : leadByLocationMap) {
+//      for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(lead, Utils.DSQ_1by1)) {
+//        System.out.println("Map Value at " + local + " -- " + leads.get(local));
+//      }
+//    }
 
-    System.out.println("Miner start populcheck friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+    System.out.println("Miner start check friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
       if (friend.type == RobotType.MINER) {
-        MapLocation[] takenLead = rc.senseNearbyLocationsWithLead(friend.location, Utils.DSQ_1by1, 2);
+        System.out.println("Friendly miner at " + friend.location + " -- " + friend);
+        MapLocation[] takenLead = rc.senseNearbyLocationsWithLead(friend.location, Utils.DSQ_2by2, 2);
         if (takenLead.length == 0) continue;
         int leadToTake = -75 / takenLead.length;
         for (MapLocation takenLeadLoc : takenLead) {
+          if (!takenLeadLoc.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) continue;
           // if we are closer, ignore the miner
           if (Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(takenLeadLoc) < friend.location.distanceSquaredTo(takenLeadLoc)) {
             continue;
           }
+          System.out.println("Miner already claims lead at " + takenLeadLoc);
+          System.out.println("My live loc: " + rc.getLocation() + " -- can see taken lead: " + rc.getLocation().isWithinDistanceSquared(takenLeadLoc, Cache.Permanent.VISION_RADIUS_SQUARED));
           for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(takenLeadLoc, Utils.DSQ_1by1)) {
-            leads.increment(local, leadToTake);
+            if (Utils.maxSingleAxisDist(local, Cache.PerTurn.CURRENT_LOCATION) > 5) continue;
+//            System.out.println("Mapping " + local + " to [" + (5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) + "," + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y) + "] (rel to " + Cache.PerTurn.CURRENT_LOCATION + ")-- " + ((5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y)));
+//            System.out.println("Decrement lead score at " + local + " -- was: " + leadByLocationMap[(5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y)] + " by: " + Math.min(leadToTake, rc.senseLead(takenLeadLoc)));
+            leadByLocationMap[(5 + local.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + local.y - Cache.PerTurn.CURRENT_LOCATION.y)] += Math.min(leadToTake, rc.senseLead(takenLeadLoc));
+//            leadByLocationMap.increment(local, leadToTake);
           }
 //          leads.merge(takenLeadLoc, leadToTake, Integer::sum);
         }
@@ -372,28 +532,37 @@ public class Miner extends Droid {
     int bestDist = 9999;
     int bestLead = 0;
 
-    for (MapLocation candidateLocation : leadByLocationMap) {
-      if (rc.isLocationOccupied(candidateLocation)) continue;
-      int candidateLead = leads.getOrDefault(candidateLocation, 0);
-      if (candidateLead <= 0) {
-        System.out.println(candidateLocation + " already claimed! ignored...");
+//    int thisTurnMax = maxLeadMapVal;
+    HashSet<MapLocation> visited = new HashSet<>(leadLocs.length*5);
+    for (MapLocation leadLoc : leadLocs) {
+      for (MapLocation candidateLocation : rc.getAllLocationsWithinRadiusSquared(leadLoc, Utils.DSQ_1by1)) {
+        if (!candidateLocation.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)
+            || rc.isLocationOccupied(candidateLocation)) continue;
+        int candidateLead = leadByLocationMap[(5 + candidateLocation.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + candidateLocation.y - Cache.PerTurn.CURRENT_LOCATION.y)];
+        leadByLocationMap[(5 + candidateLocation.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + candidateLocation.y - Cache.PerTurn.CURRENT_LOCATION.y)] = 0;
+//      if (candidateLead > maxLeadMapVal) maxLeadMapVal = candidateLead;
+//      candidateLead -= thisTurnMax;
+        if (candidateLead <= 0) {
+          System.out.println(candidateLocation + " already claimed! ignored...");
+          System.out.println("lead available after claiming: " + candidateLead);
 //        rejectedLocations.add(candidateLocation);
-        continue;
+          continue;
+        }
+
+        int candidateRubble = rc.senseRubble(candidateLocation);
+        if (candidateRubble > leastRubble) continue;
+        int candidateDist = candidateLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+
+        if (candidateRubble == leastRubble) {
+          if (candidateLead < bestLead) continue;
+          if (candidateLead == bestLead && candidateDist >= bestDist) continue;
+        }
+
+        bestLocation = candidateLocation;
+        leastRubble = candidateRubble;
+        bestDist = candidateDist;
+        bestLead = candidateLead;
       }
-
-      int candidateRubble = rc.senseRubble(candidateLocation);
-      if (candidateRubble > leastRubble) continue;
-      int candidateDist = candidateLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
-
-      if (candidateRubble == leastRubble) {
-        if (candidateLead < bestLead) continue;
-        if (candidateLead == bestLead && candidateDist >= bestDist) continue;
-      }
-
-      bestLocation = candidateLocation;
-      leastRubble = candidateRubble;
-      bestDist = candidateDist;
-      bestLead = candidateLead;
     }
 
     return bestLocation;

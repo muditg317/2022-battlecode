@@ -10,14 +10,14 @@ public class HashMap<K, V> {
         table = new LinkedList[capacity];
         this.capacity = capacity;
         for (int i = capacity; --i>= 0; ) {
-            table[i] = new LinkedList<HashMapNodeVal<K, V>>();
+            table[i] = new LinkedList<>();
         }
     }
     public boolean put(K key, V obj) {
         int index = (Math.abs(key.hashCode())) % this.capacity;
 
         // doesn't contain, add it
-        HashMapNodeVal<K, V> node = new HashMapNodeVal<K, V>(key, obj);
+        HashMapNodeVal<K, V> node = new HashMapNodeVal<>(key, obj);
         if (!table[index].contains(node)) {
             table[index].add(node);
             size++;
@@ -156,5 +156,12 @@ public class HashMap<K, V> {
             llnode = llnode.next;
         }
         return defaultVal;
+    }
+
+    public void clear() {
+        for (int i = capacity; --i>= 0; ) {
+            table[i].clear();
+        }
+        size = 0;
     }
 }
