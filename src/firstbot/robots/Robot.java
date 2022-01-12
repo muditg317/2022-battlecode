@@ -85,7 +85,7 @@ public abstract class Robot {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
-        rc.setIndicatorDot(rc.getLocation(), 255,255,255);
+        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
@@ -103,7 +103,7 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
-//      System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
+//      System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
     Cache.updateOnTurn();
 //    communicator.cleanStaleMessages();
@@ -207,7 +207,7 @@ public abstract class Robot {
     int bestPosDirInd = -1;
     int bestPosRubble = 101;
     int bestPosDist = -1;
-    MapLocation myLoc = rc.getLocation();
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
     int dToLoc = myLoc.distanceSquaredTo(target);
 
     MapLocation newLoc; // temp
@@ -248,12 +248,12 @@ public abstract class Robot {
 
 //  protected boolean moveSafely(MapLocation loc, int rad){
 //    if (loc == null) return false;
-//    int d = rc.getLocation().distanceSquaredTo(loc);
+//    int d = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(loc);
 //    d = Math.min(d, rad);
 //    boolean[] imp = new boolean[Utils.directions.length];
 //    boolean greedy = false;
 //    for (int i = Utils.directions.length; i-- > 0; ){
-//      MapLocation newLoc = rc.getLocation().add(Utils.directions[i]);
+//      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(Utils.directions[i]);
 //      if (newLoc.distanceSquaredTo(loc) <= d){
 //        imp[i] = true;
 //        greedy = true;
@@ -279,7 +279,7 @@ public abstract class Robot {
     int avgX = 0;
     int avgY = 0;
     int totalSeen = 0;
-    MapLocation myLoc = rc.getLocation();
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
 
     // for all loations I can sense =>
     // sum up lead and number of current miners, and see if miners > lead / 50: continue if so

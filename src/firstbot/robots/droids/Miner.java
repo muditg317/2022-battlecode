@@ -36,7 +36,7 @@ public class Miner extends Droid {
   public Miner(RobotController rc) throws GameActionException {
     super(rc);
     target = Utils.randomMapLocation();
-    bestSquaredDistanceToTarget = rc.getLocation().distanceSquaredTo(target);
+    bestSquaredDistanceToTarget = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(target);
     leadRequest = null;
     justMoved = false;
     //13x13 because the vision circle is circumscribed by a 9x9 square
@@ -125,7 +125,7 @@ public class Miner extends Droid {
 
 
     // we have a target, forward it to the requester
-    MapLocation responseLocation = target != null ? target : rc.getLocation();
+    MapLocation responseLocation = target != null ? target : Cache.PerTurn.CURRENT_LOCATION;
     if (message.from.distanceSquaredTo(responseLocation) > MAX_SQDIST_FOR_TARGET) return; // don't answer if too far
 
     rc.setIndicatorString("Answer lead request: " + responseLocation);
@@ -133,7 +133,7 @@ public class Miner extends Droid {
     message.respond(responseLocation);
     rc.setIndicatorString("Respond to lead request! " + responseLocation);
     rc.setIndicatorDot(responseLocation, 0,255,0);
-    rc.setIndicatorLine(rc.getLocation(), responseLocation, 0,255,0);
+    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, responseLocation, 0,255,0);
   }
 
 
@@ -151,7 +151,7 @@ public class Miner extends Droid {
    */
   private void mineSurroundingGold() throws GameActionException {
     // Try to mine on squares around us.
-    MapLocation me = rc.getLocation();
+    MapLocation me = Cache.PerTurn.CURRENT_LOCATION;
     for (int dx = -1; dx <= 1; dx++) {
       for (int dy = -1; dy <= 1; dy++) {
         MapLocation mineLocation = new MapLocation(me.x + dx, me.y + dy);
@@ -168,7 +168,7 @@ public class Miner extends Droid {
    */
   private void mineSurroundingLead() throws GameActionException {
     // Try to mine on squares around us.
-    MapLocation me = rc.getLocation();
+    MapLocation me = Cache.PerTurn.CURRENT_LOCATION;
     for (int dx = -1; dx <= 1; dx++) {
       for (int dy = -1; dy <= 1; dy++) {
         MapLocation mineLocation = new MapLocation(me.x + dx, me.y + dy);
@@ -193,7 +193,7 @@ public class Miner extends Droid {
   private void executeRunFromEnemy() {
     MapLocation enemies = findEnemies();
     if (enemies != null) {
-      MapLocation myLoc = rc.getLocation();
+      MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
       runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
       Direction backToSelf = runAwayTarget.directionTo(myLoc);
       while (!rc.canSenseLocation(runAwayTarget)) runAwayTarget = runAwayTarget.add(backToSelf);
@@ -231,7 +231,7 @@ public class Miner extends Droid {
   private boolean runAway() throws GameActionException {
     if (moveTowardsAvoidRubble(runAwayTarget)) {
       rc.setIndicatorString("run away! " + runAwayTarget);
-      return rc.getLocation().isWithinDistanceSquared(runAwayTarget, Cache.Permanent.ACTION_RADIUS_SQUARED);
+      return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(runAwayTarget, Cache.Permanent.ACTION_RADIUS_SQUARED);
     }
     return false;
   }
@@ -257,7 +257,7 @@ public class Miner extends Droid {
     boolean followedLead = moveToHighLeadProbabilistic();
     if (followedLead) {
       if (turnsWandering > WANDERING_TURNS_TO_BROADCAST_LEAD) {
-        broadcastLead(rc.getLocation());
+        broadcastLead(Cache.PerTurn.CURRENT_LOCATION);
       }
       turnsWandering = 0;
     }
@@ -455,12 +455,12 @@ public class Miner extends Droid {
    * @return if the target was set
    */
   private boolean registerTarget(MapLocation newTarget) {
-    int distToNewTarget = rc.getLocation().distanceSquaredTo(newTarget);
+    int distToNewTarget = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(newTarget);
     if (distToNewTarget > MAX_SQDIST_FOR_TARGET) { // target too far to follow
       return false;
     }
     // if we already have a target that's closer
-    if (target != null && distToNewTarget >= rc.getLocation().distanceSquaredTo(target)) {
+    if (target != null && distToNewTarget >= Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(target)) {
       return false;
     }
     target = newTarget;
@@ -479,14 +479,14 @@ public class Miner extends Droid {
    */
   private boolean goToTarget() throws GameActionException {
     turnsWandering = 0;
-//    Direction goal = rc.getLocation().directionTo(target);
+//    Direction goal = Cache.PerTurn.CURRENT_LOCATION.directionTo(target);
     if (moveTowardsAvoidRubble(target)) {
       rc.setIndicatorString("Approaching target" + target);
 //    moveInDirLoose(goal);
-      rc.setIndicatorLine(rc.getLocation(), target, 255, 10, 10);
+      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, target, 255, 10, 10);
       rc.setIndicatorDot(target, 0, 255, 0);
     }
-    return rc.getLocation().isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
+    return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
   }
 
   /**
@@ -515,9 +515,9 @@ public class Miner extends Droid {
    * send a RequestLeadMessage
    */
   private void requestLead() {
-    leadRequest = new LeadRequestMessage(rc.getLocation(), Cache.PerTurn.ROUND_NUM);
+    leadRequest = new LeadRequestMessage(Cache.PerTurn.CURRENT_LOCATION, Cache.PerTurn.ROUND_NUM);
     communicator.enqueueMessage(leadRequest);
-    rc.setIndicatorDot(rc.getLocation(), 0, 0, 255);
+    rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0, 0, 255);
     rc.setIndicatorString("Requesting lead!");
     //System.out.println("Requesting lead!");
   }

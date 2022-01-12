@@ -33,8 +33,8 @@ public class Soldier extends Droid {
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
     if (rc.senseNearbyLocationsWithLead().length > 15) VISION_FRACTION_TO_RAID = 6;
-    int mapW = rc.getMapWidth();
-    int mapH = rc.getMapHeight();
+    int mapW = Cache.Permanent.MAP_WIDTH;
+    int mapH = Cache.Permanent.MAP_HEIGHT;
     if (Math.abs(mapW - mapH) > 3) { // not a square default to flip sym for targetting
       switch (Utils.rng.nextInt(2)) {
         case 0:
@@ -46,7 +46,7 @@ public class Soldier extends Droid {
     } else {
       myPotentialTarget = new MapLocation(mapW-1-parentArchonLoc.x, mapH-1-parentArchonLoc.y);
     }
-    meetupPoint = Utils.lerpLocations(rc.getLocation(), myPotentialTarget, MEETUP_FACTOR);
+    meetupPoint = Utils.lerpLocations(Cache.PerTurn.CURRENT_LOCATION, myPotentialTarget, MEETUP_FACTOR);
     visionSize = rc.getAllLocationsWithinRadiusSquared(meetupPoint, 100).length;
     canStartRaid = true;
   }
@@ -88,9 +88,9 @@ public class Soldier extends Droid {
 //          broadcastEndRaid();
         }
       }
-      rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
+      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
     } else {
-//      moveInDirLoose(rc.getLocation().directionTo(center));
+//      moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(center));
       moveTowardsAvoidRubble(meetupPoint);
     }
 
@@ -183,7 +183,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if checking fails
    */
   private boolean checkDoneSaving() throws GameActionException {
-    if (!archonToSave.isWithinDistanceSquared(rc.getLocation(), Cache.Permanent.ACTION_RADIUS_SQUARED)) return false;
+    if (!archonToSave.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) return false;
     RobotInfo archon = rc.senseRobotAtLocation(archonToSave);
     if (archon == null) return true;
     return !offensiveEnemiesNearby();
@@ -236,7 +236,7 @@ public class Soldier extends Droid {
   private boolean checkForAndCallRaid() {
     if (!canCallRaid()) return false;
     rc.setIndicatorString("Ready to raid!");
-//      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, oppositeLoc, 0,0,255);
     callForRaid(myPotentialTarget);
     return true;
   }
@@ -255,10 +255,10 @@ public class Soldier extends Droid {
    * @throws GameActionException if moving fails
    */
   private boolean moveForRaid() throws GameActionException {
-    rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
-//    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
+    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
+//    return moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(raidTarget))
     return moveTowardsAvoidRubble(raidTarget)
-        && rc.getLocation().distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
+        && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
   }
 
   /**

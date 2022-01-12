@@ -4,6 +4,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.RobotController;
 import firstbot.communications.messages.Message;
+import firstbot.utils.Cache;
 import firstbot.utils.Global;
 import firstbot.utils.Utils;
 
@@ -167,18 +168,19 @@ public class Communicator {
    */
   public boolean cleanStaleMessages() {
     if (!sentMessages.isEmpty()) {
-//      if (rc.getType() == RobotType.ARCHON || rc.getRoundNum() == 474) {
+//      if (rc.getRoundNum() == 968) {
 //        System.out.println("bounds before cleaning: " + metaInfo);
 //      }
       for (Message message : sentMessages) {
         if (message.writeInfo.startIndex == metaInfo.validRegionStart) {
+          System.out.println("CLEAN " + message.header.type + ": " + metaInfo.validRegionStart);
           Message last = sentMessages.get(sentMessages.size() - 1);
           metaInfo.validRegionStart = (last.writeInfo.startIndex + last.header.numInformationInts + 1) % NUM_MESSAGING_INTS;
           if ((metaInfo.validRegionEnd + 1) % NUM_MESSAGING_INTS == metaInfo.validRegionStart) {
             metaInfo.validRegionEnd = metaInfo.validRegionStart;
           }
           intsWritten++;
-//          if (rc.getType() == RobotType.ARCHON || rc.getRoundNum() == 474) {
+//          if (rc.getRoundNum() == 968) {
 //            System.out.println("Cleaning " + (sentMessages.size() - sentMessages.indexOf(message)) + " messages!");
 //            System.out.println("Clearing messages! - starting from " + message.header.type + " on " + message.header.cyclicRoundNum + " at " + message.writeInfo.startIndex);
 //            System.out.println("Last message cleaned: " + last.header.type + " on " + message.header.cyclicRoundNum + " at " + last.writeInfo.startIndex);
@@ -261,8 +263,8 @@ public class Communicator {
       System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
       System.out.printf("Read at %d\n", messageOrigin);
       System.out.println("Header int: " + headerInt);
-      return null;
-//      throw e;
+//      return null;
+      throw e;
     }
     int[] information = new int[header.numInformationInts];
     for (int i = 0; i < header.numInformationInts; i++) {
@@ -334,10 +336,10 @@ public class Communicator {
 //    if (start within where i need to write) { check priority
     boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
-    System.out.printf("SEND %s MESSAGE:\n%d - %s\n", message.header.type, metaInfo.validRegionEnd+1, Arrays.toString(messageBits));
-//    System.out.println(message.header);
     int origin = metaInfo.validRegionEnd;
     int messageOrigin = (origin + 1) % NUM_MESSAGING_INTS;
+    System.out.printf("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
+//    System.out.println(message.header);
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
       if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
@@ -355,7 +357,7 @@ public class Communicator {
       rc.writeSharedArray(origin, messageChunk);
     }
     sentMessages.add(message);
-    rc.setIndicatorDot(rc.getLocation(), 0,255,0);
+    rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,255,0);
     metaInfo.validRegionEnd = origin;
     if (updateStart) { // first message!
       metaInfo.validRegionStart = origin - message.header.numInformationInts;
