@@ -22,7 +22,7 @@ public class Utils {
       Direction.NORTHWEST,
   };
 
-  public static final int DSQ_1by1 = 4; // technically 3x3 but a 1tile boundary around center
+  public static final int DSQ_1by1 = 2; // technically 3x3 but a 1tile boundary around center
   public static final int DSQ_2by2 = 8;
   public static final int DSQ_3by3plus = 18; // contains some extra tiles
 //  public static final int DSQ_3by3 = 32;

@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = 5;
+  public static final int SUICIDE_ROUND = -5;
 
   private int whichArchonAmI;
   private List<MapLocation> archonLocs;
