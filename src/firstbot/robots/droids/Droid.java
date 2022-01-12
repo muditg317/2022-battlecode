@@ -20,5 +20,6 @@ public abstract class Droid extends Robot {
         break;
       }
     }
+    rc.setIndicatorString("im a droid");
   }
 }

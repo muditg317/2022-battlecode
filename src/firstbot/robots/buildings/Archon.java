@@ -126,6 +126,8 @@ public class Archon extends Building {
     healthLostThisTurn = lastTurnHealth - Cache.PerTurn.HEALTH;
     rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
     lastTurnHealth = Cache.PerTurn.HEALTH;
+
+    
   }
 
   /**

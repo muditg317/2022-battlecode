@@ -2,7 +2,6 @@ package firstbot.utils;
 
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
 
 import java.util.Random;
 
@@ -29,8 +28,8 @@ public class Utils {
 //  public static final int DSQ_3by3 = 32;
 //  public static final int DSQ_3by3 = 32;
 
-  public static void setUpStatics(RobotController rc) {
-    rng = new Random(rc.getID());
+  public static void setUpStatics() {
+    rng = new Random(Global.rc.getID());
   }
 
   public static Direction randomDirection() {

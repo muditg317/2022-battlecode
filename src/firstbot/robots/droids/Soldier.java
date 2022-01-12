@@ -53,11 +53,13 @@ public class Soldier extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-
+    rc.setIndicatorString("Soldier run - " + Cache.PerTurn.ROUND_NUM);
     // Try to attack someone
     if (raidTarget != null) attackTarget(raidTarget);
+    rc.setIndicatorString("Soldier attackTarget - " + Cache.PerTurn.ROUND_NUM);
 
     checkForAndCallRaid();
+    rc.setIndicatorString("Soldier checkRaid - " + Cache.PerTurn.ROUND_NUM);
 
     if (archonToSave != null) {
       if (raidTarget != null) {
@@ -93,6 +95,7 @@ public class Soldier extends Droid {
 //      moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(center));
       moveTowardsAvoidRubble(meetupPoint);
     }
+    rc.setIndicatorString("Soldier movement done - " + Cache.PerTurn.ROUND_NUM);
 
 //    if (!raidValidated) {
 //      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
@@ -104,6 +107,8 @@ public class Soldier extends Droid {
 //    }
 
     attackNearby();
+    rc.setIndicatorString("Soldier attackNearby - " + Cache.PerTurn.ROUND_NUM);
+
   }
 
   @Override

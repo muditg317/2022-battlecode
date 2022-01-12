@@ -2,7 +2,6 @@ package firstbot.utils;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
@@ -20,16 +19,17 @@ public class Cache {
         public static int MAP_HEIGHT;
     }
 
-    public static void setup(RobotController rc) throws GameActionException {
-        Permanent.OUR_TEAM = rc.getTeam();
+    public static void setup() throws GameActionException {
+        Permanent.OUR_TEAM = Global.rc.getTeam();
         Permanent.OPPONENT_TEAM = Permanent.OUR_TEAM.opponent();
-        Permanent.ROBOT_TYPE = rc.getType();
-        Permanent.START_LOCATION = rc.getLocation();
-        Permanent.ID = rc.getID();
+        Permanent.ROBOT_TYPE = Global.rc.getType();
+        Permanent.START_LOCATION = Global.rc.getLocation();
+        Permanent.ID = Global.rc.getID();
         Permanent.VISION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.visionRadiusSquared;
         Permanent.ACTION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.actionRadiusSquared;
-        Permanent.MAP_WIDTH = rc.getMapWidth();
-        Permanent.MAP_HEIGHT = rc.getMapHeight();
+        Permanent.MAP_WIDTH = Global.rc.getMapWidth();
+        Permanent.MAP_HEIGHT = Global.rc.getMapHeight();
+        updateOnTurn();
     }
 
     public static class PerTurn {

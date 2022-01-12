@@ -39,8 +39,8 @@ public abstract class Robot {
    */
   public Robot(RobotController rc) throws GameActionException {
     Global.setupGlobals(rc);
-    Utils.setUpStatics(rc);
-    Cache.setup(rc);
+    Utils.setUpStatics();
+    Cache.setup();
     this.rc = rc;
     this.communicator = Global.communicator;
 
