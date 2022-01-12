@@ -94,6 +94,9 @@ public class Communicator {
     int ind;
     for (int i = 0; i < toUpdate; i++) {
       ind = (metaInfo.validRegionStart+i) % NUM_MESSAGING_INTS;
+//      if (rc.getRoundNum() == 1471) {
+//        System.out.println("Read to buffer: " + ind);
+//      }
       sharedBuffer[ind] = rc.readSharedArray(ind);
     }
 //    for (int i = 0; i < GameConstants.SHARED_ARRAY_LENGTH; i++) {
@@ -176,7 +179,7 @@ public class Communicator {
    */
   public boolean cleanStaleMessages() {
     if (!sentMessages.isEmpty()) {
-//      if (rc.getRoundNum() == 968) {
+//      if (rc.getRoundNum() == 1471) {
 //        System.out.println("bounds before cleaning: " + metaInfo);
 //      }
       for (Message message : sentMessages) {
@@ -188,7 +191,7 @@ public class Communicator {
             metaInfo.validRegionEnd = metaInfo.validRegionStart;
           }
           intsWritten++;
-//          if (rc.getRoundNum() == 968) {
+//          if (rc.getRoundNum() == 1471) {
 //            System.out.println("Cleaning " + (sentMessages.size() - sentMessages.indexOf(message)) + " messages!");
 //            System.out.println("Clearing messages! - starting from " + message.header.type + " on " + message.header.cyclicRoundNum + " at " + message.writeInfo.startIndex);
 //            System.out.println("Last message cleaned: " + last.header.type + " on " + message.header.cyclicRoundNum + " at " + last.writeInfo.startIndex);
@@ -210,7 +213,7 @@ public class Communicator {
   public int readMessages() throws GameActionException {
     Utils.startByteCodeCounting("reloadBuffer");
     reloadBuffer();
-//    if (rc.getRoundNum() == 582) {
+//    if (rc.getRoundNum() == 1471) {
 //      System.out.println("Reading on round 582 -- " + metaInfo);
 //      System.out.println(Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd- metaInfo.validRegionStart+1)));
 //    }
@@ -266,11 +269,11 @@ public class Communicator {
       header = Message.Header.fromReadInt(headerInt);
       header.validate();
     } catch (Exception e) {
-      System.out.println("Failed to parse header! " + header);
+      System.out.println("Failed to parse header! at: " + messageOrigin);
       System.out.println("Reading bounds: " + metaInfo);
       System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
-      System.out.printf("Read at %d\n", messageOrigin);
       System.out.println("Header int: " + headerInt);
+      System.out.println("Header: " + header);
 //      return null;
       throw e;
     }
@@ -394,7 +397,7 @@ public class Communicator {
    */
   public void updateMetaInts() throws GameActionException {
     int[] metaInts = metaInfo.encode();
-//    if (rc.getRoundNum() == 474) {
+//    if (rc.getRoundNum() == 1471) {
 //      System.out.println("Update meta: " + metaInfo + " -- " + Arrays.toString(metaInts));
 //      System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
 ////      System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd - metaInfo.validRegionStart + 1)));

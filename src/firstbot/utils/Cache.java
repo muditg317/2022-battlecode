@@ -8,6 +8,7 @@ import battlecode.common.Team;
 
 public class Cache {
     public static class Permanent {
+        public static int ROUND_SPAWNED;
         public static Team OUR_TEAM;
         public static Team OPPONENT_TEAM;
         public static RobotType ROBOT_TYPE;
@@ -20,6 +21,7 @@ public class Cache {
     }
 
     public static void setup() throws GameActionException {
+        Permanent.ROUND_SPAWNED = Global.rc.getRoundNum();
         Permanent.OUR_TEAM = Global.rc.getTeam();
         Permanent.OPPONENT_TEAM = Permanent.OUR_TEAM.opponent();
         Permanent.ROBOT_TYPE = Global.rc.getType();
@@ -34,6 +36,7 @@ public class Cache {
 
     public static class PerTurn {
         public static int ROUND_NUM;
+        public static int ROUNDS_ALIVE;
         public static RobotInfo[] ALL_NEARBY_ROBOTS;
         public static RobotInfo[] ALL_NEARBY_FRIENDLY_ROBOTS;
         public static RobotInfo[] ALL_NEARBY_ENEMY_ROBOTS;
@@ -61,6 +64,7 @@ public class Cache {
 
     public static void updateOnTurn() {
         PerTurn.ROUND_NUM = Global.rc.getRoundNum();
+        PerTurn.ROUNDS_ALIVE = PerTurn.ROUND_NUM - Permanent.ROUND_SPAWNED;
         PerTurn.LEVEL = Global.rc.getLevel();
         PerTurn.HEALTH = Global.rc.getHealth();
         PerTurn.updateForMovement();

@@ -84,13 +84,13 @@ public abstract class Robot {
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
         //System.out.println(rc.getType() + " GameActionException");
-        e.printStackTrace();
+//        e.printStackTrace();
         rc.setIndicatorDot(rc.getLocation(), 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
         //System.out.println(rc.getType() + " Exception");
-        e.printStackTrace();
+//        e.printStackTrace();
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
       } finally {
         // end turn - make code wait until next turn

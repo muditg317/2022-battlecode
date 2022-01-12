@@ -31,6 +31,7 @@ public abstract class Robot {
   protected int pendingMessages;
 
 //  protected final StolenBFS2 stolenbfs;
+  protected int turnCount;
 
   /**
    * Create a Robot with the given controller
@@ -49,6 +50,7 @@ public abstract class Robot {
 //    System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
+    turnCount = 0;
   }
 
   /**
@@ -108,6 +110,12 @@ public abstract class Robot {
     Cache.updateOnTurn();
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
+
+    if (turnCount != Cache.PerTurn.ROUNDS_ALIVE) {
+      rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
+      turnCount = Cache.PerTurn.ROUNDS_ALIVE;
+    }
+
     pendingMessages = communicator.readMessages();
     while (pendingMessages > 0) {
       Message message = communicator.getNthLastReceivedMessage(pendingMessages);
@@ -143,7 +151,8 @@ public abstract class Robot {
    * @throws GameActionException if movement failed
    */
   protected boolean move(Direction dir) throws GameActionException {
-    if (Clock.getBytecodesLeft() > 11 && rc.canMove(dir)) {
+    if (Clock.getBytecodesLeft() < 15) Clock.yield();
+    if (rc.canMove(dir)) {
       rc.move(dir);
       Cache.PerTurn.whenMoved();
       return true;

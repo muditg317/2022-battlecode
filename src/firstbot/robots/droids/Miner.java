@@ -4,11 +4,10 @@ import battlecode.common.*;
 import firstbot.communications.messages.LeadFoundMessage;
 import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
+import firstbot.containers.HashMap;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class Miner extends Droid {
 
@@ -46,7 +45,7 @@ public class Miner extends Droid {
     // and then 2 more on each side because we do not want a miner within 2x2 square (this is just a buffer and will always be 0)
     friendMinerRobots = new int[13][13];
     frindMinerDP = new int[13][13];
-    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
+//    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 
 
@@ -62,16 +61,16 @@ public class Miner extends Droid {
    */
   @Override
   protected void runTurn() throws GameActionException {
-    System.out.println("Miner run(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner run(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     int movementCooldown = rc.getMovementCooldownTurns();
 
     executeMining(); // performs action of mining gold and then lead until cooldown is reached
-    System.out.println("Miner execMining(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner execMining(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 // executeLeadTarget(); // if miner doesnt already have a target and has a pending request that it sent last turn
-    executeRunFromEnemy(); // set runAwayTarget if enemy attacking unit is within robot range (possibly bugged rn)
-    System.out.println("Miner runAway(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+    checkNeedToRunAway(); // set runAwayTarget if enemy attacking unit is within robot range (possibly bugged rn)
+//    System.out.println("Miner runAway(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     boolean resourcesLeft = checkIfResourcesLeft(); // check if any gold or lead (>1) is within robot range, return true if so
-    System.out.println("Miner checkRss(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner checkRss(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
     // lets remove target if we havent gotten closer to it in 5 moves?
 //    if (rc.getID() == 10001) {
@@ -85,10 +84,10 @@ public class Miner extends Droid {
     } else {
       reachedTarget = goToTarget(); // performs action of moving to target location
     }
-    System.out.println("Miner movement done(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner movement done(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
     executeMining();
-    System.out.println("Miner execMining(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner execMining(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
     if (reachedTarget) {
       target = Utils.randomMapLocation(); // new random target
@@ -164,7 +163,8 @@ public class Miner extends Droid {
 
     // Try to mine on squares around us.
     for (MapLocation toMine : rc.senseNearbyLocationsWithGold(Cache.Permanent.ACTION_RADIUS_SQUARED, 2)) {
-      rc.mineGold(toMine);
+      int goldThere = rc.senseGold(toMine);
+      while (rc.isActionReady() && goldThere-- > 1) rc.mineGold(toMine);
       if (!rc.isActionReady()) return;
     }
 //    MapLocation me = Cache.PerTurn.CURRENT_LOCATION;
@@ -187,7 +187,8 @@ public class Miner extends Droid {
     // Try to mine on squares around us.
 //    MapLocation me = Cache.PerTurn.CURRENT_LOCATION;
     for (MapLocation toMine : rc.senseNearbyLocationsWithLead(Cache.Permanent.ACTION_RADIUS_SQUARED, 2)) {
-      rc.mineLead(toMine);
+      int leadThere = rc.senseLead(toMine);
+      while (rc.isActionReady() && leadThere-- > 1) rc.mineLead(toMine);
       if (!rc.isActionReady()) return;
     }
 //    for (int dx = -1; dx <= 1; dx++) {
@@ -211,7 +212,7 @@ public class Miner extends Droid {
     }
   }
 
-  private void executeRunFromEnemy() {
+  private void checkNeedToRunAway() {
     MapLocation enemies = findEnemies();
     if (enemies != null) {
       MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
@@ -251,6 +252,7 @@ public class Miner extends Droid {
   private boolean runAway() throws GameActionException {
     if (moveTowardsAvoidRubble(runAwayTarget)) {
       rc.setIndicatorString("run away! " + runAwayTarget);
+      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, runAwayTarget, 0,255,0);
       return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(runAwayTarget, Cache.Permanent.ACTION_RADIUS_SQUARED);
     }
     return false;
@@ -295,7 +297,7 @@ public class Miner extends Droid {
    * @throws GameActionException if movement failed
    */
   private boolean followLeadPranay() throws GameActionException {
-    System.out.println("Miner start followLeadPnay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start followLeadPnay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     boolean followedLead = moveToLeadResources();
     if (followedLead) {
       if (turnsWandering > WANDERING_TURNS_TO_BROADCAST_LEAD) {
@@ -313,51 +315,71 @@ public class Miner extends Droid {
    */
   protected boolean moveToLeadResources() throws GameActionException {
     MapLocation highLead = getBestLeadWithHash();
-    System.out.println("Miner finish getBestLeadLocPranay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
-    if (highLead != null) {
+//    System.out.println("Miner finish getBestLeadLocPranay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+    if (highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveTowardsAvoidRubble(highLead))) {
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
       rc.setIndicatorString("lead: " + highLead);
+      return true;
     }
-    System.out.println("high lead: " + highLead);
-    return highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveTowardsAvoidRubble(highLead));
+    System.out.println("high lead not found or blocked ");
+    return false;
   }
 
+//  private Set<MapLocation> rejectedLocations = new HashSet<>();
   private MapLocation getBestLeadWithHash() throws GameActionException {
-    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2);
-    Map<MapLocation, Integer> leads = new HashMap<>(leadLocs.length);
-    for (MapLocation lead : leadLocs) {
+    MapLocation[] leadByLocationMap = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2);
+    HashMap<MapLocation, Integer> leads = new HashMap<>(leadByLocationMap.length);
+    System.out.println("Miner start populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+    for (MapLocation lead : leadByLocationMap) {
+//      if (rejectedLocations.contains(lead)) continue; // ignore lead if we got rejected earlier
       int leadThere = rc.senseLead(lead);
       for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(lead, Utils.DSQ_1by1)) {
-        leads.merge(local, leadThere, Integer::sum);
+        int befadd = Clock.getBytecodeNum();
+        leads.increment(local, leadThere);
+        System.out.println("Cost to put in map: " + (Clock.getBytecodeNum() - befadd));
+      }
+    }
+    System.out.println("Miner finish populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Considering lead locations: " + leads);
+    for (MapLocation lead : leadByLocationMap) {
+      for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(lead, Utils.DSQ_1by1)) {
+        System.out.println("Map Value at " + local + " -- " + leads.get(local));
       }
     }
 
+    System.out.println("Miner start populcheck friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
       if (friend.type == RobotType.MINER) {
-        MapLocation[] takenLead = rc.senseNearbyLocationsWithLead(friend.location, Utils.DSQ_2by2, 2);
+        MapLocation[] takenLead = rc.senseNearbyLocationsWithLead(friend.location, Utils.DSQ_1by1, 2);
         if (takenLead.length == 0) continue;
         int leadToTake = -75 / takenLead.length;
         for (MapLocation takenLeadLoc : takenLead) {
           // if we are closer, ignore the miner
-          if (Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(takenLeadLoc) <= friend.location.distanceSquaredTo(takenLeadLoc)) {
+          if (Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(takenLeadLoc) < friend.location.distanceSquaredTo(takenLeadLoc)) {
             continue;
           }
           for (MapLocation local : rc.getAllLocationsWithinRadiusSquared(takenLeadLoc, Utils.DSQ_1by1)) {
-            leads.merge(local, leadToTake, Integer::sum);
+            leads.increment(local, leadToTake);
           }
 //          leads.merge(takenLeadLoc, leadToTake, Integer::sum);
         }
       }
     }
+    System.out.println("Miner end check friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
     MapLocation bestLocation = null;
     int leastRubble = 101;
     int bestDist = 9999;
     int bestLead = 0;
 
-    for (MapLocation candidateLocation : leadLocs) {
-      int candidateLead = leads.get(candidateLocation);
-      if (candidateLead <= 0) continue;
+    for (MapLocation candidateLocation : leadByLocationMap) {
+      if (rc.isLocationOccupied(candidateLocation)) continue;
+      int candidateLead = leads.getOrDefault(candidateLocation, 0);
+      if (candidateLead <= 0) {
+        System.out.println(candidateLocation + " already claimed! ignored...");
+//        rejectedLocations.add(candidateLocation);
+        continue;
+      }
 
       int candidateRubble = rc.senseRubble(candidateLocation);
       if (candidateRubble > leastRubble) continue;
