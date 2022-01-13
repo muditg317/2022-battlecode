@@ -50,7 +50,7 @@ public class Soldier extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-    System.out.println();
+//    System.out.println();
 
     // miner-like random exploration (random target and go to it)
 
@@ -84,7 +84,7 @@ public class Soldier extends Droid {
 
     // store global var robotInfo of the thing we are chasing
     // if we are chasing, don't search for new targets -- bytecode optimization stuff
-    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
+//    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
 //    System.out.println("\nrobotToChase: " + robotToChase + "\ntarget: " + target + "\nreachedTarget: " + reachedTarget);
 
     if (enemySoldierExists) attackEnemySoldier();
@@ -95,13 +95,13 @@ public class Soldier extends Droid {
     else {
       // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
       // cached location is set to null if we go there and no enemy is found in vision radius
-      setIndicatorString("no enemy", null);
+//      setIndicatorString("no enemy", null);
       if (robotToChase != null) {
         if (robotToChase.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) > Utils.DSQ_1by1) {
-          System.out.println("MOVE TO CACHED LOCATION");
+//          System.out.println("MOVE TO CACHED LOCATION");
           moveTowardsAvoidRubble(robotToChase.location);
         } else {
-          System.out.println("RESET ROBOT TO CHASE");
+//          System.out.println("RESET ROBOT TO CHASE");
           robotToChase = null;
         }
       }
@@ -231,7 +231,7 @@ public class Soldier extends Droid {
     }
     setIndicatorString("attackEnemyArchon", enemyLocation);
     if (enemyLocation != null) {
-      if (rc.isMovementReady()) moveTowardsAvoidRubble(enemyLocation);
+      if (rc.isMovementReady() && (!enemyLocation.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))) moveTowardsAvoidRubble(enemyLocation);
       if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
     }
 
@@ -272,12 +272,12 @@ public class Soldier extends Droid {
         }
       }
     }
-    System.out.println("ATTACK BUILDER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
-    System.out.println("robotToChase: " + robotToChase);
+//    System.out.println("ATTACK BUILDER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
+//    System.out.println("robotToChase: " + robotToChase);
     setIndicatorString("attackEnemyBuilder", enemyLocation);
 
     if (enemyLocation != null) {
-      if (rc.isMovementReady()) moveTowardsAvoidRubble(enemyLocation);
+      if (rc.isMovementReady() && minDistance > Utils.DSQ_1by1) moveTowardsAvoidRubble(enemyLocation);
       if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
     }
 
@@ -377,7 +377,7 @@ public class Soldier extends Droid {
       // if I move to the current best location, what is the distance to the closest enemy soldier?
       // pick the one with largest distance s.t distance <= action radius
 
-      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound);
+//      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound);
       double score = averageFriendlyDamagePerRound - averageEnemyDamagePerRound + (averageFriendlyDamagePerRound * 0.01);
       if (rc.isMovementReady() && closestEnemySoldier != null) {
         int dist = closestEnemySoldier.distanceSquaredTo(candidate);
@@ -507,10 +507,10 @@ public class Soldier extends Droid {
       // the robotToChase is set to the miner with the least health irregardless of distance
       for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
         int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
-        System.out.println("enemy: " + enemy.location + " " + enemy.health + " " + candidateDistance + " minHealth: " + minHealth + " minDistance: " + minDistance);
+//        System.out.println("enemy: " + enemy.location + " " + enemy.health + " " + candidateDistance + " minHealth: " + minHealth + " minDistance: " + minDistance);
         if (enemy.type == RobotType.MINER && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
           robotToChase = enemy;
-          System.out.println(robotToChase);
+//          System.out.println(robotToChase);
           if (enemy.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
             minHealth = enemy.health;
             enemyLocation = enemy.location;
@@ -519,12 +519,12 @@ public class Soldier extends Droid {
         }
       }
     }
-    System.out.println("ATTACK MINER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
-    System.out.println("robotToChase: " + robotToChase);
+//    System.out.println("ATTACK MINER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
+//    System.out.println("robotToChase: " + robotToChase);
     setIndicatorString("attackEnemyMiner", enemyLocation);
 
     if (enemyLocation != null) {
-      if (rc.isMovementReady()) moveTowardsAvoidRubble(enemyLocation);
+      if (rc.isMovementReady() && minDistance > Utils.DSQ_1by1) moveTowardsAvoidRubble(enemyLocation);
       if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
     }
 

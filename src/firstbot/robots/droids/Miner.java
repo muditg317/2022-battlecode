@@ -13,6 +13,8 @@ import firstbot.communications.messages.Message;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
+import java.util.Arrays;
+
 public class Miner extends Droid {
 
   int turnsWandering;
@@ -48,7 +50,7 @@ public class Miner extends Droid {
     // and then 2 more on each side because we do not want a miner within 2x2 square (this is just a buffer and will always be 0)
     friendMinerRobots = new int[13][13];
     frindMinerDP = new int[13][13];
-    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
+//    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 
 
@@ -81,7 +83,8 @@ public class Miner extends Droid {
     if (runAwayTarget != null) { // if enemy attacking unit is within range
       target = Utils.randomMapLocation(); // new random target
       if (runAway()) runAwayTarget = null; // runAway() is true iff we move away
-    } else if (resourcesLeft && followLeadPranay()) {
+    } else if (Cache.PerTurn.ROUND_NUM >= 15 && resourcesLeft && followLeadPranay()) {
+
       // performs action of moving to lead
     } else {
       reachedTarget = goToTarget(); // performs action of moving to target location
@@ -93,6 +96,7 @@ public class Miner extends Droid {
 
     if (reachedTarget) {
       target = Utils.randomMapLocation(); // new random target
+      // must be 50 away from me and
     }
 
   }
@@ -321,28 +325,60 @@ public class Miner extends Droid {
    */
   protected boolean moveToLeadResources() throws GameActionException {
     MapLocation highLead = getBestLeadWithHash();
-    System.out.println("Miner finish getBestLead(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner finish getBestLead(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+
+    if (Cache.PerTurn.ROUND_NUM <= 50 && highLead != null) {
+      int numMovesToLead = Utils.maxSingleAxisDist(Cache.Permanent.START_LOCATION, highLead);
+      int numMovesToCurrentLocation = Utils.maxSingleAxisDist(Cache.Permanent.START_LOCATION, Cache.PerTurn.CURRENT_LOCATION);
+      if (numMovesToCurrentLocation - numMovesToLead >= 2) { // 8 10, false.. 9 10 true 11 10 true
+        return false;
+      }
+    }
+
+//            Cache.Permanent.START_LOCATION.distanceSquaredTo(highLead) < Cache.Permanent.START_LOCATION.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) - Utils.DSQ_1by1) return false;
+
     if (highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveTowardsAvoidRubble(highLead))) {
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
       rc.setIndicatorString("lead: " + highLead);
       return true;
     }
-    System.out.println("high lead not found or blocked ");
+//    System.out.println("high lead not found or blocked ");
     return false;
   }
 
 //  private Set<MapLocation> rejectedLocations = new HashSet<>();
 //  HashMap<MapLocation, Integer> leads = new HashMap<>(32);
   int[] leadByLocationMap;
-  int[] locsToCheck = new int[121];
-  int numLocsToCheck = 0;
-  int tmp;
+//  int[] locsToCheck = new int[121];
+//  int numLocsToCheck = 0;
+//  int tmp;
 //  int maxLeadMapVal = 0;
+  private static final int MAX_LEAD_LOCS_LEN = 10;
   private MapLocation getBestLeadWithHash() throws GameActionException {
 //    System.out.println("GET TROLLED!!\nMy location: " + rc.getLocation() + "\n-- Lead centered at 0,0: " + Arrays.toString(rc.senseNearbyLocationsWithLead(new MapLocation(0,0), -1)));
-    System.out.println("Miner start getBestLeadWithHash(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
-    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2);
-    System.out.println("Miner start create map(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start getBestLeadWithHash(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+    int minBound = 2;
+    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(-1, minBound);
+    while (leadLocs.length > MAX_LEAD_LOCS_LEN) {
+      int minLead = 99999;
+      int maxLead = -1;
+      for (MapLocation loc : leadLocs) {
+        int lead = rc.senseLead(loc);
+        if (lead < minLead) minLead = lead;
+        if (lead > maxLead) maxLead = lead;
+      }
+      if (minLead < maxLead) {
+        minBound = (maxLead + minLead) / 2;
+        leadLocs = rc.senseNearbyLocationsWithLead(-1, minBound);
+      } else {
+        leadLocs = Arrays.copyOf(leadLocs, MAX_LEAD_LOCS_LEN);
+      }
+//      minBound *= 2;
+//      MapLocation[] newLocs = rc.senseNearbyLocationsWithLead(-1, minBound);
+//      if (newLocs.length == 0) break;
+//      leadLocs = newLocs;
+    }
+//    System.out.println("Miner start create map(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 //    HashMap<MapLocation, Integer> leadByLocationMap = new HashMap<>(32);
 //    leads.clear();
 
@@ -352,9 +388,9 @@ public class Miner extends Droid {
     int bestLead = 0;
     // clear out array
     leadByLocationMap = new int[121];
-    numLocsToCheck = 0;
+//    numLocsToCheck = 0;
 //    HashSet<MapLocation> toCheck = new HashSet<>(leadLocs.length*5);
-    System.out.println("Miner start populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 //    System.out.println("Max lead value = " + maxLeadMapVal);
     for (MapLocation lead : leadLocs) {
 //      if (rejectedLocations.contains(lead)) continue; // ignore lead if we got rejected earlier
@@ -381,39 +417,39 @@ public class Miner extends Droid {
         case 3:
           switch (yCount) {
             case 3:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
             case 2:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
             case 1:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
           }
           start += indIncr;
         case 2:
           switch (yCount) {
             case 3:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
             case 2:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
             case 1:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
           }
           start += indIncr;
         case 1:
           switch (yCount) {
             case 3:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
             case 2:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start++] += leadThere;
             case 1:
-              locsToCheck[numLocsToCheck++] = start;
+//              locsToCheck[numLocsToCheck++] = start;
               leadByLocationMap[start] += leadThere;
           }
 //          start += yToSkip;
@@ -444,9 +480,9 @@ public class Miner extends Droid {
 //      }
     }
 
-    System.out.println("Miner finish populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner finish populate leadLocs(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
-    System.out.println("Miner start check friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start check friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
       leadByLocationMap[(5 + friend.location.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + friend.location.y - Cache.PerTurn.CURRENT_LOCATION.y)] = 0;
       if (friend.type != RobotType.MINER) continue;
@@ -521,7 +557,7 @@ public class Miner extends Droid {
 //          }
       }
     }
-    System.out.println("Miner end check friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner end check friends(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
 
 //    int thisTurnMax = maxLeadMapVal;
@@ -529,25 +565,26 @@ public class Miner extends Droid {
 //    int max = Math.min(121, (Cache.Permanent.MAP_WIDTH-Cache.PerTurn.CURRENT_LOCATION.x+5)*11);
 //    int min = Math.max(0, (5-Cache.PerTurn.CURRENT_LOCATION.y)*11);
 //    MapLocation candidateLocation = null;
-    int startCheck = Clock.getBytecodeNum();
-    int endCheck;
-    for (int t = numLocsToCheck; --t >= 0; ) {
+//    int startCheck = Clock.getBytecodeNum();
+//    int endCheck;
+//    for (int t = numLocsToCheck; --t >= 0; ) {
 //      endCheck = Clock.getBytecodeNum();
 //      System.out.println("Cost to check: " + (endCheck - startCheck));
 //      startCheck = endCheck;
-      int i = locsToCheck[t];
+//      int i = locsToCheck[t];
 //      MapLocation candidateLocation = new MapLocation((i/11)-5+Cache.PerTurn.CURRENT_LOCATION.x, (i%11)-5+Cache.PerTurn.CURRENT_LOCATION.y);
-//    for (MapLocation leadLoc : leadLocs) {
-//      for (MapLocation candidateLocation : rc.getAllLocationsWithinRadiusSquared(leadLoc, Utils.DSQ_1by1)) {
+    for (MapLocation leadLoc : leadLocs) {
+      for (MapLocation candidateLocation : rc.getAllLocationsWithinRadiusSquared(leadLoc, Utils.DSQ_1by1)) {
 
 //    Node<MapLocation> candNode;// = new MapLocation(0,0);
 //    while ((candNode = toCheck.next()) != null) {
 //        MapLocation candidateLocation = candNode.val;
 //      System.out.println("Miner check one candidate(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
-//        int candidateLead = leadByLocationMap[(5 + candidateLocation.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + candidateLocation.y - Cache.PerTurn.CURRENT_LOCATION.y)];
-//        leadByLocationMap[(5 + candidateLocation.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + candidateLocation.y - Cache.PerTurn.CURRENT_LOCATION.y)] = 0;
+        int i = (5 + candidateLocation.x - Cache.PerTurn.CURRENT_LOCATION.x) * 11 + (5 + candidateLocation.y - Cache.PerTurn.CURRENT_LOCATION.y);
         int candidateLead = leadByLocationMap[i];
+        leadByLocationMap[i] = 0;
+//        int candidateLead = leadByLocationMap[i];
 //        leadByLocationMap[i] = 0;
 //      if (candidateLead > maxLeadMapVal) maxLeadMapVal = candidateLead;
 //      candidateLead -= thisTurnMax;
@@ -557,7 +594,7 @@ public class Miner extends Droid {
 //        rejectedLocations.add(candidateLocation);
           continue;
         }
-      MapLocation candidateLocation = new MapLocation((i/11)-5+Cache.PerTurn.CURRENT_LOCATION.x, (i%11)-5+Cache.PerTurn.CURRENT_LOCATION.y);
+//      MapLocation candidateLocation = new MapLocation((i/11)-5+Cache.PerTurn.CURRENT_LOCATION.x, (i%11)-5+Cache.PerTurn.CURRENT_LOCATION.y);
 
         if (!rc.canSenseLocation(candidateLocation)) continue;
 
@@ -590,8 +627,8 @@ public class Miner extends Droid {
         bestDist = candidateDist;
         bestLead = candidateLead;
       }
-//    }
-    System.out.println("Best lead at " + bestLocation + " -- bestRubble: " + leastRubble + " bestLead: " + bestLead + " bestDistance: " + bestDist);
+    }
+//    System.out.println("Best lead at " + bestLocation + " -- bestRubble: " + leastRubble + " bestLead: " + bestLead + " bestDistance: " + bestDist);
 
     return bestLocation;
 
@@ -606,7 +643,7 @@ public class Miner extends Droid {
    * @throws GameActionException if some game op fails
    */
   protected MapLocation getBestLeadLocPranay() throws GameActionException {
-    System.out.println("Miner start getBestLeadLocPnay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start getBestLeadLocPnay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, 2);
 //    HashSet<MapLocation> visitedLocations = new HashSet<>();
 
@@ -629,7 +666,7 @@ public class Miner extends Droid {
 //        friendMinerRobots[xIndexMapped][yIndexMapped] = Cache.PerTurn.ROUND_NUM;
 //      }
 //    }
-    System.out.println("Miner read friendlies(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner read friendlies(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
 //    for(int i=2;i<13;i++) {
 //      int prsum=0;
@@ -661,7 +698,7 @@ public class Miner extends Droid {
         for (int dy = -1; dy <= 1; ++dy) { // TODO: maybe a more optimized way to iterate and check if lead is on or adj to a location?
           MapLocation candidateLocation = leadLocs[i].translate(dx, dy);
           int dxdybyte = Clock.getBytecodeNum();
-          System.out.println("Bytecode dx/dy: " + (dxdybyte - startByteCode));
+//          System.out.println("Bytecode dx/dy: " + (dxdybyte - startByteCode));
 
           // location cannot be sensed from robot or we already tried this location (bytecode: 200)
           if (!rc.canSenseLocation(candidateLocation)) continue;
@@ -669,7 +706,7 @@ public class Miner extends Droid {
           int xyz = Clock.getBytecodeNum();
           int bitDex = visitedIndex.x * 9 + visitedIndex.y;
           int xyz2 = Clock.getBytecodeNum();
-          System.out.println("bytecode to multiply: " + (xyz2-xyz));
+//          System.out.println("bytecode to multiply: " + (xyz2-xyz));
           int moddedBitDex = bitDex & 0b111111;
           long mask = 1L << moddedBitDex;
           if (bitDex < 64) {
@@ -686,7 +723,7 @@ public class Miner extends Droid {
 //          if (visitedLocations.contains(candidateLocation)) continue;
 //          visitedLocations.add(candidateLocation);
           int visitbyte = Clock.getBytecodeNum();
-          System.out.println("Bytecode visitedLocations: " + (visitbyte - dxdybyte));
+//          System.out.println("Bytecode visitedLocations: " + (visitbyte - dxdybyte));
 
 
           int candidateRubble = rc.senseRubble(candidateLocation);
@@ -697,7 +734,7 @@ public class Miner extends Droid {
             // on a candidate location query we simply check the round number of the 5x5 matches (25 spots) and increment if there is a miner
             int leadSeen = rc.senseLead(candidateLocation); //TODO: maybe a 3x3 clump centered around candidateLocation instead?
             int before2x2gridbyte = Clock.getBytecodeNum();
-            System.out.println("Bytecode to filter coord: " + (before2x2gridbyte - visitbyte));
+//            System.out.println("Bytecode to filter coord: " + (before2x2gridbyte - visitbyte));
 //            int xIndexMapped = 6 + (candidateLocation.x - Cache.PerTurn.CURRENT_LOCATION.x);
 //            int yIndexMapped = 6 + (candidateLocation.y - Cache.PerTurn.CURRENT_LOCATION.y);
 //            System.out.printf("DP on 5x5: %d,%d\n", xIndexMapped, yIndexMapped);
@@ -750,8 +787,8 @@ public class Miner extends Droid {
 //                  if (rc.canSenseLocation(tmp)) rc.senseLead(tmp);
 //                }
             int endByteCode = Clock.getBytecodeNum();
-            System.out.println("bytecode for 5x5 check: " + (endByteCode - before2x2gridbyte));
-            System.out.println("Result for " + candidateLocation + " -- miners: " + minersThere + " lead: " + leadSeen + " rubble: " + candidateRubble + " dist: " + candidateDistance);
+//            System.out.println("bytecode for 5x5 check: " + (endByteCode - before2x2gridbyte));
+//            System.out.println("Result for " + candidateLocation + " -- miners: " + minersThere + " lead: " + leadSeen + " rubble: " + candidateRubble + " dist: " + candidateDistance);
             if (minersThere > leadSeen / 75) continue;
 
             // we have found a better miner!
@@ -776,7 +813,7 @@ public class Miner extends Droid {
    */
   protected MapLocation getBestLeadLocPranay2() throws GameActionException {
     int startByteCode = Clock.getBytecodeNum();
-    System.out.println("Miner start getBestLeadLocPranay2(" + startByteCode + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start getBestLeadLocPranay2(" + startByteCode + ") - " + Cache.PerTurn.ROUND_NUM);
 
     MapLocation[] allLocationsWithinRadiusSquared = rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED);
     int allLocationsWithinRadiusSquaredLength = allLocationsWithinRadiusSquared.length;
@@ -794,8 +831,8 @@ public class Miner extends Droid {
             if (bot.type == RobotType.MINER && bot.location.distanceSquaredTo(bestMapLocation) < bestDistance)
               minersThere++;
           }
-          if (minersThere <= leadSeen / 75) {
-            System.out.println("Previous location is better than reseting to null location!");
+          if (minersThere <= leadSeen / 100) {
+//            System.out.println("Previous location is better than reseting to null location!");
             keepPreviousBest = true;
           }
         }
@@ -809,7 +846,7 @@ public class Miner extends Droid {
 
     // if I can move, check and compare bestMapLocation with how good my current location is first!
     if (rc.isMovementReady() && bestMapLocation != Cache.PerTurn.CURRENT_LOCATION) {
-      System.out.println("Miner can move, checking current location...");
+//      System.out.println("Miner can move, checking current location...");
       int currentRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
       if (currentRubble < bestRubble) {
         if (rc.senseNearbyLocationsWithLead(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1, 2).length > 0) {
@@ -820,7 +857,7 @@ public class Miner extends Droid {
 //            if (bot.type == RobotType.MINER) minersThere++;
 //          }
 //          if (minersThere <= leadSeen / 75)
-            System.out.println("Current location is better than previous best!");
+//            System.out.println("Current location is better than previous best!");
             bestMapLocation = Cache.PerTurn.CURRENT_LOCATION;
             bestRubble = currentRubble;
             bestDistance = 0;
@@ -830,11 +867,11 @@ public class Miner extends Droid {
 
     for (; currentIndex < allLocationsWithinRadiusSquaredLength; currentIndex++) {
       int endByteCode = Clock.getBytecodeNum();
-      System.out.println("bytecode: " + (endByteCode - startByteCode) + " current: " + endByteCode);
-      if (currentIndex > 0) System.out.println("Result " + allLocationsWithinRadiusSquared[currentIndex - 1] + " index " + (currentIndex-1) + "\n");
+//      System.out.println("bytecode: " + (endByteCode - startByteCode) + " current: " + endByteCode);
+//      if (currentIndex > 0) System.out.println("Result " + allLocationsWithinRadiusSquared[currentIndex - 1] + " index " + (currentIndex-1) + "\n");
       startByteCode = Clock.getBytecodeNum();
       if (startByteCode >= 6000) {
-        System.out.println("ENDING EARLY on " + currentIndex + "/" + allLocationsWithinRadiusSquaredLength + " -- " + " bestMapLocation: " + bestMapLocation + " bestRubble: " + bestRubble + " bestDistance: " + bestDistance);
+//        System.out.println("ENDING EARLY on " + currentIndex + "/" + allLocationsWithinRadiusSquaredLength + " -- " + " bestMapLocation: " + bestMapLocation + " bestRubble: " + bestRubble + " bestDistance: " + bestDistance);
         break; // worse case we have 5999 bytecode used and use 300 more, so we have 1k left for the remaining
       }
       MapLocation candidateLocation = allLocationsWithinRadiusSquared[currentIndex];
