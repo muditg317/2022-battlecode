@@ -85,7 +85,7 @@ public abstract class Robot {
         // something illegal in the Battlecode world
         //System.out.println(rc.getType() + " GameActionException");
 //        e.printStackTrace();
-        rc.setIndicatorDot(rc.getLocation(), 255,255,255);
+        //rc.setIndicatorDot(rc.getLocation(), 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad

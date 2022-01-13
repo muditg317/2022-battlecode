@@ -68,7 +68,7 @@ public class Soldier extends Droid {
       }
       if (nearbySoldiers > visionSize / 4) { // if many bois nearby (1/4 of vision)
         rc.setIndicatorString("Ready to raid!");
-//      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
+//      //rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
         callForRaid(myPotentialTarget);
         raidTarget = myPotentialTarget;
       }
@@ -89,7 +89,7 @@ public class Soldier extends Droid {
           }
         }
       }
-      rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
+      //rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
     } else {
 //      moveInDirLoose(rc.getLocation().directionTo(center));
       moveTowardsAvoidRubble(center);
@@ -159,7 +159,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if moving fails
    */
   private boolean moveForRaid() throws GameActionException {
-    rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
+    //rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
 //    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
     return moveTowardsAvoidRubble(raidTarget)
         && rc.getLocation().distanceSquaredTo(raidTarget) <= creationStats.visionRad;

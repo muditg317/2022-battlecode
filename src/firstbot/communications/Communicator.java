@@ -90,7 +90,7 @@ public class Communicator {
     // TODO: better logic for reading to the internal buffer because that boi is getting messed up
     sharedBuffer[META_INT_START] = rc.readSharedArray(META_INT_START);
     metaInfo.updateFromBuffer(sharedBuffer);
-    int toUpdate = metaInfo.validRegionEnd - metaInfo.validRegionStart + 1;
+    int toUpdate = (metaInfo.validRegionEnd - metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS;
     int ind;
     for (int i = 0; i < toUpdate; i++) {
       ind = (metaInfo.validRegionStart+i) % NUM_MESSAGING_INTS;

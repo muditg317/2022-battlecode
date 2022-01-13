@@ -1,21 +1,22 @@
-package spreadtowers.robots.droids;
+package miningmicro.robots.droids;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import spreadtowers.utils.Cache;
-import spreadtowers.utils.Utils;
-import spreadtowers.communications.messages.ArchonSavedMessage;
-import spreadtowers.communications.messages.EndRaidMessage;
-import spreadtowers.communications.messages.Message;
-import spreadtowers.communications.messages.SaveMeMessage;
-import spreadtowers.communications.messages.StartRaidMessage;
+import miningmicro.utils.Cache;
+import miningmicro.utils.Utils;
+import miningmicro.communications.messages.ArchonSavedMessage;
+import miningmicro.communications.messages.EndRaidMessage;
+import miningmicro.communications.messages.Message;
+import miningmicro.communications.messages.SaveMeMessage;
+import miningmicro.communications.messages.StartRaidMessage;
 
 public class Soldier extends Droid {
   /* fraction of distance to the target where bots should meet up */
   public static final double MEETUP_FACTOR = 0.25;
+  public static int VISION_FRACTION_TO_RAID = 4;
 
   MapLocation myPotentialTarget;
   final MapLocation meetupPoint;
@@ -31,8 +32,9 @@ public class Soldier extends Droid {
 
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
-    int mapW = rc.getMapWidth();
-    int mapH = rc.getMapHeight();
+    if (rc.senseNearbyLocationsWithLead().length > 15) VISION_FRACTION_TO_RAID = 6;
+    int mapW = Cache.Permanent.MAP_WIDTH;
+    int mapH = Cache.Permanent.MAP_HEIGHT;
     if (Math.abs(mapW - mapH) > 3) { // not a square default to flip sym for targetting
       switch (Utils.rng.nextInt(2)) {
         case 0:
@@ -44,50 +46,69 @@ public class Soldier extends Droid {
     } else {
       myPotentialTarget = new MapLocation(mapW-1-parentArchonLoc.x, mapH-1-parentArchonLoc.y);
     }
-    meetupPoint = Utils.lerpLocations(rc.getLocation(), myPotentialTarget, MEETUP_FACTOR);
+    meetupPoint = Utils.lerpLocations(Cache.PerTurn.CURRENT_LOCATION, myPotentialTarget, MEETUP_FACTOR);
     visionSize = rc.getAllLocationsWithinRadiusSquared(meetupPoint, 100).length;
     canStartRaid = true;
   }
 
   @Override
   protected void runTurn() throws GameActionException {
-
+    rc.setIndicatorString("Soldier run - " + Cache.PerTurn.ROUND_NUM);
     // Try to attack someone
     if (raidTarget != null) attackTarget(raidTarget);
+    rc.setIndicatorString("Soldier attackTarget - " + Cache.PerTurn.ROUND_NUM);
 
     checkForAndCallRaid();
+    rc.setIndicatorString("Soldier checkRaid - " + Cache.PerTurn.ROUND_NUM);
 
     if (archonToSave != null) {
       if (raidTarget != null) {
+        rc.setIndicatorString("need to save arhcon! - end raid");
         broadcastEndRaid();
         raidTarget = null;
+        raidValidated = false;
       }
       if (moveTowardsAvoidRubble(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
-      attackTarget(archonToSave);
+      attackNearby();
     } else if (raidTarget != null) {
       if (moveForRaid()) { // reached target
 //        raidTarget = null;
         if (!raidValidated) {
-          for (RobotInfo enemy : rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
+          for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
             if (enemy.type == RobotType.ARCHON) {
               raidValidated = true;
               break;
             }
           }
           if (!raidValidated) {
+            rc.setIndicatorString("raid (" + raidTarget + ") not valid -- no archon");
             broadcastEndRaid();
           }
+//        } else if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > visionSize / VISION_FRACTION_TO_RAID) {
+//          broadcastEndRaid();
         }
       }
-      //rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
+      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
     } else {
-//      moveInDirLoose(rc.getLocation().directionTo(center));
+//      moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(center));
       moveTowardsAvoidRubble(meetupPoint);
     }
+    rc.setIndicatorString("Soldier movement done - " + Cache.PerTurn.ROUND_NUM);
+
+//    if (!raidValidated) {
+//      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+//        if (enemy.type == RobotType.ARCHON && (raidTarget == null || !raidTarget.equals(enemy.location))) {
+//          rc.setIndicatorString("Saw archon at " + enemy.location + " -- call raid!");
+//          callForRaid(enemy.location);
+//        }
+//      }
+//    }
 
     attackNearby();
+    rc.setIndicatorString("Soldier attackNearby - " + Cache.PerTurn.ROUND_NUM);
+
   }
 
   @Override
@@ -111,6 +132,13 @@ public class Soldier extends Droid {
   private void ackStartRaidMessage(StartRaidMessage message) throws GameActionException {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
 //    //System.out.println("Got start raid" + message.location);
+//    if (raidValidated) {
+//      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+//        if (enemy.type == RobotType.ARCHON && raidTarget.equals(enemy.location)) { // already raiding a different archon
+//          return;
+//        }
+//      }
+//    }
     raidTarget = message.location;
     if (raidTarget.equals(myPotentialTarget)) {
       canStartRaid = false;
@@ -160,7 +188,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if checking fails
    */
   private boolean checkDoneSaving() throws GameActionException {
-    if (!archonToSave.isWithinDistanceSquared(rc.getLocation(), Cache.Permanent.ACTION_RADIUS_SQUARED)) return false;
+    if (!archonToSave.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) return false;
     RobotInfo archon = rc.senseRobotAtLocation(archonToSave);
     if (archon == null) return true;
     return !offensiveEnemiesNearby();
@@ -185,11 +213,15 @@ public class Soldier extends Droid {
     if (archonToSave != null || raidTarget != null || !canStartRaid) return false;
     RobotInfo[] nearby = rc.senseNearbyRobots(Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM);
     int nearbySoldiers = 0;
+    int blocked = 0;
     for (RobotInfo friend : nearby) {
       if (friend.type == RobotType.SOLDIER) nearbySoldiers++;
+      else blocked++;
     }
     // if many bois nearby (1/4 of vision)
-    return nearbySoldiers > visionSize / 4;
+    int minToRaid = (visionSize-blocked) / VISION_FRACTION_TO_RAID;
+    rc.setIndicatorString("soldiers: " + nearbySoldiers + " -- need: " + minToRaid);
+    return nearbySoldiers > minToRaid;
   }
 
   /**
@@ -197,7 +229,8 @@ public class Soldier extends Droid {
    * @param location where to raid
    */
   private void callForRaid(MapLocation location) {
-    StartRaidMessage message = new StartRaidMessage(location, rc.getRoundNum());
+    raidTarget = location;
+    StartRaidMessage message = new StartRaidMessage(raidTarget, rc.getRoundNum());
     communicator.enqueueMessage(message);
   }
 
@@ -208,9 +241,8 @@ public class Soldier extends Droid {
   private boolean checkForAndCallRaid() {
     if (!canCallRaid()) return false;
     rc.setIndicatorString("Ready to raid!");
-//      //rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
+//      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, oppositeLoc, 0,0,255);
     callForRaid(myPotentialTarget);
-    raidTarget = myPotentialTarget;
     return true;
   }
 
@@ -228,10 +260,10 @@ public class Soldier extends Droid {
    * @throws GameActionException if moving fails
    */
   private boolean moveForRaid() throws GameActionException {
-    //rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
-//    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
+    //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
+//    return moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(raidTarget))
     return moveTowardsAvoidRubble(raidTarget)
-        && rc.getLocation().distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
+        && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
   }
 
   /**
@@ -259,6 +291,7 @@ public class Soldier extends Droid {
         rc.attack(toAttack);
         if (raidTarget != null && enemy.health < Cache.Permanent.ROBOT_TYPE.damage) { // we killed it
           if (enemy.type == RobotType.ARCHON && enemy.location.distanceSquaredTo(raidTarget) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
+            rc.setIndicatorString("Archon target killed! -- end raid");
             broadcastEndRaid();
           }
         }

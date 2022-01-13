@@ -57,7 +57,7 @@ public class Pathfinding {
     if (!rc.isMovementReady()) return;
     target = loc;
 
-    //rc.setIndicatorLine(rc.getLocation(), target, 255, 0, 0);
+    ////rc.setIndicatorLine(rc.getLocation(), target, 255, 0, 0);
 
     if (!bugNav.move()) greedyPath();
     bugNav.move();
