@@ -26,6 +26,7 @@ public class Miner extends Droid {
 
   // did we just move?
   boolean justMoved;
+  int currentIndex;
   long visited0;
   long visited1;
   MapLocation bestMapLocation = null;
@@ -314,7 +315,7 @@ public class Miner extends Droid {
    * @throws GameActionException if movement fails
    */
   protected boolean moveToLeadResources() throws GameActionException {
-    MapLocation highLead = getBestLeadWithHash();
+    MapLocation highLead = getBestLeadLocPranay2();
 //    System.out.println("Miner finish getBestLeadLocPranay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     if (highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveTowardsAvoidRubble(highLead))) {
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
@@ -579,37 +580,90 @@ public class Miner extends Droid {
    * @throws GameActionException if some game op fails
    */
   protected MapLocation getBestLeadLocPranay2() throws GameActionException {
-    System.out.println("Miner start getBestLeadLocPranay2(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
-
-    if (justMoved || true) { // reset states
-      visited0 = 0;
-      visited1 = 0;
-      bestMapLocation = null;
-      bestRubble = 101;
-      bestDistance = 9999;
-    }
+    int startByteCode = Clock.getBytecodeNum();
+    System.out.println("Miner start getBestLeadLocPranay2(" + startByteCode + ") - " + Cache.PerTurn.ROUND_NUM);
 
     MapLocation[] allLocationsWithinRadiusSquared = rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED);
-    for (int i = 0, allLocationsWithinRadiusSquaredLength = allLocationsWithinRadiusSquared.length; i < allLocationsWithinRadiusSquaredLength; i++) {
-      int startByteCode = Clock.getBytecodeNum();
-      MapLocation candidateLocation = allLocationsWithinRadiusSquared[i];
-      System.out.println(" candidateLocation: " + candidateLocation);
-      if (rc.senseNearbyLocationsWithLead(candidateLocation, Utils.DSQ_1by1, 2).length > 0) {
-        // a valid location
-        int candidateRubble = rc.senseRubble(candidateLocation);
-        int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(candidateLocation);
-        System.out.println("VALID candidateLocation: " + candidateLocation + " candidateRubble: " + candidateRubble + " bestRubble: " + bestRubble + " candidateDistance: " + candidateDistance + " bestDistance: " + bestDistance);
-        if (candidateRubble < bestRubble || (candidateRubble == bestRubble && candidateDistance < bestDistance)) {
+    int allLocationsWithinRadiusSquaredLength = allLocationsWithinRadiusSquared.length;
+    if (currentIndex >= allLocationsWithinRadiusSquaredLength) { // reset states
+      currentIndex = 0;
 
+      // if I reset my bestMapLocation, check if the previousBestMapLocation is good and set to this location if so! (prevents us oscillating weirdly)
+      boolean keepPreviousBest = false;
+      if (bestMapLocation != null && rc.senseNearbyLocationsWithLead(bestMapLocation, Utils.DSQ_1by1, 2).length > 0) {
+        if (rc.canSenseLocation(bestMapLocation)) { //ensure the robot can sense the location
+          int leadSeen = rc.senseLead(bestMapLocation);
+          int minersThere = 0;
+          for (RobotInfo bot : rc.senseNearbyRobots(bestMapLocation, Utils.DSQ_2by2, Cache.Permanent.OUR_TEAM)) {
+            // if the miner bot is closer to the location than me, add it to the count
+            if (bot.type == RobotType.MINER && bot.location.distanceSquaredTo(bestMapLocation) < bestDistance)
+              minersThere++;
+          }
+          if (minersThere <= leadSeen / 75) {
+            System.out.println("Previous location is better than reseting to null location!");
+            keepPreviousBest = true;
+          }
+        }
+      }
+      if (!keepPreviousBest) {
+        bestMapLocation = null;
+        bestRubble = 101;
+        bestDistance = 9999;
+      }
+    }
+
+    // if I can move, check and compare bestMapLocation with how good my current location is first!
+    if (rc.isMovementReady() && bestMapLocation != Cache.PerTurn.CURRENT_LOCATION) {
+      System.out.println("Miner can move, checking current location...");
+      int currentRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+      if (currentRubble < bestRubble) {
+        if (rc.senseNearbyLocationsWithLead(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1, 2).length > 0) {
+          // we only count robots that are closer to the location, and since the distance is 0, we don't need to check it
+//          int leadSeen = rc.senseLead(Cache.PerTurn.CURRENT_LOCATION);
+//          int minersThere = 0;
+//          for (RobotInfo bot : rc.senseNearbyRobots(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2, Cache.Permanent.OUR_TEAM)) {
+//            if (bot.type == RobotType.MINER) minersThere++;
+//          }
+//          if (minersThere <= leadSeen / 75)
+            System.out.println("Current location is better than previous best!");
+            bestMapLocation = Cache.PerTurn.CURRENT_LOCATION;
+            bestRubble = currentRubble;
+            bestDistance = 0;
+
+        }
+      }
+    }
+
+    for (; currentIndex < allLocationsWithinRadiusSquaredLength; currentIndex++) {
+      int endByteCode = Clock.getBytecodeNum();
+      System.out.println("bytecode: " + (endByteCode - startByteCode) + " current: " + endByteCode);
+      if (currentIndex > 0) System.out.println("Result " + allLocationsWithinRadiusSquared[currentIndex - 1] + " index " + (currentIndex-1) + "\n");
+      startByteCode = Clock.getBytecodeNum();
+      if (startByteCode >= 6000) {
+        System.out.println("ENDING EARLY on " + currentIndex + "/" + allLocationsWithinRadiusSquaredLength + " -- " + " bestMapLocation: " + bestMapLocation + " bestRubble: " + bestRubble + " bestDistance: " + bestDistance);
+        break; // worse case we have 5999 bytecode used and use 300 more, so we have 1k left for the remaining
+      }
+      MapLocation candidateLocation = allLocationsWithinRadiusSquared[currentIndex];
+
+//      if (candidateLocation.translate(0, 1))
+        // translate & cansense--> 7 bytecode for valid location
+        // senselead --> 12 bytecode min for lead
+        // senseRobotAtLocation --> 25 per
+
+      // NOTE: senseNearbyLocationsWithLead does not error if candidateLocation is not valid
+      // all candidateLocations are already senseable as getAllLocations returns only valid locations
+      int candidateRubble = rc.senseRubble(candidateLocation);
+      int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(candidateLocation);
+      if (candidateRubble < bestRubble || (candidateRubble == bestRubble && candidateDistance < bestDistance)) {
+        if (rc.senseNearbyLocationsWithLead(candidateLocation, Utils.DSQ_1by1, 2).length > 0) {
+          // a potentially valid location
           int leadSeen = rc.senseLead(candidateLocation);
           int minersThere = 0;
           for (RobotInfo bot : rc.senseNearbyRobots(candidateLocation, Utils.DSQ_2by2, Cache.Permanent.OUR_TEAM)) {
-            if (bot.type == RobotType.MINER) minersThere++;
+            // if the miner bot is closer to the candidate location than me, add it to the count
+            if (bot.type == RobotType.MINER && bot.location.distanceSquaredTo(candidateLocation) < bestDistance) minersThere++;
           }
-          int endByteCode = Clock.getBytecodeNum();
-          System.out.println("bytecode: " + (endByteCode - startByteCode));
-          System.out.println("Result for " + candidateLocation + " -- miners: " + minersThere + " lead: " + leadSeen + " rubble: " + candidateRubble + " dist: " + candidateDistance);
-          if (minersThere > leadSeen / 75) continue;
+         if (minersThere > leadSeen / 75) continue;
 
           // we have found a better miner!
           bestMapLocation = candidateLocation;
