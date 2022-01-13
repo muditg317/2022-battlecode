@@ -70,4 +70,9 @@ public class LinkedList<T> {
         return false;
     }
 
+    public void clear() {
+        head = null;
+        end = null;
+        size = 0;
+    }
 }

@@ -50,7 +50,7 @@ public abstract class Robot {
 //    System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
-    turnCount = 0;
+    turnCount = -1;
   }
 
   /**
@@ -111,10 +111,6 @@ public abstract class Robot {
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
 
-    if (turnCount != Cache.PerTurn.ROUNDS_ALIVE) {
-      rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
-      turnCount = Cache.PerTurn.ROUNDS_ALIVE;
-    }
 
     pendingMessages = communicator.readMessages();
     while (pendingMessages > 0) {
@@ -130,6 +126,11 @@ public abstract class Robot {
     communicator.sendQueuedMessages();
     communicator.updateMetaIntsIfNeeded();
     Utils.finishByteCodeCounting("sending");
+
+    if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) {
+      rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
+      turnCount = rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED;
+    }
   }
 
   /**
