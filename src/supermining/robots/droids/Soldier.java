@@ -81,7 +81,7 @@ public class Soldier extends Droid {
           }
         }
       }
-      rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
+      //rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
     } else {
 //      moveInDirLoose(rc.getLocation().directionTo(center));
       moveTowardsAvoidRubble(meetupPoint);
@@ -208,7 +208,7 @@ public class Soldier extends Droid {
   private boolean checkForAndCallRaid() {
     if (!canCallRaid()) return false;
     rc.setIndicatorString("Ready to raid!");
-//      rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
+//      //rc.setIndicatorLine(rc.getLocation(), oppositeLoc, 0,0,255);
     callForRaid(myPotentialTarget);
     raidTarget = myPotentialTarget;
     return true;
@@ -228,7 +228,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if moving fails
    */
   private boolean moveForRaid() throws GameActionException {
-    rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
+    //rc.setIndicatorLine(rc.getLocation(), raidTarget, 0,0,255);
 //    return moveInDirLoose(rc.getLocation().directionTo(raidTarget))
     return moveTowardsAvoidRubble(raidTarget)
         && rc.getLocation().distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;

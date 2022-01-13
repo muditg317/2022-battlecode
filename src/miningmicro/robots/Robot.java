@@ -1,4 +1,4 @@
-package spawnorder.robots;
+package miningmicro.robots;
 
 import battlecode.common.AnomalyScheduleEntry;
 import battlecode.common.AnomalyType;
@@ -9,18 +9,18 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import spawnorder.utils.Cache;
-import spawnorder.utils.Global;
-import spawnorder.utils.Utils;
-import spawnorder.communications.Communicator;
-import spawnorder.communications.messages.Message;
-import spawnorder.robots.buildings.Archon;
-import spawnorder.robots.buildings.Laboratory;
-import spawnorder.robots.buildings.Watchtower;
-import spawnorder.robots.droids.Builder;
-import spawnorder.robots.droids.Miner;
-import spawnorder.robots.droids.Sage;
-import spawnorder.robots.droids.Soldier;
+import miningmicro.utils.Cache;
+import miningmicro.utils.Global;
+import miningmicro.utils.Utils;
+import miningmicro.communications.Communicator;
+import miningmicro.communications.messages.Message;
+import miningmicro.robots.buildings.Archon;
+import miningmicro.robots.buildings.Laboratory;
+import miningmicro.robots.buildings.Watchtower;
+import miningmicro.robots.droids.Builder;
+import miningmicro.robots.droids.Miner;
+import miningmicro.robots.droids.Sage;
+import miningmicro.robots.droids.Soldier;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
@@ -31,6 +31,7 @@ public abstract class Robot {
   protected int pendingMessages;
 
 //  protected final StolenBFS2 stolenbfs;
+  protected int turnCount;
 
   /**
    * Create a Robot with the given controller
@@ -39,8 +40,8 @@ public abstract class Robot {
    */
   public Robot(RobotController rc) throws GameActionException {
     Global.setupGlobals(rc);
-    Utils.setUpStatics(rc);
-    Cache.setup(rc);
+    Utils.setUpStatics();
+    Cache.setup();
     this.rc = rc;
     this.communicator = Global.communicator;
 
@@ -49,6 +50,7 @@ public abstract class Robot {
 //    //System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
+    turnCount = -1;
   }
 
   /**
@@ -85,7 +87,7 @@ public abstract class Robot {
         // something illegal in the Battlecode world
         //System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
-        //rc.setIndicatorDot(rc.getLocation(), 255,255,255);
+        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
@@ -103,11 +105,13 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
-//      //System.out.println("Age: " + turnCount + "; Location: " + rc.getLocation());
+//      //System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
     Cache.updateOnTurn();
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
+
+
     pendingMessages = communicator.readMessages();
     while (pendingMessages > 0) {
       Message message = communicator.getNthLastReceivedMessage(pendingMessages);
@@ -122,6 +126,11 @@ public abstract class Robot {
     communicator.sendQueuedMessages();
     communicator.updateMetaIntsIfNeeded();
     Utils.finishByteCodeCounting("sending");
+
+    if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) {
+      //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
+      turnCount = rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED;
+    }
   }
 
   /**
@@ -143,7 +152,8 @@ public abstract class Robot {
    * @throws GameActionException if movement failed
    */
   protected boolean move(Direction dir) throws GameActionException {
-    if (Clock.getBytecodesLeft() > 11 && rc.canMove(dir)) {
+    if (Clock.getBytecodesLeft() < 15) Clock.yield();
+    if (rc.canMove(dir)) {
       rc.move(dir);
       Cache.PerTurn.whenMoved();
       return true;
@@ -207,7 +217,7 @@ public abstract class Robot {
     int bestPosDirInd = -1;
     int bestPosRubble = 101;
     int bestPosDist = -1;
-    MapLocation myLoc = rc.getLocation();
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
     int dToLoc = myLoc.distanceSquaredTo(target);
 
     MapLocation newLoc; // temp
@@ -248,12 +258,12 @@ public abstract class Robot {
 
 //  protected boolean moveSafely(MapLocation loc, int rad){
 //    if (loc == null) return false;
-//    int d = rc.getLocation().distanceSquaredTo(loc);
+//    int d = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(loc);
 //    d = Math.min(d, rad);
 //    boolean[] imp = new boolean[Utils.directions.length];
 //    boolean greedy = false;
 //    for (int i = Utils.directions.length; i-- > 0; ){
-//      MapLocation newLoc = rc.getLocation().add(Utils.directions[i]);
+//      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(Utils.directions[i]);
 //      if (newLoc.distanceSquaredTo(loc) <= d){
 //        imp[i] = true;
 //        greedy = true;
@@ -279,7 +289,7 @@ public abstract class Robot {
     int avgX = 0;
     int avgY = 0;
     int totalSeen = 0;
-    MapLocation myLoc = rc.getLocation();
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
 
     // for all loations I can sense =>
     // sum up lead and number of current miners, and see if miners > lead / 50: continue if so

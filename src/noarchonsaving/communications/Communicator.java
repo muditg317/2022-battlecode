@@ -332,7 +332,7 @@ public class Communicator {
       rc.writeSharedArray(origin, messageChunk);
     }
     sentMessages.add(message);
-    rc.setIndicatorDot(rc.getLocation(), 0,255,0);
+    //rc.setIndicatorDot(rc.getLocation(), 0,255,0);
     metaInfo.validRegionEnd = origin;
     if (updateStart) { // first message!
       metaInfo.validRegionStart = origin - message.header.numInformationInts;

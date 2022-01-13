@@ -113,8 +113,8 @@ public class Miner extends Droid {
 
     message.respond(responseLocation);
     rc.setIndicatorString("Respond to lead request! " + responseLocation);
-    rc.setIndicatorDot(responseLocation, 0,255,0);
-    rc.setIndicatorLine(rc.getLocation(), responseLocation, 0,255,0);
+    //rc.setIndicatorDot(responseLocation, 0,255,0);
+    //rc.setIndicatorLine(rc.getLocation(), responseLocation, 0,255,0);
   }
 
 
@@ -178,8 +178,8 @@ public class Miner extends Droid {
       runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
       Direction backToSelf = runAwayTarget.directionTo(myLoc);
       while (!rc.canSenseLocation(runAwayTarget)) runAwayTarget = runAwayTarget.add(backToSelf);
-      rc.setIndicatorDot(myLoc, 255,255,0);
-      rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
+      //rc.setIndicatorDot(myLoc, 255,255,0);
+      //rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
     }
   }
 
@@ -280,8 +280,8 @@ public class Miner extends Droid {
     if (moveTowardsAvoidRubble(target)) {
       rc.setIndicatorString("Approaching target" + target);
 //    moveInDirLoose(goal);
-      rc.setIndicatorLine(rc.getLocation(), target, 255, 10, 10);
-      rc.setIndicatorDot(target, 0, 255, 0);
+      //rc.setIndicatorLine(rc.getLocation(), target, 255, 10, 10);
+      //rc.setIndicatorDot(target, 0, 255, 0);
     }
     return rc.getLocation().isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
   }
@@ -292,7 +292,7 @@ public class Miner extends Droid {
    */
   private void broadcastLead(MapLocation location) {
 //    communicator.enqueueMessage(new LeadFoundMessage(location, rc.getRoundNum()));
-//    rc.setIndicatorDot(location, 0, 255, 0);
+//    //rc.setIndicatorDot(location, 0, 255, 0);
 //    rc.setIndicatorString("Broadcast lead! " + location);
 //    //System.out.println("Broadcast lead! " + location);
   }
@@ -314,7 +314,7 @@ public class Miner extends Droid {
   private void requestLead() {
     leadRequest = new LeadRequestMessage(rc.getLocation(), rc.getRoundNum());
     communicator.enqueueMessage(leadRequest);
-    rc.setIndicatorDot(rc.getLocation(), 0, 0, 255);
+    //rc.setIndicatorDot(rc.getLocation(), 0, 0, 255);
     rc.setIndicatorString("Requesting lead!");
     //System.out.println("Requesting lead!");
   }

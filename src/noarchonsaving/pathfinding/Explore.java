@@ -152,7 +152,7 @@ public class Explore {
 //
 //  void initialize(){
 //    if (initialized){
-//      //rc.setIndicatorDot(rc.getLocation(), 255, 0, 0);
+//      ////rc.setIndicatorDot(rc.getLocation(), 255, 0, 0);
 //      return;
 //    }
 //    while(initRow < MAX_MAP_SIZE){

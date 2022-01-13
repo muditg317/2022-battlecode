@@ -1,11 +1,12 @@
-package miniclumps.communications;
+package miningmicro.communications;
 
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.RobotController;
-import battlecode.common.RobotType;
-import miniclumps.Utils;
-import miniclumps.communications.messages.Message;
+import miningmicro.communications.messages.Message;
+import miningmicro.utils.Cache;
+import miningmicro.utils.Global;
+import miningmicro.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,7 +25,7 @@ public class Communicator {
     public int validRegionStart; // 0-62    -- 6 bits [15,10]
     public int validRegionEnd; // 0-62      -- 6 bits [9,4]
 
-    public MetaInfo(RobotController rc) {
+    public MetaInfo() {
     }
 
     /**
@@ -69,13 +70,13 @@ public class Communicator {
 
   private int intsWritten;
 
-  public Communicator(RobotController rc) {
-    this.rc = rc;
+  public Communicator() {
+    this.rc = Global.rc;
     sharedBuffer = new int[GameConstants.SHARED_ARRAY_LENGTH];
-    metaInfo = new MetaInfo(rc);
+    metaInfo = new MetaInfo();
 
-    messageQueue = new PriorityQueue<>();
-    sentMessages = new ArrayList<>();
+    messageQueue = new PriorityQueue<>(5);
+    sentMessages = new ArrayList<>(5);
     received = new ArrayList<>();
 
     intsWritten = 0;
@@ -87,75 +88,86 @@ public class Communicator {
   private void reloadBuffer() throws GameActionException {
     Utils.startByteCodeCounting("readShared");
     // TODO: better logic for reading to the internal buffer because that boi is getting messed up
+    sharedBuffer[META_INT_START] = rc.readSharedArray(META_INT_START);
+    metaInfo.updateFromBuffer(sharedBuffer);
+    int toUpdate = (metaInfo.validRegionEnd - metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS;
+    int ind;
+    for (int i = 0; i < toUpdate; i++) {
+      ind = (metaInfo.validRegionStart+i) % NUM_MESSAGING_INTS;
+//      if (rc.getRoundNum() == 1471) {
+//        //System.out.println("Read to buffer: " + ind);
+//      }
+      sharedBuffer[ind] = rc.readSharedArray(ind);
+    }
 //    for (int i = 0; i < GameConstants.SHARED_ARRAY_LENGTH; i++) {
 //      sharedBuffer[i] = rc.readSharedArray(i);
 //    }
-    {
-      sharedBuffer[0] = rc.readSharedArray(0);
-      sharedBuffer[1] = rc.readSharedArray(1);
-      sharedBuffer[2] = rc.readSharedArray(2);
-      sharedBuffer[3] = rc.readSharedArray(3);
-      sharedBuffer[4] = rc.readSharedArray(4);
-      sharedBuffer[5] = rc.readSharedArray(5);
-      sharedBuffer[6] = rc.readSharedArray(6);
-      sharedBuffer[7] = rc.readSharedArray(7);
-      sharedBuffer[8] = rc.readSharedArray(8);
-      sharedBuffer[9] = rc.readSharedArray(9);
-      sharedBuffer[10] = rc.readSharedArray(10);
-      sharedBuffer[11] = rc.readSharedArray(11);
-      sharedBuffer[12] = rc.readSharedArray(12);
-      sharedBuffer[13] = rc.readSharedArray(13);
-      sharedBuffer[14] = rc.readSharedArray(14);
-      sharedBuffer[15] = rc.readSharedArray(15);
-      sharedBuffer[16] = rc.readSharedArray(16);
-      sharedBuffer[17] = rc.readSharedArray(17);
-      sharedBuffer[18] = rc.readSharedArray(18);
-      sharedBuffer[19] = rc.readSharedArray(19);
-      sharedBuffer[20] = rc.readSharedArray(20);
-      sharedBuffer[21] = rc.readSharedArray(21);
-      sharedBuffer[22] = rc.readSharedArray(22);
-      sharedBuffer[23] = rc.readSharedArray(23);
-      sharedBuffer[24] = rc.readSharedArray(24);
-      sharedBuffer[25] = rc.readSharedArray(25);
-      sharedBuffer[26] = rc.readSharedArray(26);
-      sharedBuffer[27] = rc.readSharedArray(27);
-      sharedBuffer[28] = rc.readSharedArray(28);
-      sharedBuffer[29] = rc.readSharedArray(29);
-      sharedBuffer[30] = rc.readSharedArray(30);
-      sharedBuffer[31] = rc.readSharedArray(31);
-      sharedBuffer[32] = rc.readSharedArray(32);
-      sharedBuffer[33] = rc.readSharedArray(33);
-      sharedBuffer[34] = rc.readSharedArray(34);
-      sharedBuffer[35] = rc.readSharedArray(35);
-      sharedBuffer[36] = rc.readSharedArray(36);
-      sharedBuffer[37] = rc.readSharedArray(37);
-      sharedBuffer[38] = rc.readSharedArray(38);
-      sharedBuffer[39] = rc.readSharedArray(39);
-      sharedBuffer[40] = rc.readSharedArray(40);
-      sharedBuffer[41] = rc.readSharedArray(41);
-      sharedBuffer[42] = rc.readSharedArray(42);
-      sharedBuffer[43] = rc.readSharedArray(43);
-      sharedBuffer[44] = rc.readSharedArray(44);
-      sharedBuffer[45] = rc.readSharedArray(45);
-      sharedBuffer[46] = rc.readSharedArray(46);
-      sharedBuffer[47] = rc.readSharedArray(47);
-      sharedBuffer[48] = rc.readSharedArray(48);
-      sharedBuffer[49] = rc.readSharedArray(49);
-      sharedBuffer[50] = rc.readSharedArray(50);
-      sharedBuffer[51] = rc.readSharedArray(51);
-      sharedBuffer[52] = rc.readSharedArray(52);
-      sharedBuffer[53] = rc.readSharedArray(53);
-      sharedBuffer[54] = rc.readSharedArray(54);
-      sharedBuffer[55] = rc.readSharedArray(55);
-      sharedBuffer[56] = rc.readSharedArray(56);
-      sharedBuffer[57] = rc.readSharedArray(57);
-      sharedBuffer[58] = rc.readSharedArray(58);
-      sharedBuffer[59] = rc.readSharedArray(59);
-      sharedBuffer[60] = rc.readSharedArray(60);
-      sharedBuffer[61] = rc.readSharedArray(61);
-      sharedBuffer[62] = rc.readSharedArray(62);
-      sharedBuffer[63] = rc.readSharedArray(63);
-    }
+//    {
+//      sharedBuffer[0] = rc.readSharedArray(0);
+//      sharedBuffer[1] = rc.readSharedArray(1);
+//      sharedBuffer[2] = rc.readSharedArray(2);
+//      sharedBuffer[3] = rc.readSharedArray(3);
+//      sharedBuffer[4] = rc.readSharedArray(4);
+//      sharedBuffer[5] = rc.readSharedArray(5);
+//      sharedBuffer[6] = rc.readSharedArray(6);
+//      sharedBuffer[7] = rc.readSharedArray(7);
+//      sharedBuffer[8] = rc.readSharedArray(8);
+//      sharedBuffer[9] = rc.readSharedArray(9);
+//      sharedBuffer[10] = rc.readSharedArray(10);
+//      sharedBuffer[11] = rc.readSharedArray(11);
+//      sharedBuffer[12] = rc.readSharedArray(12);
+//      sharedBuffer[13] = rc.readSharedArray(13);
+//      sharedBuffer[14] = rc.readSharedArray(14);
+//      sharedBuffer[15] = rc.readSharedArray(15);
+//      sharedBuffer[16] = rc.readSharedArray(16);
+//      sharedBuffer[17] = rc.readSharedArray(17);
+//      sharedBuffer[18] = rc.readSharedArray(18);
+//      sharedBuffer[19] = rc.readSharedArray(19);
+//      sharedBuffer[20] = rc.readSharedArray(20);
+//      sharedBuffer[21] = rc.readSharedArray(21);
+//      sharedBuffer[22] = rc.readSharedArray(22);
+//      sharedBuffer[23] = rc.readSharedArray(23);
+//      sharedBuffer[24] = rc.readSharedArray(24);
+//      sharedBuffer[25] = rc.readSharedArray(25);
+//      sharedBuffer[26] = rc.readSharedArray(26);
+//      sharedBuffer[27] = rc.readSharedArray(27);
+//      sharedBuffer[28] = rc.readSharedArray(28);
+//      sharedBuffer[29] = rc.readSharedArray(29);
+//      sharedBuffer[30] = rc.readSharedArray(30);
+//      sharedBuffer[31] = rc.readSharedArray(31);
+//      sharedBuffer[32] = rc.readSharedArray(32);
+//      sharedBuffer[33] = rc.readSharedArray(33);
+//      sharedBuffer[34] = rc.readSharedArray(34);
+//      sharedBuffer[35] = rc.readSharedArray(35);
+//      sharedBuffer[36] = rc.readSharedArray(36);
+//      sharedBuffer[37] = rc.readSharedArray(37);
+//      sharedBuffer[38] = rc.readSharedArray(38);
+//      sharedBuffer[39] = rc.readSharedArray(39);
+//      sharedBuffer[40] = rc.readSharedArray(40);
+//      sharedBuffer[41] = rc.readSharedArray(41);
+//      sharedBuffer[42] = rc.readSharedArray(42);
+//      sharedBuffer[43] = rc.readSharedArray(43);
+//      sharedBuffer[44] = rc.readSharedArray(44);
+//      sharedBuffer[45] = rc.readSharedArray(45);
+//      sharedBuffer[46] = rc.readSharedArray(46);
+//      sharedBuffer[47] = rc.readSharedArray(47);
+//      sharedBuffer[48] = rc.readSharedArray(48);
+//      sharedBuffer[49] = rc.readSharedArray(49);
+//      sharedBuffer[50] = rc.readSharedArray(50);
+//      sharedBuffer[51] = rc.readSharedArray(51);
+//      sharedBuffer[52] = rc.readSharedArray(52);
+//      sharedBuffer[53] = rc.readSharedArray(53);
+//      sharedBuffer[54] = rc.readSharedArray(54);
+//      sharedBuffer[55] = rc.readSharedArray(55);
+//      sharedBuffer[56] = rc.readSharedArray(56);
+//      sharedBuffer[57] = rc.readSharedArray(57);
+//      sharedBuffer[58] = rc.readSharedArray(58);
+//      sharedBuffer[59] = rc.readSharedArray(59);
+//      sharedBuffer[60] = rc.readSharedArray(60);
+//      sharedBuffer[61] = rc.readSharedArray(61);
+//      sharedBuffer[62] = rc.readSharedArray(62);
+//      sharedBuffer[63] = rc.readSharedArray(63);
+//    }
     Utils.finishByteCodeCounting("readShared");
     metaInfo.updateFromBuffer(sharedBuffer);
     intsWritten = 0;
@@ -167,18 +179,19 @@ public class Communicator {
    */
   public boolean cleanStaleMessages() {
     if (!sentMessages.isEmpty()) {
-//      if (rc.getType() == RobotType.ARCHON || rc.getRoundNum() == 632) {
+//      if (rc.getRoundNum() == 1471) {
 //        //System.out.println("bounds before cleaning: " + metaInfo);
 //      }
       for (Message message : sentMessages) {
         if (message.writeInfo.startIndex == metaInfo.validRegionStart) {
+          //System.out.println("CLEAN " + message.header.type + ": " + metaInfo.validRegionStart);
           Message last = sentMessages.get(sentMessages.size() - 1);
           metaInfo.validRegionStart = (last.writeInfo.startIndex + last.header.numInformationInts + 1) % NUM_MESSAGING_INTS;
           if ((metaInfo.validRegionEnd + 1) % NUM_MESSAGING_INTS == metaInfo.validRegionStart) {
             metaInfo.validRegionEnd = metaInfo.validRegionStart;
           }
           intsWritten++;
-//          if (rc.getType() == RobotType.ARCHON || rc.getRoundNum() == 632) {
+//          if (rc.getRoundNum() == 1471) {
 //            //System.out.println("Cleaning " + (sentMessages.size() - sentMessages.indexOf(message)) + " messages!");
 //            //System.out.println("Clearing messages! - starting from " + message.header.type + " on " + message.header.cyclicRoundNum + " at " + message.writeInfo.startIndex);
 //            //System.out.println("Last message cleaned: " + last.header.type + " on " + message.header.cyclicRoundNum + " at " + last.writeInfo.startIndex);
@@ -200,7 +213,7 @@ public class Communicator {
   public int readMessages() throws GameActionException {
     Utils.startByteCodeCounting("reloadBuffer");
     reloadBuffer();
-//    if (rc.getRoundNum() == 582) {
+//    if (rc.getRoundNum() == 1471) {
 //      //System.out.println("Reading on round 582 -- " + metaInfo);
 //      //System.out.println(Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd- metaInfo.validRegionStart+1)));
 //    }
@@ -228,12 +241,16 @@ public class Communicator {
 //    int thisRound = rc.getRoundNum();
     while (origin < ending) {
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
+      if (message != null) {
 //      if (message.header.withinCyclic(lastAckdRound, maxRoundNum)) { // skip stale messages
 //      if (message.header.withinRounds(thisRound-2,thisRound)) { // skip stale messages
         received.add(message);
         messages++;
 //      }
-      origin += message.size();
+        origin += message.size();
+      } else {
+        origin++;
+      }
     }
     return messages;
   }
@@ -252,11 +269,12 @@ public class Communicator {
       header = Message.Header.fromReadInt(headerInt);
       header.validate();
     } catch (Exception e) {
-      //System.out.println("Failed to parse header! " + header);
+      //System.out.println("Failed to parse header! at: " + messageOrigin);
       //System.out.println("Reading bounds: " + metaInfo);
-      //System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd-metaInfo.validRegionStart + 1)));
-      //System.out.printf("Read at %d\n", messageOrigin);
+      //System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
       //System.out.println("Header int: " + headerInt);
+      //System.out.println("Header: " + header);
+//      return null;
       throw e;
     }
     int[] information = new int[header.numInformationInts];
@@ -329,10 +347,10 @@ public class Communicator {
 //    if (start within where i need to write) { check priority
     boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
-    //System.out.printf("SEND %s MESSAGE:\n%d - %s\n", message.header.type, metaInfo.validRegionEnd+1, Arrays.toString(messageBits));
-//    //System.out.println(message.header);
     int origin = metaInfo.validRegionEnd;
     int messageOrigin = (origin + 1) % NUM_MESSAGING_INTS;
+    //System.out.printf("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
+//    //System.out.println(message.header);
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
       if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
@@ -340,7 +358,8 @@ public class Communicator {
 //        //System.out.printf("Shift valid region start for %s at %d\n", message.header.type, metaInfo.validRegionEnd+1);
 //        //System.out.println("From: " + metaInfo);
 //        //System.out.println("header: " + Message.Header.fromReadInt(sharedBuffer[origin]));
-        metaInfo.validRegionStart += readMessageAt(origin).size();
+        Message messageAt = readMessageAt(origin);
+        metaInfo.validRegionStart += messageAt != null ? messageAt.size() : 1;
         metaInfo.validRegionStart %= NUM_MESSAGING_INTS;
 //        //System.out.println("To  : " + metaInfo);
         // TODO: some criteria on deciding not to "evict" that info
@@ -349,7 +368,7 @@ public class Communicator {
       rc.writeSharedArray(origin, messageChunk);
     }
     sentMessages.add(message);
-    //rc.setIndicatorDot(rc.getLocation(), 0,255,0);
+    //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,255,0);
     metaInfo.validRegionEnd = origin;
     if (updateStart) { // first message!
       metaInfo.validRegionStart = origin - message.header.numInformationInts;
@@ -378,11 +397,12 @@ public class Communicator {
    */
   public void updateMetaInts() throws GameActionException {
     int[] metaInts = metaInfo.encode();
-//    if (rc.getRoundNum() == 632) {
+//    if (rc.getRoundNum() == 1471) {
 //      //System.out.println("Update meta: " + metaInfo + " -- " + Arrays.toString(metaInts));
-//      //System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd - metaInfo.validRegionStart + 1)));
-//      for (int i = metaInfo.validRegionStart; i <= metaInfo.validRegionEnd; i++) {
-//        //System.out.println("post: " + rc.readSharedArray(i));
+//      //System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
+////      //System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd - metaInfo.validRegionStart + 1)));
+//      for (int i = metaInfo.validRegionStart - NUM_MESSAGING_INTS; i <= metaInfo.validRegionEnd; i++) {
+//        //System.out.println("post: " + rc.readSharedArray((i + NUM_MESSAGING_INTS) %  NUM_MESSAGING_INTS));
 //      }
 //    }
     for (int i = 0; i < NUM_META_INTS; i++) {
