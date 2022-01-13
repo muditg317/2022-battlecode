@@ -22,6 +22,19 @@ public class Utils {
       Direction.NORTHWEST,
   };
 
+  /** Array of the 3x3 possible directions. */
+  public static final Direction[] directionsNine = {
+          Direction.CENTER,
+          Direction.NORTH,
+          Direction.NORTHEAST,
+          Direction.EAST,
+          Direction.SOUTHEAST,
+          Direction.SOUTH,
+          Direction.SOUTHWEST,
+          Direction.WEST,
+          Direction.NORTHWEST,
+  };
+
   public static final int DSQ_1by1 = 2; // technically 3x3 but a 1tile boundary around center
   public static final int DSQ_2by2 = 8;
   public static final int DSQ_3by3plus = 18; // contains some extra tiles
@@ -158,6 +171,12 @@ public class Utils {
    */
   public static MapLocation lerpLocations(MapLocation from, MapLocation to, double amount) {
     return new MapLocation((int) ((to.x - from.x) * amount) + from.x, (int) ((to.y - from.y) * amount) + from.y);
+  }
+
+  public static double turnsTillNextCooldown(int c, int r) {
+    int cooldownAfterMove = (int) Math.floor((1 + r/10.0) * c); //35
+    //20 => 2
+    return cooldownAfterMove / 10.0;
   }
 
   /*

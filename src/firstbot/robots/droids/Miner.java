@@ -14,7 +14,6 @@ import firstbot.containers.HashSet;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
-
 public class Miner extends Droid {
 
   int turnsWandering;
@@ -316,11 +315,11 @@ public class Miner extends Droid {
     MapLocation highLead = getBestLeadLocPranay2();
 //    System.out.println("Miner finish getBestLeadLocPranay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     if (highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveTowardsAvoidRubble(highLead))) {
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
       rc.setIndicatorString("lead: " + highLead);
       return true;
     }
-    System.out.println("high lead not found or blocked ");
+//    System.out.println("high lead not found or blocked ");
     return false;
   }
 
@@ -742,7 +741,7 @@ public class Miner extends Droid {
    */
   protected MapLocation getBestLeadLocPranay2() throws GameActionException {
     int startByteCode = Clock.getBytecodeNum();
-    System.out.println("Miner start getBestLeadLocPranay2(" + startByteCode + ") - " + Cache.PerTurn.ROUND_NUM);
+//    System.out.println("Miner start getBestLeadLocPranay2(" + startByteCode + ") - " + Cache.PerTurn.ROUND_NUM);
 
     MapLocation[] allLocationsWithinRadiusSquared = rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED);
     int allLocationsWithinRadiusSquaredLength = allLocationsWithinRadiusSquared.length;
@@ -761,7 +760,7 @@ public class Miner extends Droid {
               minersThere++;
           }
           if (minersThere <= leadSeen / 75) {
-            System.out.println("Previous location is better than reseting to null location!");
+//            System.out.println("Previous location is better than reseting to null location!");
             keepPreviousBest = true;
           }
         }
@@ -775,7 +774,7 @@ public class Miner extends Droid {
 
     // if I can move, check and compare bestMapLocation with how good my current location is first!
     if (rc.isMovementReady() && bestMapLocation != Cache.PerTurn.CURRENT_LOCATION) {
-      System.out.println("Miner can move, checking current location...");
+//      System.out.println("Miner can move, checking current location...");
       int currentRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
       if (currentRubble < bestRubble) {
         if (rc.senseNearbyLocationsWithLead(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1, 2).length > 0) {
@@ -786,7 +785,7 @@ public class Miner extends Droid {
 //            if (bot.type == RobotType.MINER) minersThere++;
 //          }
 //          if (minersThere <= leadSeen / 75)
-            System.out.println("Current location is better than previous best!");
+//            System.out.println("Current location is better than previous best!");
             bestMapLocation = Cache.PerTurn.CURRENT_LOCATION;
             bestRubble = currentRubble;
             bestDistance = 0;
@@ -797,19 +796,14 @@ public class Miner extends Droid {
 
     for (; currentIndex < allLocationsWithinRadiusSquaredLength; currentIndex++) {
       int endByteCode = Clock.getBytecodeNum();
-      System.out.println("bytecode: " + (endByteCode - startByteCode) + " current: " + endByteCode);
-      if (currentIndex > 0) System.out.println("Result " + allLocationsWithinRadiusSquared[currentIndex - 1] + " index " + (currentIndex-1) + "\n");
+//      System.out.println("bytecode: " + (endByteCode - startByteCode) + " current: " + endByteCode);
+//      if (currentIndex > 0) System.out.println("Result " + allLocationsWithinRadiusSquared[currentIndex - 1] + " index " + (currentIndex-1) + "\n");
       startByteCode = Clock.getBytecodeNum();
       if (startByteCode >= 6000) {
-        System.out.println("ENDING EARLY on " + currentIndex + "/" + allLocationsWithinRadiusSquaredLength + " -- " + " bestMapLocation: " + bestMapLocation + " bestRubble: " + bestRubble + " bestDistance: " + bestDistance);
+//        System.out.println("ENDING EARLY on " + currentIndex + "/" + allLocationsWithinRadiusSquaredLength + " -- " + " bestMapLocation: " + bestMapLocation + " bestRubble: " + bestRubble + " bestDistance: " + bestDistance);
         break; // worse case we have 5999 bytecode used and use 300 more, so we have 1k left for the remaining
       }
       MapLocation candidateLocation = allLocationsWithinRadiusSquared[currentIndex];
-
-//      if (candidateLocation.translate(0, 1))
-        // translate & cansense--> 7 bytecode for valid location
-        // senselead --> 12 bytecode min for lead
-        // senseRobotAtLocation --> 25 per
 
       // NOTE: senseNearbyLocationsWithLead does not error if candidateLocation is not valid
       // all candidateLocations are already senseable as getAllLocations returns only valid locations
@@ -822,10 +816,10 @@ public class Miner extends Droid {
           int minersThere = 0;
           for (RobotInfo bot : rc.senseNearbyRobots(candidateLocation, Utils.DSQ_2by2, Cache.Permanent.OUR_TEAM)) {
             // if the miner bot is closer to the candidate location than me, add it to the count
-            if (bot.type == RobotType.MINER && bot.location.distanceSquaredTo(candidateLocation) < bestDistance) minersThere++;
+            if (bot.type == RobotType.MINER && bot.location.distanceSquaredTo(candidateLocation) <= bestDistance) minersThere++;
           }
-         if (minersThere > leadSeen / 75) continue;
-
+         if (minersThere > leadSeen / 100) continue;
+          // 3 * 40 = 120
           // we have found a better miner!
           bestMapLocation = candidateLocation;
           bestRubble = candidateRubble;
@@ -872,8 +866,8 @@ public class Miner extends Droid {
     if (moveTowardsAvoidRubble(target)) {
       rc.setIndicatorString("Approaching target" + target);
 //    moveInDirLoose(goal);
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, target, 255, 10, 10);
-      rc.setIndicatorDot(target, 0, 255, 0);
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, target, 255, 10, 10);
+//      rc.setIndicatorDot(target, 0, 255, 0);
     }
     return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
   }
