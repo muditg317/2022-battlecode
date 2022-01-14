@@ -21,8 +21,8 @@ import firstbot.utils.Global;
 import firstbot.utils.Utils;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
 
   protected final RobotController rc;
   protected final Communicator communicator;
