@@ -1,4 +1,4 @@
-package firstbot.robots;
+package soldierexplorer.robots;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -7,18 +7,18 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.communications.Communicator;
-import firstbot.communications.messages.Message;
-import firstbot.robots.buildings.Archon;
-import firstbot.robots.buildings.Laboratory;
-import firstbot.robots.buildings.Watchtower;
-import firstbot.robots.droids.Builder;
-import firstbot.robots.droids.Miner;
-import firstbot.robots.droids.Sage;
-import firstbot.robots.droids.Soldier;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
+import soldierexplorer.communications.Communicator;
+import soldierexplorer.communications.messages.Message;
+import soldierexplorer.robots.buildings.Archon;
+import soldierexplorer.robots.buildings.Laboratory;
+import soldierexplorer.robots.buildings.Watchtower;
+import soldierexplorer.robots.droids.Builder;
+import soldierexplorer.robots.droids.Miner;
+import soldierexplorer.robots.droids.Sage;
+import soldierexplorer.robots.droids.Soldier;
+import soldierexplorer.utils.Cache;
+import soldierexplorer.utils.Global;
+import soldierexplorer.utils.Utils;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
@@ -45,9 +45,9 @@ public abstract class Robot {
 
 //    this.stolenbfs = new StolenBFS2(rc);
     // Print spawn message
-//    System.out.println(this.creationStats);
+//    //System.out.println(this.creationStats);
     // Set indicator message
-    rc.setIndicatorString("Just spawned!");
+    //rc.setIndicatorString("Just spawned!");
     turnCount = -1;
   }
 
@@ -83,15 +83,15 @@ public abstract class Robot {
         this.runTurnWrapper();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
-        System.out.println(rc.getType() + " GameActionException");
+        //System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
-        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
+        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
-        System.out.println(rc.getType() + " Exception");
+        //System.out.println(rc.getType() + " Exception");
         e.printStackTrace();
-        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
+        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
       } finally {
         // end turn - make code wait until next turn
@@ -104,7 +104,7 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
-//      System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
+//      //System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
     Cache.updateOnTurn();
 //    communicator.cleanStaleMessages();
@@ -118,7 +118,7 @@ public abstract class Robot {
       pendingMessages--;
     }
     Utils.finishByteCodeCounting("reading");
-//    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
+//    if (pendingMessages > 0) //System.out.println("Got " + pendingMessages + " messages!");
     runTurn();
 
     Utils.startByteCodeCounting("sending");
@@ -127,7 +127,7 @@ public abstract class Robot {
     Utils.finishByteCodeCounting("sending");
 
     if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) {
-      rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
+      //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
       turnCount = rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED;
     }
   }
@@ -218,7 +218,7 @@ public abstract class Robot {
     if (costB <= costC && rc.canMove(goalDir.rotateRight())) return goalDir.rotateRight();
     if (rc.canMove(goalDir.rotateLeft())) return goalDir.rotateLeft();
 //    if (rc.getRoundNum() == 28 && rc.getID() == 13009) {
-//      System.out.printf("Least rubble dir failed from %s\n\t%s:%d\n\t%s:%d\n\t%s:%d\n",Cache.PerTurn.CURRENT_LOCATION,goalDir,costA,goalDir.rotateRight(),costB,goalDir.rotateLeft(),costC);
+//      //System.out.printf("Least rubble dir failed from %s\n\t%s:%d\n\t%s:%d\n\t%s:%d\n",Cache.PerTurn.CURRENT_LOCATION,goalDir,costA,goalDir.rotateRight(),costB,goalDir.rotateLeft(),costC);
 //    }
     return null;
   }
@@ -380,9 +380,9 @@ public abstract class Robot {
 //      }
 //    }
     if (moved) {
-      rc.setIndicatorDot(toEscape, 255,0,0);
-      rc.setIndicatorString("running away from " + toEscape);
-      rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
+      //rc.setIndicatorDot(toEscape, 255,0,0);
+      //rc.setIndicatorString("running away from " + toEscape);
+      //rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
     }
 //    return !myLoc.isWithinDistanceSquared(toEscape, Cache.Permanent.VISION_RADIUS_SQUARED<<4) || !rc.onTheMap(myLoc.add(toEscape.directionTo(Cache.PerTurn.CURRENT_LOCATION)));
     return myLoc.isWithinDistanceSquared(target, Utils.DSQ_1by1);
