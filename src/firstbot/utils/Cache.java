@@ -43,6 +43,7 @@ public class Cache {
         public static MapLocation CURRENT_LOCATION;
         public static int LEVEL;
         public static int HEALTH;
+        public static int cacheState;
 
         public static void whenMoved() {
             // don't need to update
@@ -55,6 +56,7 @@ public class Cache {
         }
 
         private static void updateForMovement() {
+            PerTurn.cacheState++;
             PerTurn.CURRENT_LOCATION = Global.rc.getLocation();
             PerTurn.ALL_NEARBY_ROBOTS = Global.rc.senseNearbyRobots();
             PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS = Global.rc.senseNearbyRobots(-1, Permanent.OUR_TEAM);

@@ -41,6 +41,12 @@ public class Utils {
 //  public static final int DSQ_3by3 = 32;
 //  public static final int DSQ_3by3 = 32;
 
+  /*
+  * the amount of lead that a single miner can claim from others (based on lead regen)
+  * regenAmt*regenTime * FACTOR (~0.75) = 3*40*X = 100
+  */
+  public static final int LEAD_PER_MINER_CLAIM = 100;
+
   public static void setUpStatics() {
     rng = new Random(Global.rc.getID());
   }

@@ -66,17 +66,6 @@ public class Archon extends Building {
       return;
     }
 
-//    if (minersSpawned < initialMinersToSpawn) {
-//      MapLocation bestLead = getBestLeadLocProbabilistic();
-//      Direction dir = bestLead == null ? Utils.randomDirection() : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
-//      if (buildRobot(RobotType.MINER, dir)) {
-//        rc.setIndicatorString("Spawn miner!");
-//        minersSpawned++;
-//        leadSpent += RobotType.MINER.buildCostLead;
-//      }
-//    }
-
-
     if (healthLostThisTurn < Cache.PerTurn.HEALTH && (saveMeRequest != null || offensiveEnemiesNearby())) {
       broadcastSaveMe();
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
@@ -150,7 +139,6 @@ public class Archon extends Building {
 
     if (whichArchonAmI == rc.getArchonCount()) {
       System.out.println("I am the last archon! locs: " + archonLocs);
-
     }
 
     // let's get some data...
@@ -248,7 +236,7 @@ public class Archon extends Building {
    */
   private void spawnDroid() throws GameActionException {
     if (needMiner()) {
-      MapLocation bestLead = getBestLeadLocProbabilistic();
+      MapLocation bestLead = getWeightedAvgLeadLoc();
       // if bestLead is null, spawn on low rubble instead of random
       //TODO:
 
@@ -285,6 +273,8 @@ public class Archon extends Building {
 //    System.out.printf("Archon%s checking need Miner -- \n\tminersSpawned=%d\n\trcArchonCount=%d\n\tsoldiersSpawned=%d\n", Cache.PerTurn.CURRENT_LOCATION, minersSpawned, rc.getArchonCount(), soldiersSpawned);
 //    System.out.println(Cache.PerTurn.CURRENT_LOCATION + " --\nminersSpawned: " + minersSpawned + "\nrc.getArchonCount(): " + rc.getArchonCount() + "\nsoldiersSpawned: " + soldiersSpawned);
 
+    // TODO: something based on lead income
+
     return minersSpawned < initialMinersToSpawn
         || (minersSpawned < soldiersSpawned / 2.0 && minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 100);
 //    return rc.getTeamLeadAmount(rc.getTeam()) < 500 && ( // if we have > 2000Pb, just skip miners
@@ -306,32 +296,7 @@ public class Archon extends Building {
     return rc.getTeamLeadAmount(rc.getTeam()) > 200 && (  // if lots of lead, make builder to spend that lead
         rc.getRoundNum() % 10 == 0
         || buildersSpawned < 5
-//        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned
-    ); // need at least 1 builder per X rounds since charge anomaly
-  }
-
-  /**
-   * estimates the amount of lead that has been spent by the whole team + the currently useful lead
-   *    has no idea about builder expenditure
-   * @return the estimated lead total
-   */
-  private int estimateTotalLeadInGame() {
-    return rc.getArchonCount() * (
-          minersSpawned * RobotType.MINER.buildCostLead
-        + buildersSpawned * RobotType.BUILDER.buildCostLead
-        + soldiersSpawned * RobotType.SOLDIER.buildCostLead
-        + sagesSpawned * RobotType.SAGE.buildCostLead
-        );
-  }
-
-  /**
-   * estimates the average lead income per round of the game
-   *    based on the estimateTotalLeadInGame
-   *    resets round counter when charges occur (because most miners should be wiped by charge)
-   * @return the estimated avg lead/round income
-   */
-  private int estimateAvgLeadIncome() {
-    return estimateTotalLeadInGame() / (1 + getRoundsSinceLastAnomaly(AnomalyType.CHARGE));
+    );
   }
 
 
