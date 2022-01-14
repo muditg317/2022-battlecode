@@ -44,10 +44,15 @@ public class Soldier extends Droid {
       myPotentialTarget = new MapLocation(mapW-1-parentArchonLoc.x, mapH-1-parentArchonLoc.y);
     }
     meetupPoint = Utils.lerpLocations(Cache.PerTurn.CURRENT_LOCATION, myPotentialTarget, MEETUP_FACTOR);
-    visionSize = rc.getAllLocationsWithinRadiusSquared(meetupPoint, 100).length;
+    visionSize = rc.getAllLocationsWithinRadiusSquared(meetupPoint, Cache.Permanent.VISION_RADIUS_SQUARED).length;
     canStartRaid = true;
   }
 
+  boolean enemySoldierExists;
+  boolean enemyMinerExists;
+  boolean enemyBuilderExists;
+  boolean enemyArchonExists;
+  boolean enemySageExists;
   @Override
   protected void runTurn() throws GameActionException {
 //    System.out.println();
@@ -55,12 +60,12 @@ public class Soldier extends Droid {
     // miner-like random exploration (random target and go to it)
 
     // get all robots in vision
-    boolean enemySoldierExists = false;
-    boolean enemyMinerExists = false;
-    boolean enemyBuilderExists = false;
-    boolean enemyArchonExists = false;
-    boolean enemySageExists = false;
-    
+    enemySoldierExists = false;
+    enemyMinerExists = false;
+    enemyBuilderExists = false;
+    enemyArchonExists = false;
+    enemySageExists = false;
+
     for (RobotInfo robot : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
       switch(robot.type) {
         case SOLDIER:
@@ -87,10 +92,13 @@ public class Soldier extends Droid {
 //    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
 //    System.out.println("\nrobotToChase: " + robotToChase + "\ntarget: " + target + "\nreachedTarget: " + reachedTarget);
 
+//    if (enemySoldierExists && attackEnemySoldier()) {}
+//    else if ((enemyMinerExists || enemyBuilderExists) && attackAndChaseEnemyMinerOrBuilder()) {}
+//    else if (enemyArchonExists && attackAndChaseEnemyArchon()) {}
+//    else if (enemySageExists && attackEnemySage()) {}
     if (enemySoldierExists) attackEnemySoldier();
-    else if (enemyMinerExists) attackEnemyMiner();
-    else if (enemyBuilderExists) attackEnemyBuilder();
-    else if (enemyArchonExists) attackEnemyArchon();
+    else if (enemyMinerExists || enemyBuilderExists) attackAndChaseEnemyMinerOrBuilder();
+    else if (enemyArchonExists) attackAndChaseEnemyArchon();
     else if (enemySageExists) attackEnemySage();
     else {
       // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
@@ -99,7 +107,7 @@ public class Soldier extends Droid {
       if (robotToChase != null) {
         if (robotToChase.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) > Utils.DSQ_1by1) {
 //          System.out.println("MOVE TO CACHED LOCATION");
-          moveTowardsAvoidRubble(robotToChase.location);
+          moveOptimalTowards(robotToChase.location);
         } else {
 //          System.out.println("RESET ROBOT TO CHASE");
           robotToChase = null;
@@ -198,90 +206,13 @@ public class Soldier extends Droid {
    */
   private boolean goToTarget() throws GameActionException {
 //    Direction goal = Cache.PerTurn.CURRENT_LOCATION.directionTo(target);
-    if (moveTowardsAvoidRubble(target)) {
+    if (moveOptimalTowards(target)) {
       rc.setIndicatorString("Approaching target" + target);
 //    moveInDirLoose(goal);
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, target, 255, 10, 10);
       rc.setIndicatorDot(target, 0, 255, 0);
     }
     return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
-  }
-
-  private void attackEnemySage() {
-    // if they attacked us, then let's attack them back for X (18) rounds.
-    // Otherwise or after 18 rounds, add location to "banned" list and avoid getting close to it again or something
-    //TODO: get health last round (based on health loss determine if sage attacked)
-    MapLocation enemyLocation = null;
-    int minHealth = Integer.MAX_VALUE;
-
-    setIndicatorString("attackEnemySage", enemyLocation);
-  }
-
-  private boolean attackEnemyArchon() throws GameActionException {
-    // move towards and attack
-    MapLocation enemyLocation = null;
-    int minHealth = Integer.MAX_VALUE;
-
-    for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-      if (enemy.type == RobotType.ARCHON && enemy.health < minHealth) {
-        minHealth = enemy.health;
-        enemyLocation = enemy.location;
-        robotToChase = enemy;
-      }
-    }
-    setIndicatorString("attackEnemyArchon", enemyLocation);
-    if (enemyLocation != null) {
-      if (rc.isMovementReady() && (!enemyLocation.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))) moveTowardsAvoidRubble(enemyLocation);
-      if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
-    }
-
-    return false;
-  }
-
-  private boolean attackEnemyBuilder() throws GameActionException {
-
-    // same as miner
-
-    MapLocation enemyLocation = null;
-    int minHealth = Integer.MAX_VALUE;
-    int minDistance = Integer.MAX_VALUE;
-
-    if (rc.isMovementReady()) {
-      // find least health enemy miner in vision radius
-      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-        int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
-        if (enemy.type == RobotType.BUILDER && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
-          minHealth = enemy.health;
-          enemyLocation = enemy.location;
-          minDistance = candidateDistance;
-          robotToChase = enemy;
-        }
-      }
-    } else {
-      // find least health enemy miner in action radius
-      // the robotToChase is set to the miner with the least health irregardless of distance
-      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-        int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
-        if (enemy.type == RobotType.BUILDER && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
-          robotToChase = enemy;
-          if (enemy.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
-            minHealth = enemy.health;
-            enemyLocation = enemy.location;
-            minDistance = candidateDistance;
-          }
-        }
-      }
-    }
-//    System.out.println("ATTACK BUILDER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
-//    System.out.println("robotToChase: " + robotToChase);
-    setIndicatorString("attackEnemyBuilder", enemyLocation);
-
-    if (enemyLocation != null) {
-      if (rc.isMovementReady() && minDistance > Utils.DSQ_1by1) moveTowardsAvoidRubble(enemyLocation);
-      if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
-    }
-
-    return false;
   }
 
   private boolean attackEnemySoldier() throws GameActionException {
@@ -311,6 +242,7 @@ public class Soldier extends Droid {
 
     // my location and all adjacent locations
     for (Direction dir : Utils.directionsNine) {
+//      if (!rc.canMove(dir)) continue; // TODO: figure out why this makes it worse
       MapLocation candidate = Cache.PerTurn.CURRENT_LOCATION.add(dir);
       if (!rc.canSenseLocation(candidate)) continue;
 
@@ -440,13 +372,25 @@ public class Soldier extends Droid {
 
     setIndicatorString("attackEnemySoldier score(" + bestScore + ")", bestLocation);
 
+    // if we are in a negative trade that we don't know how to escape
+    if (bestScore < 0 && rc.isMovementReady() && bestLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) {
+      bestLocation = Cache.PerTurn.CURRENT_LOCATION.add(getOptimalDirectionAway(offensiveEnemyCentroid()));
+    }
+
+    // TODO: why does using this make it worse???? wtf
+//    return attackAtAndMoveTo(bestEnemySoldier, bestLocation, true);
+
     boolean attacked = false;
     if (bestEnemySoldier != null) {
       if (rc.canAttack(bestEnemySoldier)) attacked |= attackTarget(bestEnemySoldier);
     }
     if (bestLocation != null) {
       // might want to move out if bestLocation score is low (after attacking tho)
-      if (rc.isMovementReady()) moveTowardsAvoidRubble(bestLocation);
+      if (rc.isMovementReady()) {
+        // TODO: switching to this makes it worse????
+        move(Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocation));
+//        moveOptimalTowards(bestLocation);
+      }
     }
     if (bestEnemySoldier != null) {
       if (rc.canAttack(bestEnemySoldier)) attacked |= attackTarget(bestEnemySoldier);
@@ -483,60 +427,153 @@ public class Soldier extends Droid {
 //      }
 //  }
   }
+  /**
+   * find and attack/deal with an enemy miner/builder
+   *    SHOULD GUARANTEE >=1 miner/builder is in vision radius
+   * @return true if attacked
+   * @throws GameActionException if sensing or attacking fails
+   */
+  private boolean attackAndChaseEnemyMinerOrBuilder() throws GameActionException {
+    MapLocation enemyLocation = setNonOffensiveDroidToChaseAndChooseTarget();
+//    System.out.println("ATTACK MINER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
+//    System.out.println("robotToChase: " + robotToChase);
+    setIndicatorString("attackEnemyMiner/Builder", enemyLocation);
 
-  private boolean attackEnemyMiner() throws GameActionException {
-    // possibly do score function of health and distance to enemy miner
+    return attackAtAndMoveTo(enemyLocation, enemyLocation, true);
+  }
 
+  /**
+   * find and attack/deal with an enemy archon
+   *    SHOULD GUARANTEE >=1 archon is in vision radius
+   * @return true if attacked
+   * @throws GameActionException if sensing or attacking fails
+   */
+  private boolean attackAndChaseEnemyArchon() throws GameActionException {
+
+    // move towards and attack
+    RobotInfo archon = findLowestHealthEnemyOfType(RobotType.ARCHON);
+    MapLocation enemyLocation = archon.location;
+    robotToChase = archon;
+
+    setIndicatorString("attackEnemyArchon", enemyLocation);
+
+    return attackAtAndMoveTo(enemyLocation, enemyLocation, true);
+//
+//    if (enemyLocation != null) {
+//      if (rc.isMovementReady() && (!enemyLocation.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))) moveOptimalTowards(enemyLocation);
+//      if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
+//    }
+//
+//    return false;
+  }
+
+  /**
+   * find and attack/deal with an enemy sage
+   *    SHOULD GUARANTEE >=1 sage is in vision radius
+   *    TODO: implement
+   * @return true if attacked
+   */
+  private boolean attackEnemySage() {
+    // if they attacked us, then let's attack them back for X (18) rounds.
+    // Otherwise or after 18 rounds, add location to "banned" list and avoid getting close to it again or something
+    // TODO: get health last round (based on health loss determine if sage attacked)
+    MapLocation enemyLocation = null;
+//    int minHealth = Integer.MAX_VALUE;
+
+    setIndicatorString("attackEnemySage", enemyLocation);
+    return false;
+  }
+
+  /**
+   * Iterates over enemy robots and chooses the lowest health droid to attack
+   * also sets the robot to chase
+   *    can ONLY chase miners/builder
+   *    will CHASE lowest health unit
+   *    will ATTACK lowest health unit in action range
+   * @return the coords of the enemy to attack
+   */
+  private MapLocation setNonOffensiveDroidToChaseAndChooseTarget() {
+    // possibly do score function of health and distance to enemy
+    // TODO: ensure that the below priority system works
+    // if not, revert to simple, choose miner > builder
+    RobotType preferredType =
+        enemyBuilderExists
+            && (!enemyMinerExists
+            || rc.getTeamLeadAmount(Cache.Permanent.OPPONENT_TEAM) > 1.3 * rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM))
+            ? RobotType.BUILDER
+            : RobotType.MINER;
+    RobotInfo bestTarget = null;
     MapLocation enemyLocation = null;
     int minHealth = Integer.MAX_VALUE;
     int minDistance = Integer.MAX_VALUE;
 
-    if (rc.isMovementReady()) {
-      // find least health enemy miner in vision radius
-      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-        int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
-        if (enemy.type == RobotType.MINER && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
+    boolean canMove = rc.isMovementReady();
+
+    // find least health enemy miner in action radius
+    // the robotToChase is set to the miner with the least health irregardless of distance
+    for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+      int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
+//        System.out.println("enemy: " + enemy.location + " " + enemy.health + " " + candidateDistance + " minHealth: " + minHealth + " minDistance: " + minDistance);
+      if (enemy.type == preferredType && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
+        bestTarget = enemy;
+//        System.out.println(bestToTarget);
+        if (canMove || candidateDistance <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
           minHealth = enemy.health;
           enemyLocation = enemy.location;
           minDistance = candidateDistance;
-          robotToChase = enemy;
-        }
-      }
-    } else {
-      // find least health enemy miner in action radius
-      // the robotToChase is set to the miner with the least health irregardless of distance
-      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-        int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
-//        System.out.println("enemy: " + enemy.location + " " + enemy.health + " " + candidateDistance + " minHealth: " + minHealth + " minDistance: " + minDistance);
-        if (enemy.type == RobotType.MINER && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
-          robotToChase = enemy;
-//          System.out.println(robotToChase);
-          if (enemy.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
-            minHealth = enemy.health;
-            enemyLocation = enemy.location;
-            minDistance = candidateDistance;
-          }
         }
       }
     }
-//    System.out.println("ATTACK MINER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
-//    System.out.println("robotToChase: " + robotToChase);
-    setIndicatorString("attackEnemyMiner", enemyLocation);
 
-    if (enemyLocation != null) {
-      if (rc.isMovementReady() && minDistance > Utils.DSQ_1by1) moveTowardsAvoidRubble(enemyLocation);
-      if (rc.canAttack(enemyLocation)) return attackTarget(enemyLocation);
-    }
+    // shouldn't ever happen
+    if (bestTarget == null) return null;
 
-    return false;
-    // if outside action radius but in vision radius, do least health in vision radius -> move towards and attack
-    // if its inside action radius, do least health in vision radius -> move towards and attack
+    robotToChase = bestTarget;
+    return enemyLocation;
+  }
 
-    // cannot move -> action, move -> vision
+  /**
+   * attack a given location and also move
+   *    depending on usePathing, either use moveOptimal or a direct move call
+   * @param whereToAttack the location to attack
+   * @param whereToMove the location to move to
+   * @param usePathing whether to use optimal planning or move in direction
+   * @return true if attacked
+   * @throws GameActionException if attacking or moving fails
+   */
+  private boolean attackAtAndMoveTo(MapLocation whereToAttack, MapLocation whereToMove, boolean usePathing) throws GameActionException {
 
-    // if we cannot move: if outside action radius but in vision radius and cooldown, do one with least health in action radius -> attack
+    boolean attacked = false;
+    Direction dirToMove = rc.isMovementReady() && (!whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1)) ? getOptimalDirectionTowards(whereToMove) : Direction.CENTER;
+    MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
+    // only try to attack early if rubble is better
+//    if (rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < rc.senseRubble(newLoc)) attacked |= attackTarget(whereToAttack);
+    // TODO: why is above making things worse?????
 
-    //follow it!
+    // only attack early if moving first screws us over
+    if (whereToAttack != null && !whereToAttack.isWithinDistanceSquared(newLoc, Cache.Permanent.ACTION_RADIUS_SQUARED)) attacked |= attackTarget(whereToAttack);
+    // only move if not CENTER and target isn't already within 1by1 from self
+    if (dirToMove != Direction.CENTER && rc.isMovementReady() && (!whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))) move(dirToMove);
+    // retry attack if incomplete
+    attacked |= attackTarget(whereToAttack);
+    return attacked;
+
+//    boolean attacked = false;
+//    if (whereToAttack != null) {
+//      attacked |= rc.canAttack(whereToAttack) && attackTarget(whereToAttack);
+//    }
+//    if (whereToMove != null) {
+//      // might want to move out if bestLocation score is low (after attacking tho)
+//      if (rc.isMovementReady() && !whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+//        if (usePathing) moveOptimalTowards(whereToMove);
+//        else move(Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove));
+//      }
+//    }
+//    if (whereToAttack != null) {
+//      attacked |= rc.canAttack(whereToAttack) && attackTarget(whereToAttack);
+//    }
+//
+//    return attacked;
   }
   
   @Override
@@ -690,7 +727,7 @@ public class Soldier extends Droid {
   private boolean moveForRaid() throws GameActionException {
     rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
 //    return moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(raidTarget))
-    return moveTowardsAvoidRubble(raidTarget)
+    return moveOptimalTowards(raidTarget)
         && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
   }
 

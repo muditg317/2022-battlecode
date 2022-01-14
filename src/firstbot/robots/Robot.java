@@ -1,7 +1,5 @@
 package firstbot.robots;
 
-import battlecode.common.AnomalyScheduleEntry;
-import battlecode.common.AnomalyType;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -9,9 +7,6 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
 import firstbot.communications.Communicator;
 import firstbot.communications.messages.Message;
 import firstbot.robots.buildings.Archon;
@@ -21,6 +16,9 @@ import firstbot.robots.droids.Builder;
 import firstbot.robots.droids.Miner;
 import firstbot.robots.droids.Sage;
 import firstbot.robots.droids.Soldier;
+import firstbot.utils.Cache;
+import firstbot.utils.Global;
+import firstbot.utils.Utils;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
@@ -202,120 +200,201 @@ public abstract class Robot {
   }
 
   /**
-   * move towards the given target and avoid rubble naively
-   * @param target the location to move towards
-   * @return if moved
+   * move in the desired direction but accounting for rubble
+   * @param goalDir the goal direction to move in
+   * @return true if moved
    * @throws GameActionException if movement fails
+   */
+  protected boolean moveInDirAvoidRubble(Direction goalDir) throws GameActionException {
+    MapLocation a = Cache.PerTurn.CURRENT_LOCATION.add(goalDir);
+    MapLocation b = Cache.PerTurn.CURRENT_LOCATION.add(goalDir.rotateRight());
+    MapLocation c = Cache.PerTurn.CURRENT_LOCATION.add(goalDir.rotateLeft());
+    int costA = rc.canSenseLocation(a) ? rc.senseRubble(a) : 101;
+    int costB = rc.canSenseLocation(b) ? rc.senseRubble(b) : 101;
+    int costC = rc.canSenseLocation(c) ? rc.senseRubble(c) : 101;
+
+    return (costA <= costB && costA <= costC && move(goalDir))
+        || (costB <= costC && move(goalDir.rotateRight()))
+        || (move(goalDir.rotateLeft()));
+  }
+
+  /**
+   * get the best direction to move to reach the provided target
+   *    accounts for rubble but greedily
+   * @param target the location to approach
+   * @return the best direction or null
+   * @throws GameActionException if sensing fails
    */
   private MapLocation lastTarget = null;
   private MapLocation lastPosition = null;
-  protected boolean moveTowardsAvoidRubble(MapLocation target) throws GameActionException {
-    if (!rc.isMovementReady()) return false;
-//    if (USE_STOLEN_BFS) {
-//      stolenbfs.move(target, false);
-//      if (!rc.isMovementReady()) return true;
-//    }
-
-    MapLocation offLimits = (lastTarget != null && lastTarget.equals(target)) ? lastPosition : null;
-    lastPosition = Cache.PerTurn.CURRENT_LOCATION;
-    lastTarget = target;
-
-    int bestPosDirInd = -1;
+  protected Direction getOptimalDirectionTowards(MapLocation target) throws GameActionException {
+    if (Cache.PerTurn.CURRENT_LOCATION.equals(target)) return Direction.CENTER;
+    Direction bestDirection = null;
     int bestPosRubble = 101;
     int bestPosDist = -1;
     MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
     int dToLoc = myLoc.distanceSquaredTo(target);
 
+    MapLocation offLimits = (lastTarget != null && lastTarget.equals(target)) ? lastPosition : null;
+    lastPosition = Cache.PerTurn.CURRENT_LOCATION;
+    lastTarget = target;
+
     MapLocation newLoc; // temp
     int newLocDist; // temp
-    for (int i = 0; i < Utils.directions.length; i++) {
-      newLoc = myLoc.add(Utils.directions[i]);
+    for (Direction candidateDir : Utils.directions) {
+      newLoc = myLoc.add(candidateDir);
       if (newLoc.equals(offLimits)) continue; // not allowed to cycle location
       newLocDist = newLoc.distanceSquaredTo(target);
-      if (rc.canMove(Utils.directions[i]) && newLocDist <= dToLoc) {
+      if (rc.canMove(candidateDir) && newLocDist <= dToLoc) {
         if (rc.canSenseLocation(newLoc)) {
           int rubble = rc.senseRubble(newLoc);
           if (rubble < bestPosRubble || (rubble == bestPosRubble && newLocDist < bestPosDist)) {
-            bestPosDirInd = i;
+            bestDirection = candidateDir;
             bestPosRubble = rubble;
             bestPosDist = newLocDist;
           }
         }
       }
     }
-    if (bestPosDirInd != -1) {
-      return move(Utils.directions[bestPosDirInd]);
-    }
-
-    // inspired from pnay old code
-    // Potential choices
-    Direction dirToTarget = myLoc.directionTo(target);
-    MapLocation a = myLoc.add(dirToTarget);
-    MapLocation b = myLoc.add(dirToTarget.rotateRight());
-    MapLocation c = myLoc.add(dirToTarget.rotateLeft());
-    int costA = rc.canSenseLocation(a) ? rc.senseRubble(a) : 101;
-    int costB = rc.canSenseLocation(b) ? rc.senseRubble(b) : 101;
-    int costC = rc.canSenseLocation(c) ? rc.senseRubble(c) : 101;
-
-//    return moveInDirLoose(dirToTarget);
-    return (costA <= costB && costA <= costC && move(dirToTarget))
-        || (costB <= costC && move(dirToTarget.rotateRight()))
-        || (move(dirToTarget.rotateLeft()));
+    return bestDirection;
   }
 
-//  protected boolean moveSafely(MapLocation loc, int rad){
-//    if (loc == null) return false;
-//    int d = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(loc);
-//    d = Math.min(d, rad);
-//    boolean[] imp = new boolean[Utils.directions.length];
-//    boolean greedy = false;
-//    for (int i = Utils.directions.length; i-- > 0; ){
-//      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(Utils.directions[i]);
-//      if (newLoc.distanceSquaredTo(loc) <= d){
-//        imp[i] = true;
-//        greedy = true;
-//      }
-//    }
-//    stolenbfs.path.setImpassable(imp);
-//    stolenbfs.move(loc, greedy);
-//    return true;
-//  }
+  /**
+   * move towards the given target and avoid rubble naively
+   * @param target the location to move towards
+   * @return if moved
+   * @throws GameActionException if movement fails
+   */
+  protected boolean moveOptimalTowards(MapLocation target) throws GameActionException {
+    if (!rc.isMovementReady()) return false;
 
+    Direction bestDirection = getOptimalDirectionTowards(target);
+    return bestDirection != null
+        ? move(bestDirection)
+        : moveInDirAvoidRubble(Cache.PerTurn.CURRENT_LOCATION.directionTo(target));
+  }
 
   /**
-   * sense all around the robot for lead, choose a location probabilistically
+   * get the best direction to move to avoid the provided target
+   *    accounts for rubble but greedily
+   * @param source the location to avoid
+   * @return the best direction or null
+   * @throws GameActionException if sensing fails
+   */
+  protected Direction getOptimalDirectionAway(MapLocation source) throws GameActionException {
+    Direction bestDirection = null;
+    int bestPosRubble = 101;
+    int bestPosDist = Integer.MAX_VALUE;
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
+    int dToLoc = myLoc.distanceSquaredTo(source);
+
+    MapLocation newLoc; // temp
+    int newLocDist; // temp
+    for (Direction candidateDir : Utils.directions) {
+      newLoc = myLoc.add(candidateDir);
+      newLocDist = newLoc.distanceSquaredTo(source);
+      if (rc.canMove(candidateDir) && newLocDist >= dToLoc) {
+        if (rc.canSenseLocation(newLoc)) {
+          int rubble = rc.senseRubble(newLoc);
+          if (rubble < bestPosRubble || (rubble == bestPosRubble && newLocDist > bestPosDist)) {
+            bestDirection = candidateDir;
+            bestPosRubble = rubble;
+            bestPosDist = newLocDist;
+          }
+        }
+      }
+    }
+    return bestDirection;
+  }
+
+  /**
+   * move away from the given target and avoid rubble
+   * @param source the location to move away from
+   * @return if moved
+   * @throws GameActionException if movement fails
+   */
+  protected boolean moveOptimalAway(MapLocation source) throws GameActionException {
+    if (!rc.isMovementReady()) return false;
+
+    Direction bestDirection = getOptimalDirectionAway(source);
+    return bestDirection != null
+        ? move(bestDirection)
+        : moveInDirAvoidRubble(source.directionTo(Cache.PerTurn.CURRENT_LOCATION));
+  }
+
+  /**
+   * move away from the provided location and set some indicators
+   * TODO: this method doesn't work well for some reason
+   * @param toEscape the location to run away from
+   * @return true if escaped from the given location (not in 2xvision)
+   * @throws GameActionException if movement fails
+   */
+  protected boolean runAwayFrom(MapLocation toEscape) throws GameActionException {
+    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
+    boolean moved = false;
+
+    MapLocation target = new MapLocation((myLoc.x << 1) - toEscape.x, (myLoc.y << 1) - toEscape.y);
+    Direction backToSelf = target.directionTo(myLoc);
+    Direction awayFromSelf = backToSelf.opposite();
+//    while (rc.canSenseLocation(target)) target = target.add(awayFromSelf); // go as far out as possible
+    while (!rc.canSenseLocation(target)) target = target.add(backToSelf); // come back in until sensible
+
+    moved = moveOptimalTowards(target) || moveOptimalAway(toEscape) || moveInDirLoose(awayFromSelf);
+//    if (moveOptimalAway(toEscape)) {
+//      moved = true;
+//    } else {
+//      MapLocation target = new MapLocation((myLoc.x << 1) - toEscape.x, (myLoc.y << 1) - toEscape.y);
+//      Direction backToSelf = target.directionTo(myLoc);
+//      Direction awayFromSelf = backToSelf.opposite();
+//      while (rc.canSenseLocation(target)) target = target.add(awayFromSelf); // go as far out as possible
+//      while (!rc.canSenseLocation(target)) target = target.add(backToSelf); // come back in until sensible
+//
+//      if (moveOptimalTowards(target)) {
+//        moved = true;
+//      } else if (moveInDirLoose(awayFromSelf)) {
+//        moved = true;
+//      }
+//    }
+    if (moved) {
+      rc.setIndicatorDot(toEscape, 255,0,0);
+      rc.setIndicatorString("running away from " + toEscape);
+      rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
+    }
+//    return !myLoc.isWithinDistanceSquared(toEscape, Cache.Permanent.VISION_RADIUS_SQUARED<<4) || !rc.onTheMap(myLoc.add(toEscape.directionTo(Cache.PerTurn.CURRENT_LOCATION)));
+    return myLoc.isWithinDistanceSquared(target, Utils.DSQ_1by1);
+  }
+
+  /**
+   * sense all around the robot for lead, return a weighted average location
    *    weighted by how much lead is reached and how much rubble in the way
    *    IGNORES 0Pb
-   * @return the most tile in the center of most lead
-   * @throws GameActionException if some game op fails
+   * @return the tile in the center of most lead (null if no lead)
+   * @throws GameActionException if some sensing fails
    */
-  protected MapLocation getBestLeadLocProbabilistic() throws GameActionException {
-    final int MIN_LEAD = 1;
+  protected MapLocation getWeightedAvgLeadLoc() throws GameActionException {
+    final int MIN_LEAD = 1; // making this 2 causes us to do slightly worse lol weird
     final int MAX_LOCS = Clock.getBytecodesLeft() >> (Cache.Permanent.ROBOT_TYPE.isBuilding() ? 8 : 9); // div by 256 = *0.78/100 -- allowed to use 78% of bytecode on this
 //    int[] leadInDirection = new int[Utils.directions.length];
     int avgX = 0;
     int avgY = 0;
     int totalSeen = 0;
     MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
-
     // for all loations I can sense =>
     // sum up lead and number of current miners, and see if miners > lead / 50: continue if so
     MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED, MIN_LEAD);
+    if (leadLocs.length == 0) return null;
     if (MAX_LOCS <= 1) return leadLocs[Utils.rng.nextInt(leadLocs.length)];
     int incr = 1;
     if (leadLocs.length > MAX_LOCS) incr = leadLocs.length / MAX_LOCS;
     for (int i = 0, leadLocsLength = Math.min(leadLocs.length, MAX_LOCS * incr); i < leadLocsLength; i+=incr) {
       MapLocation loc = leadLocs[i];
-
       // if there is a miner within 2x2 blocks of the location, then ignore it
       int leadSeen = rc.senseLead(loc);
-
       int minersThere = 0;
       for (RobotInfo friend : rc.senseNearbyRobots(loc, 8, Cache.Permanent.OUR_TEAM)) {
         if (friend.type == RobotType.MINER) minersThere++;
       }
-      if (minersThere > leadSeen / 75) continue;
-
+      if (minersThere > leadSeen / Utils.LEAD_PER_MINER_CLAIM) continue;
 
       int rubbleThere = rc.senseRubble(loc);
       int rubbleOnPath = rc.senseRubble(myLoc.add(myLoc.directionTo(loc)));
@@ -323,44 +402,14 @@ public abstract class Robot {
       leadSeen *= 100 - rubbleThere;
       leadSeen *= 100 - rubbleOnPath;
 //      leadSeen /= myLoc.distanceSquaredTo(loc)+1;
+
       avgX += loc.x * leadSeen;
       avgY += loc.y * leadSeen;
       totalSeen += leadSeen;
     }
-//    totalSeen *= 3; // each location affects 3 direction entries
-    if (totalSeen == 0) { // return null if no good lead direction
-      return null; // Utils.randomDirection();
-    }
+    // return null if no good lead direction
+    if (totalSeen == 0) return null;
     return new MapLocation(avgX / totalSeen, avgY / totalSeen);
-//    int randomInt = Utils.rng.nextInt(totalSeen);
-//    for (int i = 0; i < leadInDirection.length; i++) {
-//      if (randomInt <= leadInDirection[i]) return Utils.directions[i];
-//      randomInt -= leadInDirection[i];
-//    }
-//    System.out.println("WEIGHTED PICK FAILED: " + Arrays.toString(leadInDirection));
-//    throw new RuntimeException("Weighted sum should be able to choose one a direction");
-  }
-
-  /**
-   * move to a location with high lead density
-   * @return if the movement was successfully based on lead presence
-   * @throws GameActionException if movement fails
-   */
-  protected boolean moveToHighLeadProbabilistic() throws GameActionException {
-    MapLocation highLead = getBestLeadLocProbabilistic();
-//    if (rc.getID() == 10001) {
-//      System.out.println("high lead: " + highLead);
-//    }
-    return highLead != null && moveTowardsAvoidRubble(highLead);
-//
-//    if (dir != null) {
-//      if (rc.canMove(dir)) {
-//        rc.move(dir);
-//        return true;
-//      }
-//    }
-//    if (defaultToRandomMovement) moveRandomly();
-//    return false;
   }
 
   /**
@@ -383,8 +432,12 @@ public abstract class Robot {
    * check if there are any enemy (soldiers) to run away from
    * @return the map location where there are offensive enemies (null if none)
    */
+  private MapLocation cachedEnemyCentroid;
+  private int cacheStateOnCalc = -1;
   protected MapLocation offensiveEnemyCentroid() {
-    if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length == 0) return null;
+    if (cacheStateOnCalc == Cache.PerTurn.cacheState) return cachedEnemyCentroid;
+    cacheStateOnCalc = Cache.PerTurn.cacheState;
+    if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length == 0) return (cachedEnemyCentroid = null);
     int avgX = 0;
     int avgY = 0;
     int count = 0;
@@ -395,8 +448,7 @@ public abstract class Robot {
         count += enemy.type.damage;
       }
     }
-    if (count == 0) return null;
-    return new MapLocation(avgX / count, avgY / count);
+    return (cachedEnemyCentroid = (count == 0 ? null : new MapLocation(avgX / count, avgY / count)));
   }
 
   /**
@@ -408,16 +460,21 @@ public abstract class Robot {
   }
 
   /**
-   * returns the number of rounds since the last anomaly of a certain type
-   * @param type the anomaly to look for
-   * @return the turns since occurence (or roundNum if never occurred)
+   * looks through enemies in vision and finds the one with lowest health that matches the type criteria
+   * @param enemyType the robottype to look for
+   * @return the robot of specified type with lowest health
    */
-  protected int getRoundsSinceLastAnomaly(AnomalyType type) {
-    int turnsSince = rc.getRoundNum();
-    for (AnomalyScheduleEntry anomaly : rc.getAnomalySchedule()) {
-      if (anomaly.roundNumber >= rc.getRoundNum()) return turnsSince;
-      if (anomaly.anomalyType == type) turnsSince = rc.getRoundNum() - anomaly.roundNumber;
+  protected RobotInfo findLowestHealthEnemyOfType(RobotType enemyType) {
+    RobotInfo weakestEnemy = null;
+    int minHealth = Integer.MAX_VALUE;
+
+    for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+      if (enemy.type == enemyType && enemy.health < minHealth) {
+        minHealth = enemy.health;
+        weakestEnemy = enemy;
+      }
     }
-    return turnsSince;
+
+    return weakestEnemy;
   }
 }

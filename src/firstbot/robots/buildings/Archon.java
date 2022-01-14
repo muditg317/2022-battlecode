@@ -66,19 +66,9 @@ public class Archon extends Building {
       return;
     }
 
-//    if (minersSpawned < initialMinersToSpawn) {
-//      MapLocation bestLead = getBestLeadLocProbabilistic();
-//      Direction dir = bestLead == null ? Utils.randomDirection() : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
-//      if (buildRobot(RobotType.MINER, dir)) {
-//        rc.setIndicatorString("Spawn miner!");
-//        minersSpawned++;
-//        leadSpent += RobotType.MINER.buildCostLead;
-//      }
-//    }
-
-
-    if (healthLostThisTurn < Cache.PerTurn.HEALTH && (saveMeRequest != null || offensiveEnemiesNearby())) {
-      broadcastSaveMe();
+    MapLocation nearbyEnemies = offensiveEnemyCentroid();
+    if (saveMeRequest != null || nearbyEnemies != null) {
+      if (healthLostThisTurn < Cache.PerTurn.HEALTH) broadcastSaveMe();
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
         rc.setIndicatorString("Spawn soldier!");
         soldiersSpawned++;
@@ -86,9 +76,11 @@ public class Archon extends Building {
       }
     }
 
-//    if (saveMeRequest != null) {
-//      broadcastSaveMe();
-//    }
+    // Spawn new droid if none to repair
+    int archons = rc.getArchonCount();
+    if (rc.isActionReady() && rc.getRoundNum() % archons == whichArchonAmI % archons) {
+      spawnDroid();
+    }
 
     // Repair damaged droid
 //    if (rc.isActionReady()) {
@@ -99,17 +91,6 @@ public class Archon extends Building {
 //        }
 //      }
 //    }
-
-//    System.out.println("rng bound: " + (rc.getArchonCount()-whichArchonAmI+3));
-
-    // Spawn new droid if none to repair
-    int archons = rc.getArchonCount();
-    if (rc.isActionReady() && rc.getRoundNum() % archons == whichArchonAmI % archons) {
-//    if (rc.isActionReady() && (Utils.rng.nextInt(rc.getArchonCount()-whichArchonAmI+2) <= 1)) {
-//    if (rc.isActionReady() && (Utils.rng.nextInt((rc.getArchonCount()>>1)|1) <= whichArchonAmI>>1)) {
-        //Utils.rng.nextInt(Math.max(1, rc.getArchonCount()-whichArchonAmI)) <= 1
-      spawnDroid();
-    }
 
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();
@@ -134,8 +115,6 @@ public class Archon extends Building {
     healthLostThisTurn = lastTurnHealth - Cache.PerTurn.HEALTH;
 //    rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
     lastTurnHealth = Cache.PerTurn.HEALTH;
-
-    
   }
 
   /**
@@ -187,6 +166,13 @@ public class Archon extends Building {
     return true;
   }
 
+  /**
+   * generate a message to be sent to the other arhcons on the first turn of the game
+   *    this message contains various bits of info that should be shared
+   *    - location
+   *    - symmetry info (TODO: implement)
+   * @return the message to send to the other archons
+   */
   private ArchonHelloMessage generateArchonHello() {
 //    boolean notHoriz = false;
 //    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
@@ -214,10 +200,7 @@ public class Archon extends Building {
    * @param message the hello
    */
   public void ackArchonHello(ArchonHelloMessage message) {
-//    if (rc.getRoundNum() == 1)
-//      whichArchonAmI++;
     archonLocs.add(message.location);
-//    System.out.println("Got archon hello!");
   }
 
   /**
@@ -248,11 +231,13 @@ public class Archon extends Building {
    */
   private void spawnDroid() throws GameActionException {
     if (needMiner()) {
-      MapLocation bestLead = getBestLeadLocProbabilistic();
-      // if bestLead is null, spawn on low rubble instead of random
-      //TODO:
+      MapLocation bestLead = getWeightedAvgLeadLoc();
+      // TODO: if bestLead is null, spawn on low rubble instead of random
 
-      Direction dir = bestLead == null ? Utils.randomDirection() : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
+      Direction dir = bestLead == null
+          ? Utils.randomDirection()
+          : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
+      // using getOptimalDirectionTowards(bestLead) causes slightly worse performance lol
       if (dir == Direction.CENTER) dir = Utils.randomDirection();
 
       System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
@@ -281,9 +266,9 @@ public class Archon extends Building {
    * @return boolean of necessity of building a miner
    */
   private boolean needMiner() throws GameActionException {
-    // print debug
 //    System.out.printf("Archon%s checking need Miner -- \n\tminersSpawned=%d\n\trcArchonCount=%d\n\tsoldiersSpawned=%d\n", Cache.PerTurn.CURRENT_LOCATION, minersSpawned, rc.getArchonCount(), soldiersSpawned);
 //    System.out.println(Cache.PerTurn.CURRENT_LOCATION + " --\nminersSpawned: " + minersSpawned + "\nrc.getArchonCount(): " + rc.getArchonCount() + "\nsoldiersSpawned: " + soldiersSpawned);
+    // TODO: something based on lead income
 
     return minersSpawned < initialMinersToSpawn
         || (minersSpawned < soldiersSpawned / 2.0 && minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 100);
@@ -306,33 +291,6 @@ public class Archon extends Building {
     return rc.getTeamLeadAmount(rc.getTeam()) > 200 && (  // if lots of lead, make builder to spend that lead
         rc.getRoundNum() % 10 == 0
         || buildersSpawned < 5
-//        || getRoundsSinceLastAnomaly(AnomalyType.CHARGE) / 50 < buildersSpawned
-    ); // need at least 1 builder per X rounds since charge anomaly
+    );
   }
-
-  /**
-   * estimates the amount of lead that has been spent by the whole team + the currently useful lead
-   *    has no idea about builder expenditure
-   * @return the estimated lead total
-   */
-  private int estimateTotalLeadInGame() {
-    return rc.getArchonCount() * (
-          minersSpawned * RobotType.MINER.buildCostLead
-        + buildersSpawned * RobotType.BUILDER.buildCostLead
-        + soldiersSpawned * RobotType.SOLDIER.buildCostLead
-        + sagesSpawned * RobotType.SAGE.buildCostLead
-        );
-  }
-
-  /**
-   * estimates the average lead income per round of the game
-   *    based on the estimateTotalLeadInGame
-   *    resets round counter when charges occur (because most miners should be wiped by charge)
-   * @return the estimated avg lead/round income
-   */
-  private int estimateAvgLeadIncome() {
-    return estimateTotalLeadInGame() / (1 + getRoundsSinceLastAnomaly(AnomalyType.CHARGE));
-  }
-
-
 }

@@ -43,18 +43,19 @@ public class Cache {
         public static MapLocation CURRENT_LOCATION;
         public static int LEVEL;
         public static int HEALTH;
+        public static int cacheState;
 
         public static void whenMoved() {
             // don't need to update
             if (PerTurn.CURRENT_LOCATION != null && Global.rc.getLocation().equals(PerTurn.CURRENT_LOCATION)) {
                 return;
             }
-
             // do the update
             updateForMovement();
         }
 
         private static void updateForMovement() {
+            PerTurn.cacheState++;
             PerTurn.CURRENT_LOCATION = Global.rc.getLocation();
             PerTurn.ALL_NEARBY_ROBOTS = Global.rc.senseNearbyRobots();
             PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS = Global.rc.senseNearbyRobots(-1, Permanent.OUR_TEAM);
