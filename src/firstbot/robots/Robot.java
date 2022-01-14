@@ -207,12 +207,18 @@ public abstract class Robot {
    * @return if moved
    * @throws GameActionException if movement fails
    */
+  private MapLocation lastTarget = null;
+  private MapLocation lastPosition = null;
   protected boolean moveTowardsAvoidRubble(MapLocation target) throws GameActionException {
     if (!rc.isMovementReady()) return false;
 //    if (USE_STOLEN_BFS) {
 //      stolenbfs.move(target, false);
 //      if (!rc.isMovementReady()) return true;
 //    }
+
+    MapLocation offLimits = (lastTarget != null && lastTarget.equals(target)) ? lastPosition : null;
+    lastPosition = Cache.PerTurn.CURRENT_LOCATION;
+    lastTarget = target;
 
     int bestPosDirInd = -1;
     int bestPosRubble = 101;
@@ -224,6 +230,7 @@ public abstract class Robot {
     int newLocDist; // temp
     for (int i = 0; i < Utils.directions.length; i++) {
       newLoc = myLoc.add(Utils.directions[i]);
+      if (newLoc.equals(offLimits)) continue; // not allowed to cycle location
       newLocDist = newLoc.distanceSquaredTo(target);
       if (rc.canMove(Utils.directions[i]) && newLocDist <= dToLoc) {
         if (rc.canSenseLocation(newLoc)) {

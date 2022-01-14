@@ -181,6 +181,9 @@ public class Archon extends Building {
     initialMinersToSpawn += totalMoves / 75;
     System.out.println("I am archon #" + whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION + " with " + leadAtArchonLocation + " lead and " + avgRubble + " avg rubble" + " and " + totalMoves + " moves to reach enemy archon" + " and " + initialMinersToSpawn + " miners to spawn");
 
+    // find direction s.t. the miner can go far in the direction
+
+
     return true;
   }
 
@@ -244,10 +247,15 @@ public class Archon extends Building {
    * Spawn some droid around the archon based on some heuristics
    */
   private void spawnDroid() throws GameActionException {
-    double soldierDeathScale = 0;
     if (needMiner()) {
       MapLocation bestLead = getBestLeadLocProbabilistic();
+      // if bestLead is null, spawn on low rubble instead of random
+      //TODO:
+
       Direction dir = bestLead == null ? Utils.randomDirection() : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
+      if (dir == Direction.CENTER) dir = Utils.randomDirection();
+
+      System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
       if (buildRobot(RobotType.MINER, dir)) {
         rc.setIndicatorString("Spawn miner!");
         minersSpawned++;
