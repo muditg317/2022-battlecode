@@ -7,6 +7,13 @@ import java.util.Random;
 
 public class Utils {
 
+  public enum MapSymmetry {
+    ROTATIONAL,
+    HORIZONTAL,
+    VERTICAL,
+  }
+
+
   /** Seeded RNG for use throughout the bot classes */
   public static Random rng;
 
@@ -40,6 +47,35 @@ public class Utils {
   public static final int DSQ_3by3plus = 18; // contains some extra tiles
 //  public static final int DSQ_3by3 = 32;
 //  public static final int DSQ_3by3 = 32;
+
+  /**
+   * mapping from comms integer value to MapSymmetry
+   * 0 is invalid -> null
+   * NOT_HORIZ NOT_VERT NOT_ROT
+   * horiz = 011 = 3
+   * vert = 101 = 5
+   * rot = 110 = 6
+   */
+  public static final MapSymmetry[] commsSymmetryMap = {
+      null,
+      null,
+      null,
+      MapSymmetry.HORIZONTAL,
+      null,
+      MapSymmetry.VERTICAL,
+      MapSymmetry.ROTATIONAL,
+//      null,
+  };
+  public static final MapSymmetry[] commsSymmetryGuessMap = {
+      MapSymmetry.ROTATIONAL, // 000
+      MapSymmetry.HORIZONTAL, // 001
+      MapSymmetry.ROTATIONAL, // 010
+      MapSymmetry.HORIZONTAL, // 011
+      MapSymmetry.ROTATIONAL, // 100
+      MapSymmetry.VERTICAL,   // 101
+      MapSymmetry.ROTATIONAL, // 110
+//      MapSymmetry.ROTATIONAL, // 111
+  };
 
   /*
    * the amount of lead that a single miner can claim from others (based on lead regen)
@@ -177,6 +213,33 @@ public class Utils {
    */
   public static MapLocation lerpLocations(MapLocation from, MapLocation to, double amount) {
     return new MapLocation((int) ((to.x - from.x) * amount) + from.x, (int) ((to.y - from.y) * amount) + from.y);
+  }
+
+  /**
+   * flip x-coord of location (mimic horizontal flip)
+   * @param toFlip the coord to flip horiz
+   * @return the flipped location
+   */
+  public static MapLocation flipLocationX(MapLocation toFlip) {
+    return new MapLocation(Cache.Permanent.MAP_WIDTH - 1 - toFlip.x, toFlip.y);
+  }
+
+  /**
+   * flip y-coord of location (mimic vertical flip)
+   * @param toFlip the coord to flip vert
+   * @return the flipped location
+   */
+  public static MapLocation flipLocationY(MapLocation toFlip) {
+    return new MapLocation(toFlip.x, Cache.Permanent.MAP_HEIGHT - 1 - toFlip.y);
+  }
+
+  /**
+   * flip x- and y-coords of location (mimic rotation)
+   * @param toRot the coord to rotate
+   * @return the rotated location
+   */
+  public static MapLocation rotateLocation180(MapLocation toRot) {
+    return new MapLocation(Cache.Permanent.MAP_WIDTH - 1 - toRot.x, Cache.Permanent.MAP_HEIGHT - 1 - toRot.y);
   }
 
   public static double turnsTillNextCooldown(int c, int r) {

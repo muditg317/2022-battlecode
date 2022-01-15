@@ -30,10 +30,10 @@ public class ArchonHelloMessage extends Message {
     this.notRotSym = notRotSym;
   }
 
-  public ArchonHelloMessage(Header header, int[] information) {
+  public ArchonHelloMessage(Header header, int information) {
     super(header);
-    this.location = Utils.decodeLocation(information[0]);
-    this.decodeSymmetryData(information[0]);
+    this.location = Utils.decodeLocation(information);
+    this.decodeSymmetryData(information);
   }
 
   public int[] toEncodedInts() {

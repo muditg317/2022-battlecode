@@ -9,6 +9,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.communications.Communicator;
 import firstbot.communications.messages.Message;
+import firstbot.communications.messages.RubbleAtLocationMessage;
 import firstbot.robots.buildings.Archon;
 import firstbot.robots.buildings.Laboratory;
 import firstbot.robots.buildings.Watchtower;
@@ -21,8 +22,10 @@ import firstbot.utils.Global;
 import firstbot.utils.Utils;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
+
+  private static final int MAX_TURNS_FIGURE_SYMMETRY = 200;
 
   protected final RobotController rc;
   protected final Communicator communicator;
@@ -37,7 +40,7 @@ public abstract class Robot {
    * @param rc the controller
    */
   public Robot(RobotController rc) throws GameActionException {
-    Global.setupGlobals(rc);
+    Global.setupGlobals(rc, this);
     Utils.setUpStatics();
     Cache.setup();
     this.rc = rc;
@@ -104,45 +107,107 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
+//    System.out.println("\nvery start - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
 //      System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
     Cache.updateOnTurn();
+//    System.out.println("Update cache -- " + Clock.getBytecodeNum());
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
-
-
-    pendingMessages = communicator.readMessages();
-    while (pendingMessages > 0) {
-      Message message = communicator.getNthLastReceivedMessage(pendingMessages);
-      ackMessage(message);
-      pendingMessages--;
-    }
+    pendingMessages = communicator.readAndAckAllMessages();
+//    System.out.println("# messages: " + pendingMessages + " -- " + Clock.getBytecodeNum());
+//    while (pendingMessages > 0) {
+//      Message message = communicator.getNthLastReceivedMessage(pendingMessages);
+//      ackMessage(message);
+//      pendingMessages--;
+//    }
     Utils.finishByteCodeCounting("reading");
 //    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
+
+//    System.out.println("After acking: " + Clock.getBytecodeNum());
+    MapLocation initial = Cache.PerTurn.CURRENT_LOCATION;
     runTurn();
 
-    Utils.startByteCodeCounting("sending");
-    communicator.sendQueuedMessages();
-    communicator.updateMetaIntsIfNeeded();
-    Utils.finishByteCodeCounting("sending");
+    if (!initial.equals(Cache.PerTurn.CURRENT_LOCATION)) {
+      updateSymmetryComms();
+    }
 
     if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) {
       rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
       turnCount = rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED;
+    } else { // still on our turn logic
+//    if (Clock.getBytecodesLeft() >= MIN_BYTECODES_TO_SEND) {
+      Utils.startByteCodeCounting("sending");
+//      System.out.println("Bytecodes before send all messages: " + (Clock.getBytecodeNum()));
+      communicator.sendQueuedMessages();
+      communicator.updateMetaIntsIfNeeded();
+//      System.out.println("Bytecodes after send all messages: " + (Clock.getBytecodeNum()));
+      Utils.finishByteCodeCounting("sending");
+//    }
     }
+//    System.out.println("\nvery end - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
   }
 
   /**
    * acknowledge the provided message (happens at turn start)
    * @param message the message received
    */
-  protected void ackMessage(Message message) throws GameActionException {}
+  public void ackMessage(Message message) throws GameActionException {
+    if (message instanceof RubbleAtLocationMessage) {
+      ackRubbleAtLocationMessage((RubbleAtLocationMessage) message);
+    }
+  }
 
   /**
    * Run a single turn for the robot
    * unique to each robot type
    */
   protected abstract void runTurn() throws GameActionException;
+
+  /**
+   * perform any universal code that robots should run to figure out map symmetry
+   *    Currently - broadcast my location + the rubble there
+   * @throws GameActionException if sensing fails
+   */
+  protected void updateSymmetryComms() throws GameActionException {
+    // TODO: do it based on how many robots we have spawned (or total friends alive) or something
+    if (Cache.PerTurn.HEALTH > 20 && communicator.metaInfo.knownSymmetry == null && Cache.PerTurn.ROUND_NUM < MAX_TURNS_FIGURE_SYMMETRY) {
+      RubbleAtLocationMessage rubbleAtLocationMessage = new RubbleAtLocationMessage(Cache.PerTurn.CURRENT_LOCATION, rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.ROUND_NUM);
+      ackRubbleAtLocationMessage(rubbleAtLocationMessage);
+      if (communicator.metaInfo.knownSymmetry == null) communicator.enqueueMessage(rubbleAtLocationMessage);
+//      if (communicator.metaInfo.knownSymmetry == null) communicator.enqueueMessage(rubbleAtLocationMessage);
+    }
+  }
+
+  /**
+   * receive the rubble location of anoter robot
+   *    check if that helps us determine symmetry
+   * @param message the rubble/location message
+   * @throws GameActionException if sensing fails
+   */
+  private void ackRubbleAtLocationMessage(RubbleAtLocationMessage message) throws GameActionException {
+    if (!communicator.metaInfo.notHorizontal) { // might be horizontal, check
+      MapLocation xFlip = Utils.flipLocationX(message.location);
+      if (rc.canSenseLocation(xFlip)) {
+        int rubble = rc.senseRubble(xFlip);
+        if (message.rubble != rubble) communicator.metaInfo.setSymmetryCantBe(Utils.MapSymmetry.HORIZONTAL);
+      }
+    }
+    if (!communicator.metaInfo.notVertical) { // might be horizontal, check
+      MapLocation yFlip = Utils.flipLocationY(message.location);
+      if (rc.canSenseLocation(yFlip)) {
+        int rubble = rc.senseRubble(yFlip);
+        if (message.rubble != rubble) communicator.metaInfo.setSymmetryCantBe(Utils.MapSymmetry.VERTICAL);
+      }
+    }
+    if (!communicator.metaInfo.notRotational) { // might be horizontal, check
+      MapLocation rot = Utils.rotateLocation180(message.location);
+      if (rc.canSenseLocation(rot)) {
+        int rubble = rc.senseRubble(rot);
+        if (message.rubble != rubble) communicator.metaInfo.setSymmetryCantBe(Utils.MapSymmetry.ROTATIONAL);
+      }
+    }
+  }
 
   /**
    * Wrapper for move() of RobotController that ensures enough bytecodes
@@ -155,6 +220,7 @@ public abstract class Robot {
     if (rc.canMove(dir)) {
       rc.move(dir);
       Cache.PerTurn.whenMoved();
+//      updateSymmetryComms();
       return true;
     }
     return false;
@@ -314,10 +380,10 @@ public abstract class Robot {
 
     MapLocation newLoc; // temp
     int newLocDist; // temp
-    for (Direction candidateDir : Utils.directions) {
+    for (Direction candidateDir : Utils.directionsNine) {
       newLoc = myLoc.add(candidateDir);
       newLocDist = newLoc.distanceSquaredTo(source);
-      if (rc.canMove(candidateDir) && newLocDist >= dToLoc) {
+      if (candidateDir == Direction.CENTER || rc.canMove(candidateDir)) {// && newLocDist >= dToLoc) {
         if (rc.canSenseLocation(newLoc)) {
           int rubble = rc.senseRubble(newLoc);
           if (rubble < bestPosRubble || (rubble == bestPosRubble && newLocDist > bestPosDist)) {

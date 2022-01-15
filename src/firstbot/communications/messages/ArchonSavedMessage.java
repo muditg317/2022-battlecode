@@ -21,9 +21,9 @@ public class ArchonSavedMessage extends Message {
     this(PRIORITY, location, roundNum);
   }
 
-  public ArchonSavedMessage(Header header, int[] information) {
+  public ArchonSavedMessage(Header header, int information) {
     super(header);
-    this.location = Utils.decodeLocation(information[0]);
+    this.location = Utils.decodeLocation(information);
   }
 
   public int[] toEncodedInts() {

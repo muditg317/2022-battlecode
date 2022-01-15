@@ -21,9 +21,9 @@ public class StartRaidMessage extends Message {
     this(PRIORITY, location, roundNum);
   }
 
-  public StartRaidMessage(Header header, int[] information) {
+  public StartRaidMessage(Header header, int information) {
     super(header);
-    this.location = Utils.decodeLocation(information[0]);
+    this.location = Utils.decodeLocation(information);
   }
 
   public int[] toEncodedInts() {

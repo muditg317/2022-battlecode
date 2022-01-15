@@ -17,35 +17,21 @@ import java.util.Arrays;
 
 public class Miner extends Droid {
 
-  int turnsWandering;
-  private static final int WANDERING_TURNS_TO_BROADCAST_LEAD = 10; // if the miner wanders for >= 10 turns, it will broadcast when lead is found
-  private static final int MAX_WANDERING_REQUEST_LEAD = 8; // if wandering for 5+ turns, request lead broadcast
-  MapLocation target;
-  boolean reachedTarget;
-  int bestSquaredDistanceToTarget;
-  private static final int WANDERING_TURNS_TO_FOLLOW_LEAD = 3;
-  private static final int MAX_SQDIST_FOR_TARGET = 200;
+  private static final int EXPLORING_TURNS_TO_BROADCAST_LEAD = 10; // if the miner wanders for >= 10 turns, it will broadcast when lead is found
+  private static final int MAX_EXPLORING_REQUEST_LEAD = 8; // if wandering for 5+ turns, request lead broadcast
+  private LeadRequestMessage leadRequest;
+
+
+  MapLocation leadTarget;
+  private static final int EXPLORING_TURNS_TO_FOLLOW_LEAD = 3;
+  private static final int MAX_SQDIST_FOR_LEAD_TARGET = 200;
 
   MapLocation runAwayTarget;
 
-//  // did we just move?
-//  int currentIndex;
-//  long visited0;
-//  long visited1;
-//  MapLocation bestMapLocation = null;
-//  int bestRubble = 101;
-//  int bestDistance = 9999;
-
-
-  private LeadRequestMessage leadRequest; // TODO: make a message that the other boi will overwrite (will rely on getting ack within 1 turn or else sad)
 
   public Miner(RobotController rc) throws GameActionException {
     super(rc);
-    target = Utils.randomMapLocation();
-    bestSquaredDistanceToTarget = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(target);
     leadRequest = null;
-    //13x13 because the vision circle is circumscribed by a 9x9 square
-    // and then 2 more on each side because we do not want a miner within 2x2 square (this is just a buffer and will always be 0)
 //    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 
@@ -77,28 +63,32 @@ public class Miner extends Droid {
 
     // lets remove target if we havent gotten closer to it in 5 moves?
     if (runAwayTarget != null) { // if enemy attacking unit is within range
-      target = Utils.randomMapLocation(); // new random target
-      if (runAway()) runAwayTarget = null; // runAway() is true iff we move away
+      if (runAway()) {
+        runAwayTarget = null; // runAway() is true iff we move away
+        randomizeExplorationTarget();
+      }
     } else if (Cache.PerTurn.ROUND_NUM >= 15 && resourcesLeft && followLead()) {
 
       // performs action of moving to lead
     } else {
-      reachedTarget = goToTarget(); // performs action of moving to target location
+      doExploration();
+//      reachedTarget = goToTarget(); // performs action of moving to target location
     }
 //    System.out.println("Miner movement done(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
     mineSurroundingResourcesIfPossible();
 //    System.out.println("Miner execMining(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
-    if (reachedTarget) {
-      target = Utils.randomMapLocation(); // new random target
-      // must be 50 away from me and
-    }
+//    if (reachedTarget) {
+//      target = Utils.randomMapLocation(); // new random target
+//      // must be 50 away from me and
+//    }
 
   }
 
   @Override
-  protected void ackMessage(Message message) throws GameActionException {
+  public void ackMessage(Message message) throws GameActionException {
+    super.ackMessage(message);
     if (message instanceof LeadFoundMessage) { // if lead was found somewhere far
       acknowledgeLeadFoundMessage((LeadFoundMessage) message);
     } else if (message instanceof LeadRequestMessage) {
@@ -111,10 +101,10 @@ public class Miner extends Droid {
    * @param message the received broadcast about lead
    */
   private void acknowledgeLeadFoundMessage(LeadFoundMessage message) {
-    if (turnsWandering <= WANDERING_TURNS_TO_FOLLOW_LEAD) { // we haven't wandered enough to care
+    if (turnsExploring <= EXPLORING_TURNS_TO_FOLLOW_LEAD) { // we haven't wandered enough to care
       return;
     }
-    registerTarget(message.location);
+    registerLeadTarget(message.location);
   }
 
   /**
@@ -122,17 +112,17 @@ public class Miner extends Droid {
    * @param message the received request for lead
    */
   private void acknowledgeLeadRequestMessage(LeadRequestMessage message) throws GameActionException {
-    rc.setIndicatorString("Got lead request: " + message.answered + "|" + message.location + "|" + turnsWandering);
-    if (turnsWandering > 0) { // can't suggest lead if we wandering too
-      if (message.answered) registerTarget(message.location); // if we wandering, just take someone elses answer lol
+    rc.setIndicatorString("Got lead request: " + message.answered + "|" + message.location + "|" + turnsExploring);
+    if (turnsExploring > 0) { // can't suggest lead if we wandering too
+      if (message.answered) registerLeadTarget(message.location); // if we wandering, just take someone elses answer lol
       return;
     }
     if (message.answered) return; // some other miner already satisfied this request
 
 
     // we have a target, forward it to the requester
-    MapLocation responseLocation = target != null ? target : Cache.PerTurn.CURRENT_LOCATION;
-    if (message.from.distanceSquaredTo(responseLocation) > MAX_SQDIST_FOR_TARGET) return; // don't answer if too far
+    MapLocation responseLocation = leadTarget != null ? leadTarget : Cache.PerTurn.CURRENT_LOCATION;
+    if (message.from.distanceSquaredTo(responseLocation) > MAX_SQDIST_FOR_LEAD_TARGET) return; // don't answer if too far
 
     rc.setIndicatorString("Answer lead request: " + responseLocation);
 
@@ -200,13 +190,14 @@ public class Miner extends Droid {
   /**
    * if the miner has no target but has a pending request, check the response
    *    if response received, register new target
+   * @throws GameActionException if reading fails
    */
-  private void checkLeadRequestResponseIfPending() {
-    if (target == null && leadRequest != null) {
+  private void checkLeadRequestResponseIfPending() throws GameActionException {
+    if (leadTarget == null && leadRequest != null) {
       rc.setIndicatorString("Checking request response!");
       if (leadRequest.readSharedResponse()) {
         //System.out.println("Got request response!!" + leadRequest.location);
-        registerTarget(leadRequest.location);
+        registerLeadTarget(leadRequest.location);
       }
       leadRequest = null;
     }
@@ -284,10 +275,10 @@ public class Miner extends Droid {
 //    System.out.println("Miner start followLeadPnay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     boolean followedLead = moveTowardsOptimalLeadMiningPos();
     if (followedLead) {
-      if (turnsWandering > WANDERING_TURNS_TO_BROADCAST_LEAD) {
+      if (turnsExploring > EXPLORING_TURNS_TO_BROADCAST_LEAD) {
         broadcastLead(rc.getLocation());
       }
-      turnsWandering = 0;
+      turnsExploring = 0;
     }
     return followedLead;
   }
@@ -513,39 +504,20 @@ public class Miner extends Droid {
    * @param newTarget the target to set
    * @return if the target was set
    */
-  private boolean registerTarget(MapLocation newTarget) {
+  private boolean registerLeadTarget(MapLocation newTarget) {
     int distToNewTarget = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(newTarget);
-    if (distToNewTarget > MAX_SQDIST_FOR_TARGET) { // target too far to follow
+    if (distToNewTarget > MAX_SQDIST_FOR_LEAD_TARGET) { // target too far to follow
       return false;
     }
     // if we already have a target that's closer
-    if (target != null && distToNewTarget >= Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(target)) {
+    if (leadTarget != null && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(leadTarget, distToNewTarget)) {
       return false;
     }
-    target = newTarget;
-    turnsWandering = 0;
+    leadTarget = newTarget;
+    turnsExploring = 0;
     leadRequest = null;
-    rc.setIndicatorString("Got new target! " + target);
+    rc.setIndicatorString("Got new leadTarget! " + leadTarget);
     return true;
-  }
-
-  /**
-   *
-   * assuming there is a target for the miner, approach it
-   *    currently very naive -- should use path finding!
-   * @return if the miner is within the action radius of the target
-   * @throws GameActionException if movement or line indication fails
-   */
-  private boolean goToTarget() throws GameActionException {
-    turnsWandering = 0;
-//    Direction goal = Cache.PerTurn.CURRENT_LOCATION.directionTo(target);
-    if (moveOptimalTowards(target)) {
-      rc.setIndicatorString("Approaching target" + target);
-//    moveInDirLoose(goal);
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, target, 255, 10, 10);
-      rc.setIndicatorDot(target, 0, 255, 0);
-    }
-    return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
   }
 
   /**
@@ -566,7 +538,7 @@ public class Miner extends Droid {
    * @throws GameActionException if sensing lead fails
    */
   private boolean needToRequestLead() throws GameActionException {
-    return turnsWandering > MAX_WANDERING_REQUEST_LEAD
+    return turnsExploring > MAX_EXPLORING_REQUEST_LEAD
             && rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length == 0;
   }
 

@@ -731,6 +731,8 @@ public class Soldier extends Droid {
 
   private void setIndicatorString(String custom, MapLocation enemyLocation) {
     //rc.setIndicatorString("Soldier " + custom + " -- enemyLocation: " + enemyLocation + " robotToChase: " + robotToChase);
-    if (robotToChase != null) //rc.setIndicatorString("Soldier " + custom + " - " + enemyLocation + " robotToChase: " + robotToChase.location);
+    if (robotToChase != null) {
+      //rc.setIndicatorString("Soldier " + custom + " - " + enemyLocation + " robotToChase: " + robotToChase.location);
+    }
   }
 }

@@ -1,9 +1,11 @@
 package firstbot.communications;
 
+import battlecode.common.Clock;
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.RobotController;
 import firstbot.communications.messages.Message;
+import firstbot.containers.FastQueue;
 import firstbot.utils.Cache;
 import firstbot.utils.Global;
 import firstbot.utils.Utils;
@@ -11,7 +13,6 @@ import firstbot.utils.Utils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.PriorityQueue;
 
 /**
  * This class will have a variety of methods related to communications between robots
@@ -21,65 +22,137 @@ import java.util.PriorityQueue;
  */
 public class Communicator {
 
-  private static class MetaInfo {
-    public int validRegionStart; // 0-62    -- 6 bits [15,10]
-    public int validRegionEnd; // 0-62      -- 6 bits [9,4]
+  public static class MetaInfo {
+    public static final int NUM_META_INTS = 2;
+    public static final int META_INT_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_META_INTS;
+
+    public static final int VALID_REGION_IND = META_INT_START;
+    private int validRegionStart; // 0-62    -- 6 bits [15,10]
+    private int validRegionEnd;   // 0-62    -- 6 bits [9,4]
+
+    public static final int SYMMETRY_INFO_IND = VALID_REGION_IND;
+    public Utils.MapSymmetry knownSymmetry; // determined by next three bools
+    public Utils.MapSymmetry guessedSymmetry; // determined by next three bools
+    private static final int NOT_HORIZ_MASK = 0b1000;
+    public boolean notHorizontal;     // 0-1               -- 1 bit  [3]
+    private static final int NOT_VERT_MASK = 0b100;
+    public boolean notVertical;       // 0-1               -- 1 bit  [2]
+    private static final int NOT_ROT_MASK = 0b10;
+    public boolean notRotational;     // 0-1               -- 1 bit  [1]
+    private static final int ALL_SYM_INFO_MASK = NOT_HORIZ_MASK|NOT_VERT_MASK|NOT_ROT_MASK;
+
+
+    public boolean dirty;
 
     public MetaInfo() {
+      knownSymmetry = null;
+      guessedSymmetry = null;
+      notHorizontal = false;
+      notVertical = false;
+      notRotational = false;
+
+      dirty = false;
     }
 
     /**
-     * update the communicators meta information based on the meta ints from the shared buffer
-     * @param sharedBuffer the most up-to-date version of the shared memory buffer
+     * update the communicators meta information based on the meta ints from the shared array
+     * @throws GameActionException if reading fails
      */
-    public void updateFromBuffer(int[] sharedBuffer) {
-      int metaInt = sharedBuffer[META_INT_START];
-      validRegionStart = (metaInt >>> 10) & 63;
-      validRegionEnd = (metaInt >>> 4) & 63;
+    public void updateFromShared() throws GameActionException {
+      int validRegion = Global.rc.readSharedArray(VALID_REGION_IND);
+      validRegionStart = (validRegion >>> 10) & 63;
+      validRegionEnd = (validRegion >>> 4) & 63;
+
+      int symmetryInfo = validRegion; //Global.rc.readSharedArray(SYMMETRY_INFO_IND);
+      knownSymmetry = Utils.commsSymmetryMap[(symmetryInfo & ALL_SYM_INFO_MASK) >> 1];
+      notHorizontal = (symmetryInfo & NOT_HORIZ_MASK) > 0;
+      notVertical = (symmetryInfo & NOT_VERT_MASK) > 0;
+      notRotational = (symmetryInfo & NOT_ROT_MASK) > 0;
+      guessedSymmetry = knownSymmetry != null ? knownSymmetry : Utils.commsSymmetryGuessMap[(symmetryInfo & ALL_SYM_INFO_MASK) >> 1];
+
+      dirty = false;
+    }
+
+    /**
+     * update validstart/validend from shared array
+     * @throws GameActionException if reading fails
+     */
+    public void reloadValidRegion() throws GameActionException {
+      int validRegion = Global.rc.readSharedArray(VALID_REGION_IND);
+      validRegionStart = (validRegion >>> 10) & 63;
+      validRegionEnd = (validRegion >>> 4) & 63;
     }
 
     /**
      * convert the meta information about the communication buffer into a set of ints
-     * @return the encoded meta information
+     *    also write the ints to the shared array
+     * @return true if updated
+     * @throws GameActionException if writing fails
      */
-    public int[] encode() {
-      int[] encoded = new int[NUM_META_INTS];
-      encoded[0] =
+    public boolean encodeAndWrite() throws GameActionException {
+      if (!dirty) return false;
+      Global.rc.writeSharedArray(VALID_REGION_IND,
             validRegionStart << 10
-          | validRegionEnd << 4;
-      return encoded;
+          | validRegionEnd << 4
+          | ((notHorizontal ? NOT_HORIZ_MASK : 0) | (notVertical ? NOT_VERT_MASK : 0) | (notRotational ? NOT_ROT_MASK : 0)));
+      dirty = false;
+      return true;
     }
 
     @Override
     public String toString() {
-      return String.format("CommMeta{frm=%2d,to=%2d}", validRegionStart, validRegionEnd);
+      return String.format("ValidComms[%d:%d]", validRegionStart, validRegionEnd);
+    }
+
+    /**
+     * update the meta info on map symmetry to disallow the gievn type of symmetry
+     *    also updates knownSymmetry if possible
+     *    sets dirty flag as well
+     * @param blockedSymmetry the symmetry that is no longer allowed
+     * @throws GameActionException if writing fails
+     */
+    public void setSymmetryCantBe(Utils.MapSymmetry blockedSymmetry) throws GameActionException {
+      switch (blockedSymmetry) {
+        case HORIZONTAL:
+          notHorizontal = true;
+          break;
+        case VERTICAL:
+          notVertical = true;
+          break;
+        case ROTATIONAL:
+          notRotational = true;
+          break;
+      }
+      System.out.println("Bot at " + Cache.PerTurn.CURRENT_LOCATION + " realized sym can't be " + blockedSymmetry);
+      int index = ((notHorizontal ? NOT_HORIZ_MASK : 0) | (notVertical ? NOT_VERT_MASK : 0) | (notRotational ? NOT_ROT_MASK : 0)) >> 1;
+      knownSymmetry = Utils.commsSymmetryMap[index];
+      guessedSymmetry = Utils.commsSymmetryGuessMap[index];
+      System.out.println("symIndex: " + index + " known: " + knownSymmetry + " -- guess: " + guessedSymmetry);
+      dirty = true;
+      encodeAndWrite();
     }
   }
 
+  private static final int MIN_BYTECODES_TO_SEND_MESSAGE = 1000;
+
   private final RobotController rc;
-  private final int[] sharedBuffer;
+//  private final int[] sharedBuffer;
 
-  private static final int NUM_META_INTS = 1;
-  private static final int META_INT_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_META_INTS;
-  private final MetaInfo metaInfo;
+  public final MetaInfo metaInfo;
 
-  private static final int NUM_MESSAGING_INTS = META_INT_START;
-  private final PriorityQueue<QueuedMessage> messageQueue;
+  private static final int NUM_MESSAGING_INTS = MetaInfo.META_INT_START;
+  private final FastQueue<Message> messageQueue;
   private final List<Message> sentMessages;
   private final List<Message> received;
 
-  private int intsWritten;
-
   public Communicator() {
     this.rc = Global.rc;
-    sharedBuffer = new int[GameConstants.SHARED_ARRAY_LENGTH];
+//    sharedBuffer = new int[NUM_MESSAGING_INTS];
     metaInfo = new MetaInfo();
 
-    messageQueue = new PriorityQueue<>(5);
+    messageQueue = new FastQueue<>(10);
     sentMessages = new ArrayList<>(5);
     received = new ArrayList<>();
-
-    intsWritten = 0;
   }
 
   /**
@@ -87,97 +160,22 @@ public class Communicator {
    */
   private void reloadBuffer() throws GameActionException {
     Utils.startByteCodeCounting("readShared");
-    // TODO: better logic for reading to the internal buffer because that boi is getting messed up
-    sharedBuffer[META_INT_START] = rc.readSharedArray(META_INT_START);
-    metaInfo.updateFromBuffer(sharedBuffer);
-    int toUpdate = (metaInfo.validRegionEnd - metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS;
-    int ind;
-    for (int i = 0; i < toUpdate; i++) {
-      ind = (metaInfo.validRegionStart+i) % NUM_MESSAGING_INTS;
-//      if (rc.getRoundNum() == 1471) {
-//        System.out.println("Read to buffer: " + ind);
-//      }
-      sharedBuffer[ind] = rc.readSharedArray(ind);
-    }
-//    for (int i = 0; i < GameConstants.SHARED_ARRAY_LENGTH; i++) {
-//      sharedBuffer[i] = rc.readSharedArray(i);
-//    }
-//    {
-//      sharedBuffer[0] = rc.readSharedArray(0);
-//      sharedBuffer[1] = rc.readSharedArray(1);
-//      sharedBuffer[2] = rc.readSharedArray(2);
-//      sharedBuffer[3] = rc.readSharedArray(3);
-//      sharedBuffer[4] = rc.readSharedArray(4);
-//      sharedBuffer[5] = rc.readSharedArray(5);
-//      sharedBuffer[6] = rc.readSharedArray(6);
-//      sharedBuffer[7] = rc.readSharedArray(7);
-//      sharedBuffer[8] = rc.readSharedArray(8);
-//      sharedBuffer[9] = rc.readSharedArray(9);
-//      sharedBuffer[10] = rc.readSharedArray(10);
-//      sharedBuffer[11] = rc.readSharedArray(11);
-//      sharedBuffer[12] = rc.readSharedArray(12);
-//      sharedBuffer[13] = rc.readSharedArray(13);
-//      sharedBuffer[14] = rc.readSharedArray(14);
-//      sharedBuffer[15] = rc.readSharedArray(15);
-//      sharedBuffer[16] = rc.readSharedArray(16);
-//      sharedBuffer[17] = rc.readSharedArray(17);
-//      sharedBuffer[18] = rc.readSharedArray(18);
-//      sharedBuffer[19] = rc.readSharedArray(19);
-//      sharedBuffer[20] = rc.readSharedArray(20);
-//      sharedBuffer[21] = rc.readSharedArray(21);
-//      sharedBuffer[22] = rc.readSharedArray(22);
-//      sharedBuffer[23] = rc.readSharedArray(23);
-//      sharedBuffer[24] = rc.readSharedArray(24);
-//      sharedBuffer[25] = rc.readSharedArray(25);
-//      sharedBuffer[26] = rc.readSharedArray(26);
-//      sharedBuffer[27] = rc.readSharedArray(27);
-//      sharedBuffer[28] = rc.readSharedArray(28);
-//      sharedBuffer[29] = rc.readSharedArray(29);
-//      sharedBuffer[30] = rc.readSharedArray(30);
-//      sharedBuffer[31] = rc.readSharedArray(31);
-//      sharedBuffer[32] = rc.readSharedArray(32);
-//      sharedBuffer[33] = rc.readSharedArray(33);
-//      sharedBuffer[34] = rc.readSharedArray(34);
-//      sharedBuffer[35] = rc.readSharedArray(35);
-//      sharedBuffer[36] = rc.readSharedArray(36);
-//      sharedBuffer[37] = rc.readSharedArray(37);
-//      sharedBuffer[38] = rc.readSharedArray(38);
-//      sharedBuffer[39] = rc.readSharedArray(39);
-//      sharedBuffer[40] = rc.readSharedArray(40);
-//      sharedBuffer[41] = rc.readSharedArray(41);
-//      sharedBuffer[42] = rc.readSharedArray(42);
-//      sharedBuffer[43] = rc.readSharedArray(43);
-//      sharedBuffer[44] = rc.readSharedArray(44);
-//      sharedBuffer[45] = rc.readSharedArray(45);
-//      sharedBuffer[46] = rc.readSharedArray(46);
-//      sharedBuffer[47] = rc.readSharedArray(47);
-//      sharedBuffer[48] = rc.readSharedArray(48);
-//      sharedBuffer[49] = rc.readSharedArray(49);
-//      sharedBuffer[50] = rc.readSharedArray(50);
-//      sharedBuffer[51] = rc.readSharedArray(51);
-//      sharedBuffer[52] = rc.readSharedArray(52);
-//      sharedBuffer[53] = rc.readSharedArray(53);
-//      sharedBuffer[54] = rc.readSharedArray(54);
-//      sharedBuffer[55] = rc.readSharedArray(55);
-//      sharedBuffer[56] = rc.readSharedArray(56);
-//      sharedBuffer[57] = rc.readSharedArray(57);
-//      sharedBuffer[58] = rc.readSharedArray(58);
-//      sharedBuffer[59] = rc.readSharedArray(59);
-//      sharedBuffer[60] = rc.readSharedArray(60);
-//      sharedBuffer[61] = rc.readSharedArray(61);
-//      sharedBuffer[62] = rc.readSharedArray(62);
-//      sharedBuffer[63] = rc.readSharedArray(63);
+    metaInfo.updateFromShared();
+//    int toUpdate = (metaInfo.validRegionEnd - metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS;
+//    int ind;
+//    for (int i = 0; i < toUpdate; i++) {
+//      ind = (metaInfo.validRegionStart+i) % NUM_MESSAGING_INTS;
+//      sharedBuffer[ind] = rc.readSharedArray(ind);
 //    }
     Utils.finishByteCodeCounting("readShared");
-    metaInfo.updateFromBuffer(sharedBuffer);
-    intsWritten = 0;
   }
 
   /**
    * clean out own stale messages if they are at the start of the valid region
    * @return if cleaned
+   * @throws GameActionException if writing fails
    */
-  public boolean cleanStaleMessages() {
+  public boolean cleanStaleMessages() throws GameActionException {
     if (!sentMessages.isEmpty()) {
 //      if (rc.getRoundNum() == 1471) {
 //        System.out.println("bounds before cleaning: " + metaInfo);
@@ -186,17 +184,19 @@ public class Communicator {
         if (message.writeInfo.startIndex == metaInfo.validRegionStart) {
           System.out.println("CLEAN " + message.header.type + ": " + metaInfo.validRegionStart);
           Message last = sentMessages.get(sentMessages.size() - 1);
-          metaInfo.validRegionStart = (last.writeInfo.startIndex + last.header.numInformationInts + 1) % NUM_MESSAGING_INTS;
+          metaInfo.validRegionStart = (last.writeInfo.startIndex + last.size()) % NUM_MESSAGING_INTS;
           if ((metaInfo.validRegionEnd + 1) % NUM_MESSAGING_INTS == metaInfo.validRegionStart) {
-            metaInfo.validRegionEnd = metaInfo.validRegionStart;
+            metaInfo.validRegionEnd = metaInfo.validRegionStart = 0;
           }
-          intsWritten++;
+          metaInfo.dirty = true;
+          metaInfo.encodeAndWrite();
 //          if (rc.getRoundNum() == 1471) {
 //            System.out.println("Cleaning " + (sentMessages.size() - sentMessages.indexOf(message)) + " messages!");
 //            System.out.println("Clearing messages! - starting from " + message.header.type + " on " + message.header.cyclicRoundNum + " at " + message.writeInfo.startIndex);
 //            System.out.println("Last message cleaned: " + last.header.type + " on " + message.header.cyclicRoundNum + " at " + last.writeInfo.startIndex);
 //            System.out.println("new bounds from cleaning: " + metaInfo);
 //          }
+//          System.out.println("\ncleaned  - " + metaInfo);
           return true;
         }
       }
@@ -207,23 +207,28 @@ public class Communicator {
 
   /**
    * read all the messages in the sharedArray
+   *    Also forward these to the robot!
    * @return the number of messages that were read
    * @throws GameActionException thrown if readMessageAt fails
    */
-  public int readMessages() throws GameActionException {
+  public int readAndAckAllMessages() throws GameActionException {
     Utils.startByteCodeCounting("reloadBuffer");
     reloadBuffer();
+//    System.out.println("update meta - " + Clock.getBytecodeNum());
 //    if (rc.getRoundNum() == 1471) {
 //      System.out.println("Reading on round 582 -- " + metaInfo);
 //      System.out.println(Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd- metaInfo.validRegionStart+1)));
 //    }
     Utils.finishByteCodeCounting("reloadBuffer");
+//    System.out.println("\nstarting - " + metaInfo);
+
     cleanStaleMessages(); // clean out stale bois
     sentMessages.clear();
+//    System.out.println("clean stale - " + Clock.getBytecodeNum());
     int origin = metaInfo.validRegionStart;
     int ending = metaInfo.validRegionEnd;
     if (ending < origin) {
-      ending += GameConstants.SHARED_ARRAY_LENGTH;
+      ending += NUM_MESSAGING_INTS;
     }
     if (ending == origin) { // no messages to read
       return 0;
@@ -240,17 +245,20 @@ public class Communicator {
 //    System.out.println("ack messages within: (" + lastAckdRound + ", " + maxRoundNum + "]");
 //    int thisRound = rc.getRoundNum();
     while (origin < ending) {
+//      System.out.println("\nBefore  read/ack message: " + Clock.getBytecodeNum());
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
-      if (message != null) {
+//      if (message != null) {
 //      if (message.header.withinCyclic(lastAckdRound, maxRoundNum)) { // skip stale messages
 //      if (message.header.withinRounds(thisRound-2,thisRound)) { // skip stale messages
-        received.add(message);
+      Global.robot.ackMessage(message);
+//      received.add(message);
         messages++;
 //      }
         origin += message.size();
-      } else {
-        origin++;
-      }
+//      System.out.println("\nCost to read/ack message: " + Clock.getBytecodeNum());
+//      } else {
+//        origin++;
+//      }
     }
     return messages;
   }
@@ -261,12 +269,14 @@ public class Communicator {
    * @param messageOrigin where the message starts
    * @return the read message
    */
-  private Message readMessageAt(final int messageOrigin) {
+  private Message readMessageAt(final int messageOrigin) throws GameActionException {
 //     assert messageOrigin < NUM_MESSAGING_INTS; // ensure that the message is within the messaging ints
-    int headerInt = sharedBuffer[messageOrigin];
+    int headerInt = Global.rc.readSharedArray(messageOrigin);//sharedBuffer[messageOrigin];
     Message.Header header = null;
     try {
+//      int beforeReadHeader = Clock.getBytecodeNum();
       header = Message.Header.fromReadInt(headerInt);
+//      System.out.println("Cost to read header: " + (Clock.getBytecodeNum() - beforeReadHeader));
       header.validate();
     } catch (Exception e) {
       System.out.println("Failed to parse header! at: " + messageOrigin);
@@ -277,12 +287,32 @@ public class Communicator {
 //      return null;
       throw e;
     }
-    int[] information = new int[header.numInformationInts];
-    for (int i = 0; i < header.numInformationInts; i++) {
-      information[i] = sharedBuffer[(messageOrigin + i + 1) % NUM_MESSAGING_INTS];
+
+    switch (header.numInformationInts) {
+      case 0:
+        return Message.fromHeaderAndInfo0(header
+          ).setWriteInfo(new Message.WriteInfo(messageOrigin));
+      case 1:
+        return Message.fromHeaderAndInfo1(header,
+            Global.rc.readSharedArray((messageOrigin + 1) % NUM_MESSAGING_INTS)
+          ).setWriteInfo(new Message.WriteInfo(messageOrigin));
+      case 2:
+        return Message.fromHeaderAndInfo2(header,
+            Global.rc.readSharedArray((messageOrigin + 1) % NUM_MESSAGING_INTS),
+            Global.rc.readSharedArray((messageOrigin + 2) % NUM_MESSAGING_INTS)
+          ).setWriteInfo(new Message.WriteInfo(messageOrigin));
+      default:
+        throw new RuntimeException("Not enough cases for big message! - " + header);
     }
+
+//    int beforeMakeInfo = Clock.getBytecodeNum();
+//    int[] information = new int[header.numInformationInts];
+//    for (int i = 0; i < header.numInformationInts; i++) {
+//      information[i] = Global.rc.readSharedArray((messageOrigin + i + 1) % NUM_MESSAGING_INTS);// sharedBuffer[(messageOrigin + i + 1) % NUM_MESSAGING_INTS];
+//    }
+//    System.out.println("Cost to make info arr: " + (Clock.getBytecodeNum() - beforeMakeInfo));
 //    try {
-      return Message.fromHeaderAndInfo(header, information).setWriteInfo(new Message.WriteInfo(messageOrigin));
+//      return Message.fromHeaderAndInfo(header, information).setWriteInfo(new Message.WriteInfo(messageOrigin));
 //    } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
 //      System.out.println("Message instantiation failed!");
 //      System.out.println("Reading bounds: " + metaInfo);
@@ -294,33 +324,20 @@ public class Communicator {
   }
 
   /**
-   * add a message to the internal communicator queue to be sent on this turn
-   * @param message the message to send at the end of this turn (end of robot turn, not the round)
-   */
-  public void enqueueMessage(Message message) {
-    messageQueue.add(new QueuedMessage(message, rc.getRoundNum()));
-  }
-
-  /**
    * add a message to the internal communicator queue
    * @param message the message to send
-   * @param roundToSend the round on which to send the message
    */
-  public void enqueueMessage(Message message, int roundToSend) {
-    assert message.header.fromRound(roundToSend); // ensure that future messages line up with themselves -- ensures proper retrieval
-    messageQueue.add(new QueuedMessage(message, roundToSend));
+  public void enqueueMessage(Message message) {
+    messageQueue.push(message);
   }
 
   /**
    * reschedule a message to be sent in some number of turns
    *    should NOT happen often
    * @param message the message to reschedule
-   * @param roundsToDelay the number of turns to wait before sending the message again
    */
-  public void rescheduleMessageByRounds(Message message, int roundsToDelay) {
-    assert message.header.fromRound(rc.getRoundNum()); // ensure that the message was just attempted to be sent
-    message.reschedule(roundsToDelay);
-    enqueueMessage(message, rc.getRoundNum() + roundsToDelay);
+  public void rescheduleMessage(Message message) {
+    enqueueMessage(message);
   }
 
   /**
@@ -328,23 +345,23 @@ public class Communicator {
    * @throws GameActionException thrown if sendMessage fails
    */
   public void sendQueuedMessages() throws GameActionException {
-    while (!messageQueue.isEmpty() && messageQueue.peek().roundToSend <= rc.getRoundNum()) {
-      sendMessage(messageQueue.poll().message);
-    }
+    while (!messageQueue.isEmpty() && sendMessage(messageQueue.popFront()));
   }
 
   /**
    * write a certain message to the shared array
    * starts message after validRegionEnd and bumps validRegionStart as needed if ints are overwritten
    * @param message the message to write
+   * @returns true if sent, false if rescheduled
    * @throws GameActionException thrown if writing to array fails
    */
-  private void sendMessage(Message message) throws GameActionException {
-    if (intsWritten + message.size() > NUM_MESSAGING_INTS) { // will try to write more ints than available
-      rescheduleMessageByRounds(message, 1);
-      return;
+  private boolean sendMessage(Message message) throws GameActionException {
+    metaInfo.reloadValidRegion();
+    if (Clock.getBytecodesLeft() < MIN_BYTECODES_TO_SEND_MESSAGE
+        || ((metaInfo.validRegionEnd-metaInfo.validRegionStart+NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS) + message.size() > NUM_MESSAGING_INTS) { // will try to write more ints than available
+      rescheduleMessage(message);
+      return false;
     }
-//    if (start within where i need to write) { check priority
     boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
     int origin = metaInfo.validRegionEnd;
@@ -354,15 +371,9 @@ public class Communicator {
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
       if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
-        // reread that message and move validStart past that message!
-//        System.out.printf("Shift valid region start for %s at %d\n", message.header.type, metaInfo.validRegionEnd+1);
-//        System.out.println("From: " + metaInfo);
-//        System.out.println("header: " + Message.Header.fromReadInt(sharedBuffer[origin]));
         Message messageAt = readMessageAt(origin);
         metaInfo.validRegionStart += messageAt != null ? messageAt.size() : 1;
         metaInfo.validRegionStart %= NUM_MESSAGING_INTS;
-//        System.out.println("To  : " + metaInfo);
-        // TODO: some criteria on deciding not to "evict" that info
       }
 //      System.out.println("Write to shared " + origin + ": " + messageChunk);
       rc.writeSharedArray(origin, messageChunk);
@@ -376,50 +387,21 @@ public class Communicator {
 //      System.out.println("Move start: " + metaInfo);
     }
     message.setWriteInfo(new Message.WriteInfo(messageOrigin));
-    intsWritten += message.size();
+    metaInfo.dirty = true;
+    metaInfo.encodeAndWrite();
+    return true;
   }
 
   /**
    * updates the meta ints in the shared memory if needed
    *    comunicator is dirty
    *      any messages were written
+   * @return true if updated
    * @throws GameActionException if updating fails
    */
-  public void updateMetaIntsIfNeeded() throws GameActionException {
-    if (intsWritten > 0) {
-      updateMetaInts();
-    }
-  }
-
-  /**
-   * write metaInfo to the end of the shared array
-   * @throws GameActionException if writing fails
-   */
-  public void updateMetaInts() throws GameActionException {
-    int[] metaInts = metaInfo.encode();
-//    if (rc.getRoundNum() == 1471) {
-//      System.out.println("Update meta: " + metaInfo + " -- " + Arrays.toString(metaInts));
-//      System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
-////      System.out.println("pre ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, metaInfo.validRegionEnd - metaInfo.validRegionStart + 1)));
-//      for (int i = metaInfo.validRegionStart - NUM_MESSAGING_INTS; i <= metaInfo.validRegionEnd; i++) {
-//        System.out.println("post: " + rc.readSharedArray((i + NUM_MESSAGING_INTS) %  NUM_MESSAGING_INTS));
-//      }
-//    }
-    for (int i = 0; i < NUM_META_INTS; i++) {
-      if (metaInts[i] < 0 || metaInts[i] > GameConstants.MAX_SHARED_ARRAY_VALUE) {
-        System.out.println("FAILED META UPDATE -- " + metaInfo + Arrays.toString(metaInts));
-      }
-      rc.writeSharedArray(META_INT_START + i, metaInts[i]);
-    }
-  }
-
-  /**
-   * get a message from the received message list
-   * @param n how far back in the inbo to look
-   * @return the message
-   */
-  public Message getNthLastReceivedMessage(int n) {
-    return received.get(received.size() - n);
+  public boolean updateMetaIntsIfNeeded() throws GameActionException {
+//    System.out.println("\nend turn - " + metaInfo);
+    return metaInfo.encodeAndWrite();
   }
 
   /**
@@ -428,10 +410,12 @@ public class Communicator {
    * @param headerIndex the index to check
    * @param header the message metadata to verify
    * @return the sameness
+   * @throws GameActionException if reading fails
    */
-  public boolean headerMatches(int headerIndex, Message.Header header) {
+  public boolean headerMatches(int headerIndex, Message.Header header) throws GameActionException {
 //    System.out.println("Checking header at " + headerIndex + ": " + sharedBuffer[headerIndex] + " -- " + header.toInt());
-    return sharedBuffer[headerIndex] == header.toInt();
+//    return sharedBuffer[headerIndex] == header.toInt();
+    return Global.rc.readSharedArray(headerIndex) == header.toInt();
   }
 
   /**
@@ -441,12 +425,13 @@ public class Communicator {
    * @param startIndex where to start
    * @param numInts the number of ints to read
    * @return the array of read ints
+   * @throws GameActionException if reading fails
    */
-  public int[] readInts(int startIndex, int numInts) {
+  public int[] readInts(int startIndex, int numInts) throws GameActionException {
 //    System.out.println("Read ints at " + startIndex + ": " + numInts);
     int[] ints = new int[numInts];
     for (int i = 0; i < numInts; i++) {
-      ints[i] = sharedBuffer[(startIndex+i) % NUM_MESSAGING_INTS];
+      ints[i] = Global.rc.readSharedArray((startIndex+i) % NUM_MESSAGING_INTS);//sharedBuffer[(startIndex+i) % NUM_MESSAGING_INTS];
     }
     return ints;
   }
@@ -464,5 +449,4 @@ public class Communicator {
       rc.writeSharedArray((startIndex + i) % NUM_MESSAGING_INTS, information[i]);
     }
   }
-
 }

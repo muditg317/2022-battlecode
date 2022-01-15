@@ -187,7 +187,8 @@ public class Archon extends Building {
   }
 
   @Override
-  protected void ackMessage(Message message) throws GameActionException {
+  public void ackMessage(Message message) throws GameActionException {
+    super.ackMessage(message);
     if (message instanceof ArchonHelloMessage) {
       ackArchonHello((ArchonHelloMessage) message);
     } else if (message instanceof ArchonSavedMessage) {

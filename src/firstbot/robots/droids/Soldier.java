@@ -23,11 +23,7 @@ public class Soldier extends Droid {
   MapLocation lastSoldierAttack;
   double lastSoldierTradeScore;
 
-  MapLocation target;
-  boolean reachedTarget;
-
   MapLocation archonToSave;
-
 
 
   public Soldier(RobotController rc) throws GameActionException {
@@ -49,7 +45,6 @@ public class Soldier extends Droid {
     meetupPoint = Utils.lerpLocations(Cache.PerTurn.CURRENT_LOCATION, myPotentialTarget, MEETUP_FACTOR);
     visionSize = rc.getAllLocationsWithinRadiusSquared(meetupPoint, Cache.Permanent.VISION_RADIUS_SQUARED).length;
     canStartRaid = true;
-    randomizeTarget();
   }
 
   boolean enemySoldierExists;
@@ -122,13 +117,11 @@ public class Soldier extends Droid {
         }
       }
       if (robotToChase == null) {
-        rc.setIndicatorString("Soldier goToTarget - " + target);
-        reachedTarget = goToTarget();
+        doExploration();
       }
       // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
       // cached location is set to null if we go there and no enemy is found in vision radius
 //      setIndicatorString("no enemy", null);
-
     }
 
     if (robotToChase != null) {
@@ -141,11 +134,6 @@ public class Soldier extends Droid {
     if (robotToChase != null) {
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, robotToChase.location, 0, 0, 255);
       rc.setIndicatorDot(robotToChase.location, 0, 255, 0);
-    }
-
-    // if we reached target, reset target
-    if (reachedTarget) {
-      randomizeTarget();
     }
 
     //TODO: should technically check cases again if I just moved and have action cooldown, but this is fine for now!!
@@ -216,48 +204,8 @@ public class Soldier extends Droid {
 
   }
 
-  private void randomizeTarget() {
-    target = Utils.randomMapLocation();
-  }
 
-  private int timesTriedEnterHighRubble = 0;
-  private boolean justGoThrough = false;
-  /**
-   * assuming there is a target for the miner, approach it
-   *    currently very naive -- should use path finding!
-   * @return if the miner is within the action radius of the target
-   * @throws GameActionException if movement or line indication fails
-   */
-  private boolean goToTarget() throws GameActionException {
-    if (!rc.isMovementReady()) return false;
-//    Direction goal = Cache.PerTurn.CURRENT_LOCATION.directionTo(target);
-    Direction desired = getOptimalDirectionTowards(target);
-    if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(target));
-    if (desired == null) {
-      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (target " + target + ") is null!!" + desired);
-      return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
-    }
-    MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(desired);
-    int rubbleThere = rc.senseRubble(newLoc);
-    if (rubbleThere > 25 && rubbleThere > 1.5 * rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION)) {
-      timesTriedEnterHighRubble++;
-      if (timesTriedEnterHighRubble < 3) {
-        randomizeTarget();
-      } else {
-        justGoThrough = true;
-      }
-    } else if (justGoThrough) {
-      timesTriedEnterHighRubble = 0;
-      justGoThrough = false;
-    }
-    if (move(desired)) {
-      rc.setIndicatorString("Approaching target" + target);
-//    moveInDirLoose(goal);
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, target, 255, 10, 10);
-      rc.setIndicatorDot(target, 0, 255, 0);
-    }
-    return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(target, Cache.Permanent.ACTION_RADIUS_SQUARED); // set target to null if found!
-  }
+
 
   /**
    * iterate over all of vision and set all booleans about soldier existence
@@ -393,7 +341,7 @@ public class Soldier extends Droid {
       // pick the one with largest distance s.t distance <= action radius
 
       double score = 1.01 * averageFriendlyDamagePerRound - averageEnemyDamagePerRound;
-      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound + "\nscore: " + score);
+//      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound + "\nscore: " + score);
       if (rc.isMovementReady() && closestEnemySoldier != null) {
         int dist = closestEnemySoldier.distanceSquaredTo(candidate);
         if (rc.isActionReady()) {
@@ -453,11 +401,14 @@ public class Soldier extends Droid {
     }
 
 
-    setIndicatorString("atk sldr (" + bestScore + ")", bestLocation);
+    setIndicatorString(String.format("atkSldr(%4.2f)", bestScore), bestLocation);
 
     // if we are in a negative trade that we don't know how to escape
     if (bestScore < 0 && rc.isMovementReady() && bestLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) {
-      bestLocation = Cache.PerTurn.CURRENT_LOCATION.add(getOptimalDirectionAway(offensiveEnemyCentroid()));
+      Direction toEscape = getOptimalDirectionAway(offensiveEnemyCentroid());
+      if (toEscape != null) {
+        bestLocation = Cache.PerTurn.CURRENT_LOCATION.add(toEscape);
+      }
     }
 
     // TODO: why does using this make it worse???? wtf
@@ -634,7 +585,7 @@ public class Soldier extends Droid {
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {
-      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
+//      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
       dirToMove = Direction.CENTER;
     }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
@@ -671,7 +622,8 @@ public class Soldier extends Droid {
   }
   
   @Override
-  protected void ackMessage(Message message) throws GameActionException {
+  public void ackMessage(Message message) throws GameActionException {
+    super.ackMessage(message);
     if (message instanceof StartRaidMessage) {
       ackStartRaidMessage((StartRaidMessage) message);
     } else if (message instanceof EndRaidMessage) {
