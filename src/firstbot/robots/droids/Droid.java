@@ -24,12 +24,17 @@ public abstract class Droid extends Robot {
   }
 
   protected void randomizeExplorationTarget() throws GameActionException {
-    int b = Clock.getBytecodeNum();
+//    int b = Clock.getBytecodeNum();
     explorationTarget = communicator.chunkInfo.centerOfClosestUnexploredChunk(Cache.PerTurn.CURRENT_LOCATION);
-    System.out.println("randomizeExplorationTarget - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
+//    System.out.println("randomizeExplorationTarget - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
     if (explorationTarget == null) {
+      int attempts = 0;
       rc.setIndicatorString("no unexplored local chunks");
-      explorationTarget = Utils.randomMapLocation();
+      do {
+        explorationTarget = Utils.randomMapLocation();
+      } while (++attempts <= 10 && communicator.chunkInfo.chunkHasBeenExplored(explorationTarget));
+//      if (attempts == 11) failedAttempts++;
+//      else failedAttempts = 0;
     }
   }
 
