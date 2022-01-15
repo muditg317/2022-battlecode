@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -2;
+  public static final int SUICIDE_ROUND = -20;
 
   private int whichArchonAmI;
   private List<MapLocation> archonLocs;
@@ -65,6 +65,24 @@ public class Archon extends Building {
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
     }
+
+//    if (rc.getID() <= 4) {
+//      for (int i = 0; i < Cache.Permanent.MAP_HEIGHT; i++) {
+//        for (int j = 0; j < Cache.Permanent.MAP_WIDTH; j++) {
+//          MapLocation loc = new MapLocation(j, i);
+//          int chunk = Utils.encodeLocationToChunkIndex(loc);
+//          System.out.println("loc: " + loc + " chunk: " + chunk + " decode: " + Utils.decodeChunkIndexToLocation(chunk));
+////        if (chunk < 33) {
+////          rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
+////        } else if (chunk < 66) {
+////          rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
+////        } else {
+////          rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
+////        }
+//        }
+//      }
+//      rc.resign();
+//    }
 
     MapLocation nearbyEnemies = offensiveEnemyCentroid();
     if (saveMeRequest != null || nearbyEnemies != null) {
@@ -294,4 +312,14 @@ public class Archon extends Building {
         || buildersSpawned < 5
     );
   }
+
+  private void sendLeadRefreshMessages() {
+    if (rc.getRoundNum() % 20 != 0) return; //do this on every 20th round
+
+    // go through chunk messages in communication
+
+    //
+
+  }
+
 }

@@ -28,6 +28,8 @@ public class Miner extends Droid {
 
   MapLocation runAwayTarget;
 
+  int chunk = 0;
+
 
   public Miner(RobotController rc) throws GameActionException {
     super(rc);
@@ -275,9 +277,9 @@ public class Miner extends Droid {
 //    System.out.println("Miner start followLeadPnay(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
     boolean followedLead = moveTowardsOptimalLeadMiningPos();
     if (followedLead) {
-      if (turnsExploring > EXPLORING_TURNS_TO_BROADCAST_LEAD) {
-        broadcastLead(rc.getLocation());
-      }
+//      if (turnsExploring > EXPLORING_TURNS_TO_BROADCAST_LEAD) {
+//        broadcastLead(rc.getLocation());
+//      }
       turnsExploring = 0;
     }
     return followedLead;
@@ -496,6 +498,10 @@ public class Miner extends Droid {
     }
 //    System.out.println("Best lead at " + bestLocation + " -- bestRubble: " + leastRubble + " bestLead: " + bestLead + " bestDistance: " + bestDist);
 
+    if (bestLead > Utils.LEAD_PER_MINER_CLAIM) {
+      broadcastLead(bestLocation, (int) Math.ceil(bestLead / (double) Utils.LEAD_PER_MINER_CLAIM) - 1);
+    }
+
     return bestLocation;
   }
 
@@ -524,7 +530,7 @@ public class Miner extends Droid {
    * send a LeadFoundMessage with the specified location
    * @param location the location where to find lead!
    */
-  private void broadcastLead(MapLocation location) {
+  private void broadcastLead(MapLocation location, int minersNeeded) {
 //    communicator.enqueueMessage(new LeadFoundMessage(location, Cache.PerTurn.ROUND_NUM));
 //    rc.setIndicatorDot(location, 0, 255, 0);
 //    rc.setIndicatorString("Broadcast lead! " + location);

@@ -1,9 +1,6 @@
 package firstbot.communications;
 
-import battlecode.common.Clock;
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 import firstbot.communications.messages.Message;
 import firstbot.containers.FastQueue;
 import firstbot.utils.Cache;
@@ -22,9 +19,130 @@ import java.util.List;
  */
 public class Communicator {
 
+  /**
+   * information about a subchunk of the map
+   *    lead presence, danger, etc
+   */
+  public static class ChunkInfo {
+    public static final int NUM_CHUNK_INTS = Utils.NUM_MAP_CHUNKS / Utils.CHUNK_INFOS_PER_INT;
+    public static final int CHUNK_INTS_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_CHUNK_INTS;
+
+    /**
+     * next three encoded into 2 bits
+     * 00 - unexplored
+     * 01 - explored, no rss
+     * 10 - explored, rss exist
+     * 11 - explored, rss depleted
+     */
+//    boolean explored;
+//    boolean hasResources;
+//    boolean resourcesDepleted;
+    public static final int EXPLORATION_AND_LEAD_MASK = 0b0011;
+    public static final int EXPLORED_NO_RSS_MASK = 0b0001;
+    public static final int EXPLORED_W_RSS_MASK = 0b0010;
+    public static final int EXPLORED_RSS_DEPLETED_MASK = 0b0011;
+
+    /**
+     * indicates presence of dangerous enemies
+     *    soldier, sage,
+     *    watch tower,
+     *    archon
+     */
+//    boolean hasDangerousUnits;
+    public static final int DANGEROUS_UNIT_MASK = 0b1000;
+
+    /**
+     * indicates presence of non-dangerous enemies
+     *    miner, builder
+     */
+//    boolean hasNonOffensiveUnits;
+    public static final int NON_OFFENSIVE_UNIT_MASK = 0b0100;
+
+    /**
+     * checks if the chunk at a given index has dangerous units
+     * @param chunkIndex the chunk to check
+     * @return whether the chunk has dangerous units
+     * @throws GameActionException if reading fails
+     */
+    public boolean chunkHasDangerousUnits(int chunkIndex) throws GameActionException {
+      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) >> 2)) & 0b1111;
+      return (chunkInfoInt & ChunkInfo.DANGEROUS_UNIT_MASK) > 0;
+    }
+    public boolean chunkHasBeenExplored(int chunkIndex) throws GameActionException {
+//      System.out.println("checking chunk " + chunkIndex);
+      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+//      System.out.println("sharedArrIndex: " + sharedArrIndex);
+      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) >> 2)) & 0b1111;
+//      System.out.println("chunkInfoInt: " + chunkInfoInt);
+      return (chunkInfoInt & ChunkInfo.EXPLORATION_AND_LEAD_MASK) > 0;
+    }
+    public boolean chunkHasBeenExplored(MapLocation mapLoc) throws GameActionException {
+//      System.out.println("checking chunk " + chunkIndex);
+      int chunkIndex = Utils.encodeLocationToChunkIndex(mapLoc);
+      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+//      System.out.println("sharedArrIndex: " + sharedArrIndex);
+      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) >> 2)) & 0b1111;
+//      System.out.println("chunkInfoInt: " + chunkInfoInt);
+      return (chunkInfoInt & ChunkInfo.EXPLORATION_AND_LEAD_MASK) > 0;
+    }
+
+    /**
+     * gets the current chunk and returns the center of the closest unexplored chunk
+     * @return the center of an unexplored chunk
+     * @throws GameActionException if reading fails
+     */
+    public MapLocation centerOfClosestUnexploredChunk(MapLocation source) throws GameActionException {
+      int myChunk = Utils.encodeLocationToChunkIndex(source);
+      if (!chunkHasBeenExplored(myChunk)) return Utils.decodeChunkIndexToLocation(myChunk);
+      for (Direction dir : Utils.directions) {
+        int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
+        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+      }
+      for (Direction dir : Utils.directions) {
+        int chunkToTest = myChunk + dir.dx*2 + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
+        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+      }
+      for (Direction dir : Utils.directions) {
+        int chunkToTest = myChunk + dir.dx + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
+        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+      }
+      for (Direction dir : Utils.directions) {
+        int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
+        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
+        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
+        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+      }
+      return null;
+    }
+
+    public void markExplored(MapLocation explorationTarget) throws GameActionException {
+      int chunkToMark = Utils.encodeLocationToChunkIndex(explorationTarget);
+      int sharedArrIndex = chunkToMark / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+      int existingChunkSetInfo = Global.rc.readSharedArray(sharedArrIndex);
+      int shiftAmt = (chunkToMark % Utils.CHUNK_INFOS_PER_INT) >> 2;
+//      int currentChunkInfo = (existingChunkSetInfo >> shiftAmt) & 0b1111;
+      Global.rc.writeSharedArray(sharedArrIndex, existingChunkSetInfo | (EXPLORED_NO_RSS_MASK << shiftAmt));
+    }
+  }
+
   public static class MetaInfo {
-    public static final int NUM_META_INTS = 2;
-    public static final int META_INT_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_META_INTS;
+    public static final int NUM_META_INTS = 1;
+    public static final int META_INT_START = ChunkInfo.CHUNK_INTS_START - NUM_META_INTS;
 
     public static final int VALID_REGION_IND = META_INT_START;
     private int validRegionStart; // 0-62    -- 6 bits [15,10]
@@ -41,7 +159,6 @@ public class Communicator {
     public boolean notRotational;     // 0-1               -- 1 bit  [1]
     private static final int ALL_SYM_INFO_MASK = NOT_HORIZ_MASK|NOT_VERT_MASK|NOT_ROT_MASK;
 
-
     public boolean dirty;
 
     public MetaInfo() {
@@ -50,6 +167,107 @@ public class Communicator {
       notHorizontal = false;
       notVertical = false;
       notRotational = false;
+
+//      chunks = new ChunkInfo[Utils.NUM_MAP_CHUNKS];
+//      chunks[0] = new ChunkInfo();
+//      chunks[1] = new ChunkInfo();
+//      chunks[2] = new ChunkInfo();
+//      chunks[3] = new ChunkInfo();
+//      chunks[4] = new ChunkInfo();
+//      chunks[5] = new ChunkInfo();
+//      chunks[6] = new ChunkInfo();
+//      chunks[7] = new ChunkInfo();
+//      chunks[8] = new ChunkInfo();
+//      chunks[9] = new ChunkInfo();
+//      chunks[10] = new ChunkInfo();
+//      chunks[11] = new ChunkInfo();
+//      chunks[12] = new ChunkInfo();
+//      chunks[13] = new ChunkInfo();
+//      chunks[14] = new ChunkInfo();
+//      chunks[15] = new ChunkInfo();
+//      chunks[16] = new ChunkInfo();
+//      chunks[17] = new ChunkInfo();
+//      chunks[18] = new ChunkInfo();
+//      chunks[19] = new ChunkInfo();
+//      chunks[20] = new ChunkInfo();
+//      chunks[21] = new ChunkInfo();
+//      chunks[22] = new ChunkInfo();
+//      chunks[23] = new ChunkInfo();
+//      chunks[24] = new ChunkInfo();
+//      chunks[25] = new ChunkInfo();
+//      chunks[26] = new ChunkInfo();
+//      chunks[27] = new ChunkInfo();
+//      chunks[28] = new ChunkInfo();
+//      chunks[29] = new ChunkInfo();
+//      chunks[30] = new ChunkInfo();
+//      chunks[31] = new ChunkInfo();
+//      chunks[32] = new ChunkInfo();
+//      chunks[33] = new ChunkInfo();
+//      chunks[34] = new ChunkInfo();
+//      chunks[35] = new ChunkInfo();
+//      chunks[36] = new ChunkInfo();
+//      chunks[37] = new ChunkInfo();
+//      chunks[38] = new ChunkInfo();
+//      chunks[39] = new ChunkInfo();
+//      chunks[40] = new ChunkInfo();
+//      chunks[41] = new ChunkInfo();
+//      chunks[42] = new ChunkInfo();
+//      chunks[43] = new ChunkInfo();
+//      chunks[44] = new ChunkInfo();
+//      chunks[45] = new ChunkInfo();
+//      chunks[46] = new ChunkInfo();
+//      chunks[47] = new ChunkInfo();
+//      chunks[48] = new ChunkInfo();
+//      chunks[49] = new ChunkInfo();
+//      chunks[50] = new ChunkInfo();
+//      chunks[51] = new ChunkInfo();
+//      chunks[52] = new ChunkInfo();
+//      chunks[53] = new ChunkInfo();
+//      chunks[54] = new ChunkInfo();
+//      chunks[55] = new ChunkInfo();
+//      chunks[56] = new ChunkInfo();
+//      chunks[57] = new ChunkInfo();
+//      chunks[58] = new ChunkInfo();
+//      chunks[59] = new ChunkInfo();
+//      chunks[60] = new ChunkInfo();
+//      chunks[61] = new ChunkInfo();
+//      chunks[62] = new ChunkInfo();
+//      chunks[63] = new ChunkInfo();
+//      chunks[64] = new ChunkInfo();
+//      chunks[65] = new ChunkInfo();
+//      chunks[66] = new ChunkInfo();
+//      chunks[67] = new ChunkInfo();
+//      chunks[68] = new ChunkInfo();
+//      chunks[69] = new ChunkInfo();
+//      chunks[70] = new ChunkInfo();
+//      chunks[71] = new ChunkInfo();
+//      chunks[72] = new ChunkInfo();
+//      chunks[73] = new ChunkInfo();
+//      chunks[74] = new ChunkInfo();
+//      chunks[75] = new ChunkInfo();
+//      chunks[76] = new ChunkInfo();
+//      chunks[77] = new ChunkInfo();
+//      chunks[78] = new ChunkInfo();
+//      chunks[79] = new ChunkInfo();
+//      chunks[80] = new ChunkInfo();
+//      chunks[81] = new ChunkInfo();
+//      chunks[82] = new ChunkInfo();
+//      chunks[83] = new ChunkInfo();
+//      chunks[84] = new ChunkInfo();
+//      chunks[86] = new ChunkInfo();
+//      chunks[87] = new ChunkInfo();
+//      chunks[88] = new ChunkInfo();
+//      chunks[89] = new ChunkInfo();
+//      chunks[90] = new ChunkInfo();
+//      chunks[91] = new ChunkInfo();
+//      chunks[92] = new ChunkInfo();
+//      chunks[93] = new ChunkInfo();
+//      chunks[94] = new ChunkInfo();
+//      chunks[95] = new ChunkInfo();
+//      chunks[96] = new ChunkInfo();
+//      chunks[97] = new ChunkInfo();
+//      chunks[98] = new ChunkInfo();
+//      chunks[99] = new ChunkInfo();
 
       dirty = false;
     }
@@ -139,6 +357,7 @@ public class Communicator {
 //  private final int[] sharedBuffer;
 
   public final MetaInfo metaInfo;
+  public final ChunkInfo chunkInfo;
 
   private static final int NUM_MESSAGING_INTS = MetaInfo.META_INT_START;
   private final FastQueue<Message> messageQueue;
@@ -149,6 +368,7 @@ public class Communicator {
     this.rc = Global.rc;
 //    sharedBuffer = new int[NUM_MESSAGING_INTS];
     metaInfo = new MetaInfo();
+    chunkInfo = new ChunkInfo();
 
     messageQueue = new FastQueue<>(10);
     sentMessages = new ArrayList<>(5);

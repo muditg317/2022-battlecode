@@ -13,7 +13,6 @@ public class Utils {
     VERTICAL,
   }
 
-
   /** Seeded RNG for use throughout the bot classes */
   public static Random rng;
 
@@ -76,6 +75,12 @@ public class Utils {
       MapSymmetry.ROTATIONAL, // 110
 //      MapSymmetry.ROTATIONAL, // 111
   };
+
+  /** The number of chunks that the map should be split into */
+  public static final int NUM_MAP_CHUNKS = 100;
+
+  /** related to above */
+  public static final int CHUNK_INFOS_PER_INT = 4;
 
   /*
    * the amount of lead that a single miner can claim from others (based on lead regen)
@@ -246,6 +251,18 @@ public class Utils {
     int cooldownAfterMove = (int) Math.floor((1 + r/10.0) * c); //35
     //20 => 2
     return cooldownAfterMove / 10.0;
+  }
+
+  public static int encodeLocationToChunkIndex(MapLocation mapLocation) {
+    int x = mapLocation.x / Cache.Permanent.CHUNK_WIDTH;
+    int y = mapLocation.y / Cache.Permanent.CHUNK_HEIGHT;
+    return x + y * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+  }
+
+  public static MapLocation decodeChunkIndexToLocation(int chunkIndex) {
+    int x = chunkIndex % Cache.Permanent.NUM_HORIZONTAL_CHUNKS * Cache.Permanent.CHUNK_WIDTH;
+    int y = chunkIndex / Cache.Permanent.NUM_HORIZONTAL_CHUNKS * Cache.Permanent.CHUNK_HEIGHT;
+    return new MapLocation(x + Cache.Permanent.CHUNK_WIDTH / 2, y + Cache.Permanent.CHUNK_HEIGHT / 2);
   }
 
   /*

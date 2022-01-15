@@ -1,10 +1,6 @@
 package firstbot.utils;
 
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import battlecode.common.Team;
+import battlecode.common.*;
 
 public class Cache {
     public static class Permanent {
@@ -18,6 +14,118 @@ public class Cache {
         public static MapLocation START_LOCATION;
         public static int MAP_WIDTH;
         public static int MAP_HEIGHT;
+
+        public static int CHUNK_WIDTH;
+        public static int NUM_HORIZONTAL_CHUNKS;
+        public static int CHUNK_HEIGHT;
+        public static int NUM_VERTICAL_CHUNKS;
+        public static int CHUNK_EXPLORATION_RADIUS_SQUARED;
+
+        private static void setupChunkBounds() {
+            final int minAreaPerChunk = (int) Math.ceil(MAP_WIDTH * MAP_HEIGHT / (double) Utils.NUM_MAP_CHUNKS);
+            // int minMapArea = 20x20 = 400 / 100 == 4
+//            int bestArea = (GameConstants.MAP_MAX_WIDTH * GameConstants.MAP_MAX_HEIGHT / Utils.NUM_MAP_CHUNKS) + 1;
+            switch (minAreaPerChunk) {
+                case 4:
+                    CHUNK_WIDTH = 2;
+                    CHUNK_HEIGHT = 2;
+                    CHUNK_EXPLORATION_RADIUS_SQUARED = 10; // 13 slightly too big
+                    break;
+                case 5:
+//                    CHUNK_WIDTH = 1;
+//                    CHUNK_HEIGHT = 5;
+//                    break;
+                case 6:
+//                    CHUNK_WIDTH = 2;
+//                    CHUNK_HEIGHT = 3;
+//                    break;
+                case 7:
+                case 8:
+//                    CHUNK_WIDTH = 2;
+//                    CHUNK_HEIGHT = 4;
+//                    break;
+                case 9:
+                    CHUNK_WIDTH = 3;
+                    CHUNK_HEIGHT = 3;
+                    CHUNK_EXPLORATION_RADIUS_SQUARED = 13; // must see > 6/9
+                    break;
+                case 10:
+//                    CHUNK_WIDTH = 2;
+//                    CHUNK_HEIGHT = 5;
+//                    break;
+                case 11:
+                case 12:
+//                    CHUNK_WIDTH = 3;
+//                    CHUNK_HEIGHT = 4;
+//                    break;
+                case 13:
+                case 14:
+                case 15:
+//                    CHUNK_WIDTH = 3;
+//                    CHUNK_HEIGHT = 5;
+//                    break;
+                case 16:
+                    CHUNK_WIDTH = 4;
+                    CHUNK_HEIGHT = 4;
+                    CHUNK_EXPLORATION_RADIUS_SQUARED = 8; // 9/10 leave too much space in lower left
+                    break;
+                case 17:
+                case 18:
+//                    CHUNK_WIDTH = 3;
+//                    CHUNK_HEIGHT = 6;
+//                    break;
+                case 19:
+                case 20:
+//                    CHUNK_WIDTH = 4;
+//                    CHUNK_HEIGHT = 5;
+//                    break;
+                case 21:
+                case 22:
+                case 23:
+                case 24:
+//                    CHUNK_WIDTH = 4;
+//                    CHUNK_HEIGHT = 6;
+//                    break;
+                case 25:
+                    CHUNK_WIDTH = 5;
+                    CHUNK_HEIGHT = 5;
+                    CHUNK_EXPLORATION_RADIUS_SQUARED = 8; // 9/10 leave whole row
+                    break;
+                case 26:
+                case 27:
+                case 28:
+                case 29:
+                case 30:
+//                    CHUNK_WIDTH = 5;
+//                    CHUNK_HEIGHT = 6;
+//                    break;
+                case 31:
+                case 32:
+                case 33:
+                case 34:
+                case 35:
+                case 36:
+                    CHUNK_WIDTH = 6;
+                    CHUNK_HEIGHT = 6;
+                    CHUNK_EXPLORATION_RADIUS_SQUARED = 2; // 4/5 leave too much gap
+                    break;
+            }
+
+            NUM_HORIZONTAL_CHUNKS = MAP_WIDTH / CHUNK_WIDTH;
+            if (MAP_WIDTH % CHUNK_WIDTH > 0) { // only allow chunk if more than 1 column of it's locs are on the map
+                NUM_HORIZONTAL_CHUNKS++;
+            }
+
+            NUM_VERTICAL_CHUNKS = MAP_HEIGHT / CHUNK_HEIGHT;
+            if (MAP_HEIGHT % CHUNK_HEIGHT > 0) { // only allow chunk if more than 1 row of it's locs are on the map
+                NUM_VERTICAL_CHUNKS++;
+            }
+
+            System.out.println("MAP WIDTH = " + MAP_WIDTH + " MAP HEIGHT = " + MAP_HEIGHT);
+            System.out.println("CHUNK_WIDTH: " + Cache.Permanent.CHUNK_WIDTH + " CHUNK_HEIGHT: " + Cache.Permanent.CHUNK_HEIGHT);
+            System.out.println("NUM_HORIZONTAL_CHUNKS: " + Cache.Permanent.NUM_HORIZONTAL_CHUNKS + " NUM_VERTICAL_CHUNKS: " + Cache.Permanent.NUM_VERTICAL_CHUNKS);
+
+        }
     }
 
     public static void setup() throws GameActionException {
@@ -31,6 +139,7 @@ public class Cache {
         Permanent.ACTION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.actionRadiusSquared;
         Permanent.MAP_WIDTH = Global.rc.getMapWidth();
         Permanent.MAP_HEIGHT = Global.rc.getMapHeight();
+        Permanent.setupChunkBounds();
         updateOnTurn();
     }
 

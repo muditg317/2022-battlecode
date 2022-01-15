@@ -1,13 +1,8 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import firstbot.utils.Cache;
+import battlecode.common.*;
 import firstbot.robots.Robot;
+import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
 public abstract class Droid extends Robot {
@@ -28,8 +23,14 @@ public abstract class Droid extends Robot {
     randomizeExplorationTarget();
   }
 
-  protected void randomizeExplorationTarget() {
-    explorationTarget = Utils.randomMapLocation();
+  protected void randomizeExplorationTarget() throws GameActionException {
+    int b = Clock.getBytecodeNum();
+    explorationTarget = communicator.chunkInfo.centerOfClosestUnexploredChunk(Cache.PerTurn.CURRENT_LOCATION);
+    System.out.println("randomizeExplorationTarget - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
+    if (explorationTarget == null) {
+      rc.setIndicatorString("no unexplored local chunks");
+      explorationTarget = Utils.randomMapLocation();
+    }
   }
 
   private int timesTriedEnterHighRubble = 0;
@@ -49,7 +50,7 @@ public abstract class Droid extends Robot {
     if (desired == null) {
       rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
 //      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
-      return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.ACTION_RADIUS_SQUARED); // set explorationTarget to null if found!
+      return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
     }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(desired);
     int rubbleThere = rc.senseRubble(newLoc);
@@ -72,7 +73,7 @@ public abstract class Droid extends Robot {
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 10, 10);
       rc.setIndicatorDot(explorationTarget, 0, 255, 0);
     }
-    return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.ACTION_RADIUS_SQUARED); // set explorationTarget to null if found!
+    return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
   }
 
   /**
@@ -82,7 +83,11 @@ public abstract class Droid extends Robot {
    */
   protected boolean doExploration() throws GameActionException {
     rc.setIndicatorString("doExploration - " + explorationTarget);
+    if (communicator.chunkInfo.chunkHasBeenExplored(explorationTarget)) {
+      randomizeExplorationTarget();
+    }
     if (goToExplorationTarget()) {
+      communicator.chunkInfo.markExplored(explorationTarget);
       randomizeExplorationTarget();
       return true;
     }
