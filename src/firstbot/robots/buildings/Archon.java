@@ -101,14 +101,14 @@ public class Archon extends Building {
     }
 
     // Repair damaged droid
-//    if (rc.isActionReady()) {
-//      for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
-//        if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < info.type.getMaxHealth(info.level)) { // we see a damaged friendly
-//          rc.repair(info.location);
-//          break;
-//        }
-//      }
-//    }
+    if (rc.isActionReady()) {
+      for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
+        if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < info.type.getMaxHealth(info.level)) { // we see a damaged friendly
+          rc.repair(info.location);
+          break;
+        }
+      }
+    }
 
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();

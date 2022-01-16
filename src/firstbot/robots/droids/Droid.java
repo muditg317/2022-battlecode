@@ -60,7 +60,7 @@ public abstract class Droid extends Robot {
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(desired);
     int rubbleThere = rc.senseRubble(newLoc);
     if ((this instanceof Soldier && rubbleThere >= 25 && rubbleThere > 1.5 * rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION))
-//    || (this instanceof Miner && rubbleThere >= 50 && rubbleThere > 1.5 * rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION))
+    || (this instanceof Miner && rubbleThere >= 50 && rubbleThere > 1.5 * rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION))
     ) {
       timesTriedEnterHighRubble++;
       if (timesTriedEnterHighRubble < 3) {

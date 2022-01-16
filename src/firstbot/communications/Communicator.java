@@ -95,39 +95,53 @@ public class Communicator {
     public MapLocation centerOfClosestUnexploredChunk(MapLocation source) throws GameActionException {
       int myChunk = Utils.encodeLocationToChunkIndex(source);
       if (!chunkHasBeenExplored(myChunk)) return Utils.decodeChunkIndexToLocation(myChunk);
-      for (Direction dir : Utils.directions) {
-        int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
-        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+
+      MapLocation closestUnexploredChunk = null;
+      int closestUnexploredChunkDist = Integer.MAX_VALUE;
+
+      for (int chunkToTest = 0; chunkToTest < 100; ++chunkToTest) {
+        if (!chunkHasBeenExplored(chunkToTest)) {
+          MapLocation chunkCenter = Utils.decodeChunkIndexToLocation(chunkToTest);
+          if (closestUnexploredChunk == null || source.isWithinDistanceSquared(chunkCenter, closestUnexploredChunkDist)) {
+            closestUnexploredChunk = chunkCenter;
+            closestUnexploredChunkDist = source.distanceSquaredTo(chunkCenter);
+          }
+        }
       }
-      for (Direction dir : Utils.directions) {
-        int chunkToTest = myChunk + dir.dx*2 + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
-        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
-      }
-      for (Direction dir : Utils.directions) {
-        int chunkToTest = myChunk + dir.dx + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
-        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
-      }
-      for (Direction dir : Utils.directions) {
-        int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
-        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
-      }
-      return null;
+      return closestUnexploredChunk;
+//      for (Direction dir : Utils.directions) {
+//        int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
+//        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+//      }
+//      for (Direction dir : Utils.directions) {
+//        int chunkToTest = myChunk + dir.dx*2 + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
+//        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+//      }
+//      for (Direction dir : Utils.directions) {
+//        int chunkToTest = myChunk + dir.dx + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
+//        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+//      }
+//      for (Direction dir : Utils.directions) {
+//        int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
+//        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
+//        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
+//        if (!chunkHasBeenExplored(chunkToTest)) return Utils.decodeChunkIndexToLocation(chunkToTest);
+//      }
+//      return null;
     }
 
     public void markExplored(MapLocation explorationTarget) throws GameActionException {

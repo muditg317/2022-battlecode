@@ -25,6 +25,8 @@ public class Soldier extends Droid {
 
   MapLocation archonToSave;
 
+  boolean isMovementDisabled;
+
 
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
@@ -58,29 +60,21 @@ public class Soldier extends Droid {
 
     // miner-like random exploration (random target and go to it)
 
-    boolean anyEnemies = processEnemiesInVision();
-    if (!anyEnemies) {
-//      if (lastSoldierAttack != null) {
-//        if (lastSoldierTradeScore > 0) {
-//          moveOptimalTowards(lastSoldierAttack);
-//        } else {
-//          moveOptimalAway(lastSoldierAttack);
-//        }
-//      }
-//      if (robotToChase != null) {
-//        if (robotToChase.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) > Utils.DSQ_1by1) {
-////          System.out.println("MOVE TO CACHED LOCATION");
-//          moveOptimalTowards(robotToChase.location);
-//        } else {
-////          System.out.println("RESET ROBOT TO CHASE");
-//          robotToChase = null;
-//        }
-//      }
-//      if (robotToChase == null) {
-//        rc.setIndicatorString("Soldier goToTarget - " + target);
-//        reachedTarget = goToTarget();
-//      }
-//      anyEnemies = processEnemiesInVision();
+    isMovementDisabled = false;
+    rc.setIndicatorString(Cache.PerTurn.HEALTH + "/" + Cache.Permanent.MAX_HEALTH);
+    if (Cache.PerTurn.HEALTH < Cache.Permanent.MAX_HEALTH / 2) {
+      isMovementDisabled = true;
+      robotToChase = null;
+    }
+
+    if (isMovementDisabled && Cache.PerTurn.HEALTH > Cache.Permanent.MAX_HEALTH - 10) {
+      isMovementDisabled = false;
+    }
+
+    if (processEnemiesInVision() || !isMovementDisabled) attackPriority();
+
+    if (isMovementDisabled) {
+      runHome(Cache.Permanent.START_LOCATION);
     }
 
     // store global var robotInfo of the thing we are chasing
@@ -88,41 +82,7 @@ public class Soldier extends Droid {
 //    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
 //    System.out.println("\nrobotToChase: " + robotToChase + "\ntarget: " + target + "\nreachedTarget: " + reachedTarget);
 
-//    if (enemySoldierExists && attackEnemySoldier()) {}
-//    else if ((enemyMinerExists || enemyBuilderExists) && attackAndChaseEnemyMinerOrBuilder()) {}
-//    else if (enemyArchonExists && attackAndChaseEnemyArchon()) {}
-//    else if (enemySageExists && attackEnemySage()) {}
-    if (enemySoldierExists) attackEnemySoldier();
-    else if (enemyMinerExists || enemyBuilderExists) attackAndChaseEnemyMinerOrBuilder();
-    else if (enemyArchonExists) attackAndChaseEnemyArchon();
-    else if (enemySageExists) attackEnemySage();
-    else {
-//      if (lastSoldierAttack != null) {
-//        if (lastSoldierTradeScore > 0) {
-//          moveOptimalTowards(lastSoldierAttack);
-//        } else {
-//          moveOptimalAway(lastSoldierAttack);
-//        }
-////        if (!rc.canSenseLocation(lastSoldierAttack) || rc.senseRobotAtLocation(lastSoldierAttack) == null) {
-//        lastSoldierAttack = null;
-////        }
-//      }
-      if (robotToChase != null) {
-        if (!robotToChase.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1)) {
-//          System.out.println("MOVE TO CACHED LOCATION");
-          moveOptimalTowards(robotToChase.location);
-        } else {
-//          System.out.println("RESET ROBOT TO CHASE");
-          robotToChase = null;
-        }
-      }
-      if (robotToChase == null) {
-        doExploration();
-      }
-      // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
-      // cached location is set to null if we go there and no enemy is found in vision radius
-//      setIndicatorString("no enemy", null);
-    }
+
 
     if (robotToChase != null) {
       if (!rc.canSenseRobot(robotToChase.ID)) {
@@ -131,6 +91,7 @@ public class Soldier extends Droid {
         robotToChase = rc.senseRobot(robotToChase.ID);
       }
     }
+
     if (robotToChase != null) {
       rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, robotToChase.location, 0, 0, 255);
       rc.setIndicatorDot(robotToChase.location, 0, 255, 0);
@@ -204,6 +165,156 @@ public class Soldier extends Droid {
 
   }
 
+  public void attackPriority() throws GameActionException {
+
+//    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
+//    System.out.println("isMovementDisabled: " + isMovementDisabled + "robotToChase: " + robotToChase);
+    if (enemySoldierExists) attackEnemySoldier();
+    else if (enemyMinerExists || enemyBuilderExists) attackAndChaseEnemyMinerOrBuilder();
+    else if (enemyArchonExists) attackAndChaseEnemyArchon();
+    else if (enemySageExists) attackEnemySage();
+    else if (!isMovementDisabled) {
+//      if (lastSoldierAttack != null) {
+//        if (lastSoldierTradeScore > 0) {
+//          moveOptimalTowards(lastSoldierAttack);
+//        } else {
+//          moveOptimalAway(lastSoldierAttack);
+//        }
+////        if (!rc.canSenseLocation(lastSoldierAttack) || rc.senseRobotAtLocation(lastSoldierAttack) == null) {
+//        lastSoldierAttack = null;
+////        }
+//      }
+      if (robotToChase != null) {
+        if (!robotToChase.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1)) {
+//          System.out.println("MOVE TO CACHED LOCATION");
+          moveOptimalTowards(robotToChase.location);
+        } else {
+//          System.out.println("RESET ROBOT TO CHASE");
+          robotToChase = null;
+        }
+      }
+      System.out.println("robotToChase: " + robotToChase);
+      if (robotToChase == null) {
+        doExploration();
+      }
+      // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
+      // cached location is set to null if we go there and no enemy is found in vision radius
+//      setIndicatorString("no enemy", null);
+    }
+  }
+
+  /* Behavior =>
+    Good Square => not blocking the EC AND an odd distance away
+    Bad Square => blocking the EC or an even distance away
+  Return: true if and only if the square is good
+  */
+  private boolean checkIfGoodSquare(MapLocation location) {
+    return (location.x % 2 == location.y % 2) && !location.isAdjacentTo(Cache.Permanent.START_LOCATION);
+  }
+
+  /* Create lattice structure of slanderers centered around the EC location
+   * Potential Bugs:
+   *       if two seperate ECs collide slanderers with each other (big problem I think), not sure best way to fix... maybe each slanderer communicates in its flag distance from closest EC and we greedily make it accordingly to closest EC?
+   *       if one side of the EC is overproduced and bots can't get further away... is this really a bug tho or a feature? I think feature
+   * */
+  public void runHome(MapLocation archonLocation) throws GameActionException {
+
+    if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonLocation, Utils.DSQ_3by3plus)) {
+      moveOptimalTowards(archonLocation);
+    } else {
+      boolean isMyCurrentSquareGood = checkIfGoodSquare(Cache.PerTurn.CURRENT_LOCATION);
+      if (isMyCurrentSquareGood) {
+        currentSquareIsGoodExecute(archonLocation);
+      } else {
+        currentSquareIsBadExecute(archonLocation);
+      }
+    }
+
+  }
+
+  /* Execute behavior if current square is a "bad" square
+   * Behavior: perform a moving action to square in the following priority ->
+   *          If there exists a good square that the bot can move to regardless of distance, then move to the one that is closest to the EC
+   *          If there exists a bad square that the bot can move to that is further from the EC than the current square, then move to the one that is furthest to the EC
+   *          Else => do nothing
+   * */
+  public void currentSquareIsBadExecute(MapLocation archonLocation) throws GameActionException {
+
+    if (!rc.isMovementReady()) return;
+
+    int badSquareMaximizedDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(archonLocation);
+    Direction badSquareMaximizedDirection = null;
+
+    // try to find a good square
+
+    // move further or equal to EC
+
+    int goodSquareMinimizedDistance = (int) 1E9;
+    Direction goodSquareMinimizedDirection = null;
+
+    Direction[] directions = Utils.directions;
+    for (int i = 0, directionsLength = directions.length; i < directionsLength; i++) {
+      Direction direction = directions[i];
+      if (rc.canMove(direction)) {
+        MapLocation candidateLocation = Cache.PerTurn.CURRENT_LOCATION.add(direction);
+        int candidateDistance = candidateLocation.distanceSquaredTo(archonLocation);
+        boolean isGoodSquare = checkIfGoodSquare(candidateLocation);
+
+        if (candidateLocation.isAdjacentTo(archonLocation)) continue;
+
+        if (isGoodSquare) {
+          if (goodSquareMinimizedDistance > candidateDistance) {
+            goodSquareMinimizedDistance = candidateDistance;
+            goodSquareMinimizedDirection = direction;
+          }
+        } else {
+          if (badSquareMaximizedDistance <= candidateDistance) {
+            badSquareMaximizedDistance = candidateDistance;
+            badSquareMaximizedDirection = direction;
+          }
+        }
+      }
+    }
+
+    if (goodSquareMinimizedDirection != null) {
+      move(goodSquareMinimizedDirection);
+    } else if (badSquareMaximizedDirection != null) {
+      move(badSquareMaximizedDirection);
+    }
+
+  }
+
+  /* Execute behavior if current square is a "good" square
+   * Behavior:
+   *           perform a moving action to square if and only if the square is a good square AND it is closer to the EC AND if we are ready
+   *           else: do nothing
+   * */
+  //TODO: check why sometimes we have a bug with the units not moving closer to EC? -- not that big of a deal I think
+  public void currentSquareIsGoodExecute(MapLocation archonLocation) throws GameActionException {
+    // try to move towards EC with any ordinal directions that decreases distance (NE, SE, SW, NW)
+
+    if (!rc.isMovementReady()) return;
+
+    int moveTowardsDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(archonLocation);
+    Direction moveTowardsDirection = null;
+
+    for (Direction direction : Utils.ordinal_directions) {
+      if (rc.canMove(direction)) {
+        MapLocation candidateLocation = Cache.PerTurn.CURRENT_LOCATION.add(direction);
+        int candidateDistance = candidateLocation.distanceSquaredTo(archonLocation);
+        boolean isGoodSquare = checkIfGoodSquare(candidateLocation);
+        if (isGoodSquare && candidateDistance < moveTowardsDistance) {
+          moveTowardsDistance = candidateDistance;
+          moveTowardsDirection = direction;
+        }
+      }
+    }
+
+    if (moveTowardsDirection != null) {
+      move(moveTowardsDirection);
+    }
+  }
+
 
 
 
@@ -240,7 +351,7 @@ public class Soldier extends Droid {
       }
     }
 
-    return enemySoldierExists | enemyMinerExists | enemyBuilderExists | enemyArchonExists | enemySageExists;
+    return enemySoldierExists || enemyMinerExists || enemyBuilderExists || enemyArchonExists || enemySageExists;
   }
 
   private boolean attackEnemySoldier() throws GameActionException {
@@ -270,7 +381,7 @@ public class Soldier extends Droid {
 
     // my location and all adjacent locations
     for (Direction dir : Utils.directionsNine) {
-      if (dir != Direction.CENTER && !rc.canMove(dir)) continue; // TODO: figure out why this makes it worse
+      if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue; // TODO: figure out why this makes it worse
       MapLocation candidate = Cache.PerTurn.CURRENT_LOCATION.add(dir);
 //      if (!rc.canSenseLocation(candidate)) continue;
 
@@ -581,7 +692,7 @@ public class Soldier extends Droid {
   private boolean attackAtAndMoveTo(MapLocation whereToAttack, MapLocation whereToMove, boolean usePathing) throws GameActionException {
 
     boolean attacked = false;
-    Direction dirToMove = (!rc.isMovementReady() || whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))
+    Direction dirToMove = (isMovementDisabled || !rc.isMovementReady() || whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {

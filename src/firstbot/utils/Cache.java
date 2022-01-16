@@ -15,6 +15,8 @@ public class Cache {
         public static int MAP_WIDTH;
         public static int MAP_HEIGHT;
 
+        public static int MAX_HEALTH;
+
         public static int CHUNK_WIDTH;
         public static int NUM_HORIZONTAL_CHUNKS;
         public static int CHUNK_HEIGHT;
@@ -139,6 +141,7 @@ public class Cache {
         Permanent.ACTION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.actionRadiusSquared;
         Permanent.MAP_WIDTH = Global.rc.getMapWidth();
         Permanent.MAP_HEIGHT = Global.rc.getMapHeight();
+        Permanent.MAX_HEALTH = Global.rc.getType().health;
         Permanent.setupChunkBounds();
         updateOnTurn();
     }

@@ -28,6 +28,14 @@ public class Utils {
       Direction.NORTHWEST,
   };
 
+  /** Array of the 4 possible ordinal directions. */
+  public static final Direction[] ordinal_directions = {
+          Direction.NORTHEAST,
+          Direction.SOUTHEAST,
+          Direction.SOUTHWEST,
+          Direction.NORTHWEST,
+  };
+
   /** Array of the 3x3 possible directions. */
   public static final Direction[] directionsNine = {
           Direction.CENTER,
