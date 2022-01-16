@@ -1,4 +1,4 @@
-package firstbot.utils;
+package chunking.utils;
 
 import battlecode.common.*;
 
@@ -14,9 +14,6 @@ public class Cache {
         public static MapLocation START_LOCATION;
         public static int MAP_WIDTH;
         public static int MAP_HEIGHT;
-        public static int MAP_AREA;
-
-        public static int MAX_HEALTH;
 
         public static int CHUNK_WIDTH;
         public static int NUM_HORIZONTAL_CHUNKS;
@@ -25,7 +22,7 @@ public class Cache {
         public static int CHUNK_EXPLORATION_RADIUS_SQUARED;
 
         private static void setupChunkBounds() {
-            final int minAreaPerChunk = (int) Math.ceil(MAP_AREA / (double) Utils.NUM_MAP_CHUNKS);
+            final int minAreaPerChunk = (int) Math.ceil(MAP_WIDTH * MAP_HEIGHT / (double) Utils.NUM_MAP_CHUNKS);
             // int minMapArea = 20x20 = 400 / 100 == 4
 //            int bestArea = (GameConstants.MAP_MAX_WIDTH * GameConstants.MAP_MAX_HEIGHT / Utils.NUM_MAP_CHUNKS) + 1;
             switch (minAreaPerChunk) {
@@ -124,9 +121,9 @@ public class Cache {
                 NUM_VERTICAL_CHUNKS++;
             }
 
-//            System.out.println("MAP WIDTH = " + MAP_WIDTH + " MAP HEIGHT = " + MAP_HEIGHT);
-//            System.out.println("CHUNK_WIDTH: " + Cache.Permanent.CHUNK_WIDTH + " CHUNK_HEIGHT: " + Cache.Permanent.CHUNK_HEIGHT);
-//            System.out.println("NUM_HORIZONTAL_CHUNKS: " + Cache.Permanent.NUM_HORIZONTAL_CHUNKS + " NUM_VERTICAL_CHUNKS: " + Cache.Permanent.NUM_VERTICAL_CHUNKS);
+            //System.out.println("MAP WIDTH = " + MAP_WIDTH + " MAP HEIGHT = " + MAP_HEIGHT);
+            //System.out.println("CHUNK_WIDTH: " + Cache.Permanent.CHUNK_WIDTH + " CHUNK_HEIGHT: " + Cache.Permanent.CHUNK_HEIGHT);
+            //System.out.println("NUM_HORIZONTAL_CHUNKS: " + Cache.Permanent.NUM_HORIZONTAL_CHUNKS + " NUM_VERTICAL_CHUNKS: " + Cache.Permanent.NUM_VERTICAL_CHUNKS);
 
         }
     }
@@ -142,8 +139,6 @@ public class Cache {
         Permanent.ACTION_RADIUS_SQUARED = Permanent.ROBOT_TYPE.actionRadiusSquared;
         Permanent.MAP_WIDTH = Global.rc.getMapWidth();
         Permanent.MAP_HEIGHT = Global.rc.getMapHeight();
-        Permanent.MAP_AREA = Permanent.MAP_WIDTH * Permanent.MAP_HEIGHT;
-        Permanent.MAX_HEALTH = Global.rc.getType().health;
         Permanent.setupChunkBounds();
         updateOnTurn();
     }
@@ -157,12 +152,9 @@ public class Cache {
         public static MapLocation CURRENT_LOCATION;
         public static int LEVEL;
         public static int HEALTH;
-//        public static MapLocation[] NEARBY_LEAD_MIN_2;
-//        public static MapLocation[] NEARBY_LEAD_2;
-
         public static int cacheState;
 
-        public static void whenMoved() throws GameActionException {
+        public static void whenMoved() {
             // don't need to update
             if (PerTurn.CURRENT_LOCATION != null && Global.rc.getLocation().equals(PerTurn.CURRENT_LOCATION)) {
                 return;
@@ -171,17 +163,16 @@ public class Cache {
             updateForMovement();
         }
 
-        private static void updateForMovement() throws GameActionException {
+        private static void updateForMovement() {
             PerTurn.cacheState++;
             PerTurn.CURRENT_LOCATION = Global.rc.getLocation();
             PerTurn.ALL_NEARBY_ROBOTS = Global.rc.senseNearbyRobots();
             PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS = Global.rc.senseNearbyRobots(-1, Permanent.OUR_TEAM);
             PerTurn.ALL_NEARBY_ENEMY_ROBOTS = Global.rc.senseNearbyRobots(-1, Permanent.OPPONENT_TEAM);
-//            PerTurn.NEARBY_LEAD_MIN_2 = Global.rc.senseNearbyLocationsWithLead(-1, 2);
         }
     }
 
-    public static void updateOnTurn() throws GameActionException {
+    public static void updateOnTurn() {
         PerTurn.ROUND_NUM = Global.rc.getRoundNum();
         PerTurn.ROUNDS_ALIVE = PerTurn.ROUND_NUM - Permanent.ROUND_SPAWNED;
         PerTurn.LEVEL = Global.rc.getLevel();

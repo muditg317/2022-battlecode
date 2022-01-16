@@ -1,4 +1,4 @@
-package firstbot.robots;
+package chunking.robots;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -7,19 +7,19 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.communications.Communicator;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.RubbleAtLocationMessage;
-import firstbot.robots.buildings.Archon;
-import firstbot.robots.buildings.Laboratory;
-import firstbot.robots.buildings.Watchtower;
-import firstbot.robots.droids.Builder;
-import firstbot.robots.droids.Miner;
-import firstbot.robots.droids.Sage;
-import firstbot.robots.droids.Soldier;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
+import chunking.communications.Communicator;
+import chunking.communications.messages.Message;
+import chunking.communications.messages.RubbleAtLocationMessage;
+import chunking.robots.buildings.Archon;
+import chunking.robots.buildings.Laboratory;
+import chunking.robots.buildings.Watchtower;
+import chunking.robots.droids.Builder;
+import chunking.robots.droids.Miner;
+import chunking.robots.droids.Sage;
+import chunking.robots.droids.Soldier;
+import chunking.utils.Cache;
+import chunking.utils.Global;
+import chunking.utils.Utils;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
@@ -33,7 +33,6 @@ public abstract class Robot {
 
 //  protected final StolenBFS2 stolenbfs;
   protected int turnCount;
-  protected boolean dontYield;
 
   /**
    * Create a Robot with the given controller
@@ -49,9 +48,9 @@ public abstract class Robot {
 
 //    this.stolenbfs = new StolenBFS2(rc);
     // Print spawn message
-//    System.out.println(this.creationStats);
+//    //System.out.println(this.creationStats);
     // Set indicator message
-    rc.setIndicatorString("Just spawned!");
+    //rc.setIndicatorString("Just spawned!");
     turnCount = -1;
   }
 
@@ -87,27 +86,19 @@ public abstract class Robot {
         this.runTurnWrapper();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
-        System.out.println(rc.getType() + " GameActionException");
+        //System.out.println(rc.getType() + " GameActionException");
         e.printStackTrace();
-        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
+        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
-        System.out.println(rc.getType() + " Exception");
+        //System.out.println(rc.getType() + " Exception");
         e.printStackTrace();
-        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
+        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
       } finally {
         // end turn - make code wait until next turn
-        if (!dontYield) Clock.yield();
-        else {
-          if (Clock.getBytecodesLeft() < 0.9 * Cache.Permanent.ROBOT_TYPE.bytecodeLimit) { // if don't have 90% of limit, still yield
-            dontYield = false;
-            Clock.yield();
-          } else {
-            System.out.println("Skipping turn yeild!!");
-          }
-        }
+        Clock.yield();
       }
     }
   }
@@ -116,51 +107,45 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
-//    System.out.println("\nvery start - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
-//      System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
+//    //System.out.println("\nvery start - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
+//      //System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
     Cache.updateOnTurn();
-    if (!dontYield) {
-      rc.setIndicatorString("ac: " + rc.getActionCooldownTurns() + " mc: " + rc.getMovementCooldownTurns());
-    }
-    dontYield = false;
-
-//    System.out.println("Update cache -- " + Clock.getBytecodeNum());
+//    //System.out.println("Update cache -- " + Clock.getBytecodeNum());
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readAndAckAllMessages();
-//    System.out.println("# messages: " + pendingMessages + " -- " + Clock.getBytecodeNum());
+//    //System.out.println("# messages: " + pendingMessages + " -- " + Clock.getBytecodeNum());
 //    while (pendingMessages > 0) {
 //      Message message = communicator.getNthLastReceivedMessage(pendingMessages);
 //      ackMessage(message);
 //      pendingMessages--;
 //    }
     Utils.finishByteCodeCounting("reading");
-//    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
+//    if (pendingMessages > 0) //System.out.println("Got " + pendingMessages + " messages!");
 
-//    System.out.println("After acking: " + Clock.getBytecodeNum());
+//    //System.out.println("After acking: " + Clock.getBytecodeNum());
     MapLocation initial = Cache.PerTurn.CURRENT_LOCATION;
-    runTurnTypeWrapper();
+    runTurn();
 
     if (!initial.equals(Cache.PerTurn.CURRENT_LOCATION)) {
-      afterTurnWhenMoved();
+      updateSymmetryComms();
     }
 
-    if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) { // took too much bytecode
-      rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
+    if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) {
+      //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
       turnCount = rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED;
-      dontYield = true;
     } else { // still on our turn logic
 //    if (Clock.getBytecodesLeft() >= MIN_BYTECODES_TO_SEND) {
       Utils.startByteCodeCounting("sending");
-//      System.out.println("Bytecodes before send all messages: " + (Clock.getBytecodeNum()));
+//      //System.out.println("Bytecodes before send all messages: " + (Clock.getBytecodeNum()));
       communicator.sendQueuedMessages();
       communicator.updateMetaIntsIfNeeded();
-//      System.out.println("Bytecodes after send all messages: " + (Clock.getBytecodeNum()));
+//      //System.out.println("Bytecodes after send all messages: " + (Clock.getBytecodeNum()));
       Utils.finishByteCodeCounting("sending");
 //    }
     }
-//    System.out.println("\nvery end - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
+//    //System.out.println("\nvery end - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
   }
 
   /**
@@ -175,32 +160,9 @@ public abstract class Robot {
 
   /**
    * Run a single turn for the robot
-   * unique to buildings/droids
-   */
-  protected void runTurnTypeWrapper() throws GameActionException {
-    runTurn();
-  }
-
-  /**
-   * Run a single turn for the robot
    * unique to each robot type
    */
   protected abstract void runTurn() throws GameActionException;
-
-  /**
-   * run this code after the robot completes its turn
-   *    should ONLY be run if the robot moved on this turn
-   *  updates symmetry (broadcast rubble to check for symmetry failure)
-   *  update chunks in the chunk info buffer of the shared array
-   * @throws GameActionException if updating symmetry or visible chunks fails
-   */
-  protected void afterTurnWhenMoved() throws GameActionException {
-    updateSymmetryComms();
-//      int b = Clock.getBytecodeNum();
-//      int updatedChunks =
-      updateVisibleChunks();
-//      System.out.println("updateVisibleChunks(" + updatedChunks + ") cost: " + (Clock.getBytecodeNum() - b));
-  }
 
   /**
    * perform any universal code that robots should run to figure out map symmetry
@@ -215,46 +177,6 @@ public abstract class Robot {
       if (communicator.metaInfo.knownSymmetry == null) communicator.enqueueMessage(rubbleAtLocationMessage);
 //      if (communicator.metaInfo.knownSymmetry == null) communicator.enqueueMessage(rubbleAtLocationMessage);
     }
-  }
-
-  private int lastChunkUpdate = -1;
-  /**
-   * checks if the chunkCenter is visible and updates the stored ChunkInfo for that chunk
-   * @return number of chunks that were visible and updated
-   * @throws GameActionException if sensing or writingToShared fails
-   */
-  protected int updateVisibleChunks() throws GameActionException {
-    int myChunk = Utils.locationToChunkIndex(Cache.PerTurn.CURRENT_LOCATION);
-    if (myChunk == lastChunkUpdate) return 0; // don't run this if we have't changed chunks
-//    rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
-//    if (rc.senseNearbyLocationsWithLead().length == 0 || )
-    boolean dangerous = Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 2;
-    // if high lead, explored+high rss -- else, explored rss
-    int leadInfo = (rc.senseNearbyLocationsWithLead(-1,2).length > 0 ? 0b10 : 0b01);
-    if (leadInfo == 1 && rc.senseNearbyLocationsWithLead().length > 0) {  // not high, check depleted
-      leadInfo = 0b11;
-    }
-
-    int chunksUpdated = 0;
-    for (Direction dir : Utils.directionsNine) {
-      if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
-      if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
-      if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
-      if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
-      int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-      MapLocation chunkCenter = Utils.chunkIndexToLocation(chunkToTest);
-      if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(chunkCenter, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
-
-        rc.setIndicatorDot(chunkCenter, 0, 255, 255);
-        communicator.chunkInfo.markExplored(chunkCenter, dangerous, leadInfo);
-        chunksUpdated++;
-      }
-    }
-    if (chunksUpdated > 0) {
-      System.out.println("Update " + chunksUpdated + " chunks! -- from " + Cache.PerTurn.CURRENT_LOCATION);
-      lastChunkUpdate = myChunk;
-    }
-    return chunksUpdated;
   }
 
   /**
@@ -362,7 +284,7 @@ public abstract class Robot {
     if (costB <= costC && rc.canMove(goalDir.rotateRight())) return goalDir.rotateRight();
     if (rc.canMove(goalDir.rotateLeft())) return goalDir.rotateLeft();
 //    if (rc.getRoundNum() == 28 && rc.getID() == 13009) {
-//      System.out.printf("Least rubble dir failed from %s\n\t%s:%d\n\t%s:%d\n\t%s:%d\n",Cache.PerTurn.CURRENT_LOCATION,goalDir,costA,goalDir.rotateRight(),costB,goalDir.rotateLeft(),costC);
+//      //System.out.printf("Least rubble dir failed from %s\n\t%s:%d\n\t%s:%d\n\t%s:%d\n",Cache.PerTurn.CURRENT_LOCATION,goalDir,costA,goalDir.rotateRight(),costB,goalDir.rotateLeft(),costC);
 //    }
     return null;
   }
@@ -524,9 +446,9 @@ public abstract class Robot {
 //      }
 //    }
     if (moved) {
-      rc.setIndicatorDot(toEscape, 255,0,0);
-      rc.setIndicatorString("running away from " + toEscape);
-      rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
+      //rc.setIndicatorDot(toEscape, 255,0,0);
+      //rc.setIndicatorString("running away from " + toEscape);
+      //rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
     }
 //    return !myLoc.isWithinDistanceSquared(toEscape, Cache.Permanent.VISION_RADIUS_SQUARED<<4) || !rc.onTheMap(myLoc.add(toEscape.directionTo(Cache.PerTurn.CURRENT_LOCATION)));
     return myLoc.isWithinDistanceSquared(target, Utils.DSQ_1by1);

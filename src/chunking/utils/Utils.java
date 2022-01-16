@@ -1,4 +1,4 @@
-package firstbot.utils;
+package chunking.utils;
 
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
@@ -26,14 +26,6 @@ public class Utils {
       Direction.SOUTHWEST,
       Direction.WEST,
       Direction.NORTHWEST,
-  };
-
-  /** Array of the 4 possible angled directions. */
-  public static final Direction[] ordinal_directions = {
-          Direction.NORTHEAST,
-          Direction.SOUTHEAST,
-          Direction.SOUTHWEST,
-          Direction.NORTHWEST,
   };
 
   /** Array of the 3x3 possible directions. */
@@ -261,36 +253,15 @@ public class Utils {
     return cooldownAfterMove / 10.0;
   }
 
-  /**
-   * converts a map location to a chunk index based on the chunk size calculated by cache
-   * @param location the location to get its chunk
-   * @return the chunk index
-   */
-  public static int locationToChunkIndex(MapLocation location) {
-    int x = location.x / Cache.Permanent.CHUNK_WIDTH;
-    int y = location.y / Cache.Permanent.CHUNK_HEIGHT;
+  public static int encodeLocationToChunkIndex(MapLocation mapLocation) {
+    int x = mapLocation.x / Cache.Permanent.CHUNK_WIDTH;
+    int y = mapLocation.y / Cache.Permanent.CHUNK_HEIGHT;
     return x + y * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
   }
 
-  /**
-   * gets the center coord of the given chunk
-   * @param chunkIndex the index of the chunk in our chunk info
-   * @return the center location of the chunk
-   */
-  public static MapLocation chunkIndexToLocation(int chunkIndex) {
+  public static MapLocation decodeChunkIndexToLocation(int chunkIndex) {
     int x = chunkIndex % Cache.Permanent.NUM_HORIZONTAL_CHUNKS * Cache.Permanent.CHUNK_WIDTH;
     int y = chunkIndex / Cache.Permanent.NUM_HORIZONTAL_CHUNKS * Cache.Permanent.CHUNK_HEIGHT;
-    return new MapLocation(x + Cache.Permanent.CHUNK_WIDTH / 2, y + Cache.Permanent.CHUNK_HEIGHT / 2);
-  }
-
-  /**
-   * convert the provided location to the center of its chunk
-   * @param location the location to find the chunk center
-   * @return the chunk center for the given location
-   */
-  public static MapLocation locationToChunkCenter(MapLocation location) {
-    int x = location.x - (location.x % Cache.Permanent.CHUNK_WIDTH);
-    int y = location.y - (location.y % Cache.Permanent.CHUNK_HEIGHT);
     return new MapLocation(x + Cache.Permanent.CHUNK_WIDTH / 2, y + Cache.Permanent.CHUNK_HEIGHT / 2);
   }
 
@@ -301,7 +272,7 @@ public class Utils {
   private static Map<String, Integer> byteCodeMap = new HashMap<>();
   public static void startByteCodeCounting(String reason) {
     if (byteCodeMap.putIfAbsent(reason, Clock.getBytecodeNum()) != null) { // we're already counting!
-      System.out.printf("Already counting for %s!!\n", reason);
+      //System.out.printf("Already counting for %s!!\n", reason);
     }
   }
 
@@ -309,10 +280,10 @@ public class Utils {
     int end = Clock.getBytecodeNum();
     Integer start = byteCodeMap.getOrDefault(reason, -1);
     if (start == -1) {
-      System.out.printf("Not counting bytecodes for %s!!!\n", reason);
+      //System.out.printf("Not counting bytecodes for %s!!!\n", reason);
       return;
     }
-    System.out.printf("%4d BC: %s\n", end-start, reason);
+    //System.out.printf("%4d BC: %s\n", end-start, reason);
     byteCodeMap.remove(reason);
   }
 
