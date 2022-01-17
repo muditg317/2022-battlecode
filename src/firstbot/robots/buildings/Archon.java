@@ -40,11 +40,13 @@ public class Archon extends Building {
   int leadAtArchonLocation = 0;
   int initialMinersToSpawn = 2;
 
+  private boolean canMoveToBetterLocation = false;
+
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
 //    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
-    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
+    //System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
 //    lastTurnStartingLead = 0;
@@ -83,23 +85,23 @@ public class Archon extends Building {
 //
 //        int b = 2 * xy255 / Cache.Permanent.MAP_AREA;
 //
-//        //rc.setIndicatorDot(loc, r, g, b);
+//        rc.setIndicatorDot(loc, r, g, b);
 //
 //        MapLocation tl = loc.translate(-Cache.Permanent.CHUNK_WIDTH/2, -1 + (int) Math.ceil(Cache.Permanent.CHUNK_HEIGHT/2.));
 //        MapLocation tr = loc.translate(-1 + (int) Math.ceil(Cache.Permanent.CHUNK_WIDTH/2.), -1 + (int) Math.ceil(Cache.Permanent.CHUNK_HEIGHT/2.));
 //        MapLocation bl = loc.translate(-Cache.Permanent.CHUNK_WIDTH/2, -Cache.Permanent.CHUNK_HEIGHT/2);
 //        MapLocation br = loc.translate(-1 + (int) Math.ceil(Cache.Permanent.CHUNK_WIDTH/2.), -Cache.Permanent.CHUNK_HEIGHT/2);
 //
-//        //rc.setIndicatorLine(tl, tr, r, g, b);
-//        //rc.setIndicatorLine(tl, bl, r, g, b);
-//        //rc.setIndicatorLine(br, tr, r, g, b);
-//        //rc.setIndicatorLine(br, bl, r, g, b);
+//        rc.setIndicatorLine(tl, tr, r, g, b);
+//        rc.setIndicatorLine(tl, bl, r, g, b);
+//        rc.setIndicatorLine(br, tr, r, g, b);
+//        rc.setIndicatorLine(br, bl, r, g, b);
 //        if (chunk < 33) {
-//          //rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
+//          rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
 //        } else if (chunk < 66) {
-//          //rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
+//          rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
 //        } else {
-//          //rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
+//          rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
 //        }
 //
 //      }
@@ -109,7 +111,7 @@ public class Archon extends Building {
     if (saveMeRequest != null || nearbyEnemies != null) {
       if (healthLostThisTurn < Cache.PerTurn.HEALTH) broadcastSaveMe();
       if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
-        //rc.setIndicatorString("Spawn soldier!");
+        rc.setIndicatorString("Spawn soldier!");
         soldiersSpawned++;
         leadSpent += RobotType.SOLDIER.buildCostLead;
       }
@@ -126,19 +128,7 @@ public class Archon extends Building {
 
     // Repair damaged droid
     if (rc.isActionReady()) {
-      if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) < 60 - movingAvgIncome) {
-        MapLocation lowestHealthFriend = null;
-        int lowestHealth = 9999;
-        for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
-          if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < lowestHealth && info.health < info.type.health) { // we see a damaged friendly
-            lowestHealth = info.health;
-            lowestHealthFriend = info.location;
-          }
-        }
-        if (lowestHealthFriend != null) rc.repair(lowestHealthFriend);
-      } else {
-        //rc.setIndicatorString("No repair, save lead: " + rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) + " / " + (60 - movingAvgIncome));
-      }
+      healNearbyDroids();
     }
 
     if (rc.getRoundNum() == SUICIDE_ROUND) {
@@ -156,13 +146,13 @@ public class Archon extends Building {
     movingTotalIncome += leadIncome - incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH];
     incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH] = leadIncome;
     movingAvgIncome = movingTotalIncome / INCOME_HISTORY_LENGTH;
-    //rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
+    rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
 //    if (whichArchonAmI == rc.getArchonCount()) {
 //      //System.out.println("Lead income: " + leadIncome);
 //    }
 
     healthLostThisTurn = lastTurnHealth - Cache.PerTurn.HEALTH;
-//    //rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
+//    rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
     lastTurnHealth = Cache.PerTurn.HEALTH;
   }
 
@@ -179,6 +169,20 @@ public class Archon extends Building {
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);
     archonLocs.add(Cache.PerTurn.CURRENT_LOCATION);
+
+//    int leastRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+//    MapLocation leastRubbleLocation = Cache.PerTurn.CURRENT_LOCATION;
+//    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, -1)) {
+//      int candidateRubble = rc.senseRubble(loc);
+//      if (candidateRubble < leastRubble) {
+//        leastRubble = candidateRubble;
+//        leastRubbleLocation = loc;
+//      }
+//    }
+
+//    if (!leastRubbleLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) {
+//
+//    }
 
 //    if (whichArchonAmI == rc.getArchonCount()) {
 //      //System.out.println("I am the last archon! locs: " + archonLocs);
@@ -278,8 +282,17 @@ public class Archon extends Building {
    */
   private void broadcastSaveMe() throws GameActionException {
     MapLocation toSave = offensiveEnemyCentroid();
-    saveMeRequest = new SaveMeMessage(toSave != null ? toSave : Cache.PerTurn.CURRENT_LOCATION, rc.getRoundNum());
-    communicator.enqueueMessage(saveMeRequest);
+    int advantage = 0;
+    for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ROBOTS) {
+      if (ri.type.damage > 0) {
+        if (ri.team == Cache.Permanent.OUR_TEAM) advantage += ri.type.health;
+        else advantage -= ri.type.health;
+      }
+    }
+    if (advantage >= 1) {
+      saveMeRequest = new SaveMeMessage(toSave != null ? toSave : Cache.PerTurn.CURRENT_LOCATION);
+      communicator.enqueueMessage(saveMeRequest);
+    }
   }
 
   /**
@@ -299,21 +312,21 @@ public class Archon extends Building {
 
 //      //System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
         if (buildRobot(RobotType.MINER, dir)) {
-          //rc.setIndicatorString("Spawn miner!");
+          rc.setIndicatorString("Spawn miner!");
           minersSpawned++;
           leadSpent += RobotType.MINER.buildCostLead;
         }
         break;
       case BUILDER:
         if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
-          //rc.setIndicatorString("Spawn builder!");
+          rc.setIndicatorString("Spawn builder!");
           buildersSpawned++;
           leadSpent += RobotType.BUILDER.buildCostLead;
         }
         break;
       case SOLDIER:
         if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
-          //rc.setIndicatorString("Spawn soldier!");
+          rc.setIndicatorString("Spawn soldier!");
           soldiersSpawned++;
           leadSpent += RobotType.SOLDIER.buildCostLead;
         }
@@ -360,6 +373,36 @@ public class Archon extends Building {
         rc.getRoundNum() % 10 == 0
         || buildersSpawned < 5
     );
+  }
+
+  private int lastHealedID = -1;
+  private void healNearbyDroids() throws GameActionException {
+    if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) < 60 - movingAvgIncome) {
+      if (lastHealedID != -1) {
+        if (rc.canSenseRobot(lastHealedID)) {
+          RobotInfo friendToHeal = rc.senseRobot(lastHealedID);
+          if (friendToHeal.health < friendToHeal.type.health && friendToHeal.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+            rc.repair(friendToHeal.location);
+            return;
+          }
+        }
+      }
+      lastHealedID = -1;
+      RobotInfo lowestHealthFriend = null;
+      int lowestHealth = 9999;
+      for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
+        if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < lowestHealth && info.health < info.type.health) { // we see a damaged friendly
+          lowestHealth = info.health;
+          lowestHealthFriend = info;
+        }
+      }
+      if (lowestHealthFriend != null) {
+        rc.repair(lowestHealthFriend.location);
+        lastHealedID = lowestHealthFriend.ID;
+      }
+    } else {
+      rc.setIndicatorString("No repair, save lead: " + rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) + " / " + (60 - movingAvgIncome));
+    }
   }
 
   private void sendLeadRefreshMessages() {

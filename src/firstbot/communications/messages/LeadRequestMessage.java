@@ -10,7 +10,6 @@ import firstbot.utils.Utils;
  * A message sent by wandering miners looking for information about where to go
  */
 public class LeadRequestMessage extends Message {
-  public static final int PRIORITY = 1;
   public static final MessageType TYPE = MessageType.LEAD_REQUEST;
   public static final int MESSAGE_LENGTH = 2;
 
@@ -18,15 +17,11 @@ public class LeadRequestMessage extends Message {
   public MapLocation location;
   public boolean answered;
 
-  public LeadRequestMessage(int priority, MapLocation from, int roundNum) {
-    super(priority, TYPE, MESSAGE_LENGTH, roundNum);
+  public LeadRequestMessage(MapLocation from) {
+    super(TYPE, MESSAGE_LENGTH);
     this.from = from;
     location = null;
     answered = false;
-  }
-
-  public LeadRequestMessage(MapLocation from, int roundNum) {
-    this(PRIORITY, from, roundNum);
   }
 
   public LeadRequestMessage(Header header, int information, int information2) {

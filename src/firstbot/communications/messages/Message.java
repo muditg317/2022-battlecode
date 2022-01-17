@@ -14,25 +14,25 @@ public abstract class Message {
    * MAX OF 8 types
    */
   public enum MessageType {
-    ARCHON_HELLO(ArchonHelloMessage.class, ArchonHelloMessage.MESSAGE_LENGTH),
-    LEAD_FOUND(LeadFoundMessage.class, LeadFoundMessage.MESSAGE_LENGTH),
-    LEAD_REQUEST(LeadRequestMessage.class, LeadRequestMessage.MESSAGE_LENGTH),
-    START_RAID(StartRaidMessage.class, StartRaidMessage.MESSAGE_LENGTH),
-    END_RAID(EndRaidMessage.class, EndRaidMessage.MESSAGE_LENGTH),
-    SAVE_ME(SaveMeMessage.class, SaveMeMessage.MESSAGE_LENGTH),
-    ARCHON_SAVED(ArchonSavedMessage.class, ArchonSavedMessage.MESSAGE_LENGTH),
-    RUBBLE_AT_LOCATION(RubbleAtLocationMessage.class, RubbleAtLocationMessage.MESSAGE_LENGTH),
-    ;
-    public final Class<? extends Message> messageClass;
+    ARCHON_HELLO(ArchonHelloMessage.MESSAGE_LENGTH),
+    LEAD_FOUND(LeadFoundMessage.MESSAGE_LENGTH),
+    LEAD_REQUEST(LeadRequestMessage.MESSAGE_LENGTH),
+    START_RAID(StartRaidMessage.MESSAGE_LENGTH),
+    END_FIGHT(EndFightMessage.MESSAGE_LENGTH),
+    SAVE_ME(SaveMeMessage.MESSAGE_LENGTH),
+    ARCHON_SAVED(ArchonSavedMessage.MESSAGE_LENGTH),
+    RUBBLE_AT_LOCATION(RubbleAtLocationMessage.MESSAGE_LENGTH),
+    JOIN_THE_FIGHT(JoinTheFightMessage.MESSAGE_LENGTH);
+//    public final Class<? extends Message> messageClass;
     public final int standardSize;
 //    public final Constructor<? extends Message> messageConstructor;
     public final int ordinal;
 
     public static final MessageType[] values = MessageType.values();
 
-    MessageType(Class<? extends Message> messageClass, int standardSize) {
+    MessageType(int standardSize) {
       this.standardSize = standardSize;
-      this.messageClass = messageClass;
+//      this.messageClass = messageClass;
 //      Constructor<? extends Message> messageConstructorTemp;
 //      try {
 //        messageConstructorTemp = messageClass.getConstructor(Header.class, int[].class);
@@ -56,7 +56,7 @@ public abstract class Message {
     private static final int PRIORITY_MAX = (1 << PRIORITY_SIZE) - 1;
 //    public final int priority; // 0-3             -- 2 bits [15,14]
 
-    private static final int TYPE_SIZE = 3;
+    private static final int TYPE_SIZE = 4;
     private static final int TYPE_START = PRIORITY_START - TYPE_SIZE;
     private static final int TYPE_MAX = (1 << TYPE_SIZE) - 1;
     public final MessageType type; // 0-7         -- 3 bits [13,11]
@@ -180,12 +180,10 @@ public abstract class Message {
 
   /**
    * create a message with the given meta-information
-   * @param priority message priority
    * @param type message type (from the MessageType enum)
    * @param numInformationInts how many ints of information are needed for this message
-   * @param roundNum the round on which this message is/was/will be sent
    */
-  public Message(int priority, MessageType type, int numInformationInts, int roundNum) {
+  public Message(MessageType type, int numInformationInts) {
     this(new Header(type, numInformationInts));
   }
 
@@ -202,9 +200,10 @@ public abstract class Message {
       case ARCHON_HELLO: return new ArchonHelloMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
       case START_RAID: return new StartRaidMessage(header, information);
-      case END_RAID: return new EndRaidMessage(header, information);
+      case END_FIGHT: return new EndFightMessage(header, information);
       case SAVE_ME: return new SaveMeMessage(header, information);
       case ARCHON_SAVED: return new ArchonSavedMessage(header, information);
+      case JOIN_THE_FIGHT: return new JoinTheFightMessage(header, information);
       default: throw new RuntimeException("Provided message type has length != 1 : " + header.type);
     }
   }

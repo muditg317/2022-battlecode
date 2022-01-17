@@ -8,21 +8,16 @@ import firstbot.utils.Utils;
  * A message sent by wandering miners looking for information about where to go
  */
 public class RubbleAtLocationMessage extends Message {
-  public static final int PRIORITY = 1;
   public static final MessageType TYPE = MessageType.RUBBLE_AT_LOCATION;
   public static final int MESSAGE_LENGTH = 2;
 
   public MapLocation location;
   public int rubble;
 
-  public RubbleAtLocationMessage(int priority, MapLocation location, int rubble, int roundNum) {
-    super(priority, TYPE, MESSAGE_LENGTH, roundNum);
+  public RubbleAtLocationMessage(MapLocation location, int rubble) {
+    super(TYPE, MESSAGE_LENGTH);
     this.location = location;
     this.rubble = rubble;
-  }
-
-  public RubbleAtLocationMessage(MapLocation location, int rubble, int roundNum) {
-    this(PRIORITY, location, rubble, roundNum);
   }
 
   public RubbleAtLocationMessage(Header header, int information, int information2) {

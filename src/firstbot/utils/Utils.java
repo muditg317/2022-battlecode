@@ -311,9 +311,9 @@ public class Utils {
 
   public static void cleanPrint() {
     Cache.PerTurn.print = new StringBuilder();
-    Cache.PerTurn.print.append(" *** ");
-    Cache.PerTurn.print.append(Cache.PerTurn.CURRENT_LOCATION);
-    Cache.PerTurn.print.append(" ***\n");
+//    Cache.PerTurn.print.append(" *** ");
+//    Cache.PerTurn.print.append(Cache.PerTurn.CURRENT_LOCATION);
+//    Cache.PerTurn.print.append(" ***\n");
   }
 
   /*

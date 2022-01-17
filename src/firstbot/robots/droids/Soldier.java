@@ -25,6 +25,8 @@ public class Soldier extends Droid {
 
   MapLocation archonToSave;
 
+  MapLocation fightToJoin;
+
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
     if (rc.senseNearbyLocationsWithLead().length > 15) VISION_FRACTION_TO_RAID = 6;
@@ -64,6 +66,10 @@ public class Soldier extends Droid {
 //    //System.out.println();
 
     // miner-like random exploration (random target and go to it)
+
+    if (fightToJoin != null && !fightToJoin.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED*2)) {
+      explorationTarget = fightToJoin;
+    }
 
     if (archonToSave != null && !needToRunHomeForSaving && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
       //Utils.print("archonToSave: " + archonToSave);
@@ -108,8 +114,8 @@ public class Soldier extends Droid {
     }
 
     if (robotToChase != null) {
-      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, robotToChase.location, 0, 0, 255);
-      //rc.setIndicatorDot(robotToChase.location, 0, 255, 0);
+      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, robotToChase.location, 0, 0, 255);
+      rc.setIndicatorDot(robotToChase.location, 0, 255, 0);
     }
 
     //TODO: should technically check cases again if I just moved and have action cooldown, but this is fine for now!!
@@ -120,64 +126,8 @@ public class Soldier extends Droid {
 
     // archon --> some type of formula to see if we can maybe kill it? or just prioritize closer unit if no soldier
 
-    //
 
-//    //rc.setIndicatorString("Soldier run - " + Cache.PerTurn.ROUND_NUM);
-//    // Try to attack someone
-//    if (raidTarget != null) attackTarget(raidTarget);
-//    //rc.setIndicatorString("Soldier attackTarget - " + Cache.PerTurn.ROUND_NUM);
-//
-//    checkForAndCallRaid();
-//    //rc.setIndicatorString("Soldier checkRaid - " + Cache.PerTurn.ROUND_NUM);
-//
-//    if (archonToSave != null) {
-//      if (raidTarget != null) {
-//        //rc.setIndicatorString("need to save arhcon! - end raid");
-//        broadcastEndRaid();
-//        raidTarget = null;
-//        raidValidated = false;
-//      }
-//      if (moveTowardsAvoidRubble(archonToSave) && checkDoneSaving()) {
-//        finishSaving();
-//      }
-//      attackNearby();
-//    } else if (raidTarget != null) {
-//      if (moveForRaid()) { // reached target
-////        raidTarget = null;
-//        if (!raidValidated) {
-//          for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-//            if (enemy.type == RobotType.ARCHON) {
-//              raidValidated = true;
-//              break;
-//            }
-//          }
-//          if (!raidValidated) {
-//            //rc.setIndicatorString("raid (" + raidTarget + ") not valid -- no archon");
-//            broadcastEndRaid();
-//          }
-////        } else if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > visionSize / VISION_FRACTION_TO_RAID) {
-////          broadcastEndRaid();
-//        }
-//      }
-//      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
-//    } else {
-////      moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(center));
-//      moveTowardsAvoidRubble(meetupPoint);
-//    }
-//    //rc.setIndicatorString("Soldier movement done - " + Cache.PerTurn.ROUND_NUM);
-//
-////    if (!raidValidated) {
-////      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-////        if (enemy.type == RobotType.ARCHON && (raidTarget == null || !raidTarget.equals(enemy.location))) {
-////          //rc.setIndicatorString("Saw archon at " + enemy.location + " -- call raid!");
-////          callForRaid(enemy.location);
-////        }
-////      }
-////    }
-//
-//    attackNearby();
-//    //rc.setIndicatorString("Soldier attackNearby - " + Cache.PerTurn.ROUND_NUM);
-
+    fightToJoin = null;
   }
 
 //  private FastQueue<MicroInfo> movementMicroOptions = new FastQueue<>(9);
@@ -220,7 +170,7 @@ public class Soldier extends Droid {
       }
     }
 
-    return best.execute();
+    return best != null && best.execute();
   }
 
   private boolean attackEnemySoldierOld() throws GameActionException {
@@ -358,7 +308,9 @@ public class Soldier extends Droid {
 
   }
 
+//  private int timesGoneIn = 0;
   private class MicroInfo {
+
     private MapLocation myLocation;
     private int rubble;
 //    private FastQueue<RobotInfo> soldierFriendsFastQueue;
@@ -447,6 +399,7 @@ public class Soldier extends Droid {
     }
 
     private void computeFriendlyDPSWithClosestEnemy() throws GameActionException {
+      if (closestEnemy == null) return;
       if (closestEnemy.location.isWithinDistanceSquared(myLocation, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
         // if the closest enemy is in range, chose it as attack priority
         numHelpingFriends++;
@@ -508,6 +461,12 @@ public class Soldier extends Droid {
         hasHugeAdvantage = true;
       }
 
+      if (!hasHugeAdvantage) {
+        //change score based on how close to enemy base vs ours
+        Utils.MapSymmetry guess = communicator.metaInfo.guessedSymmetry;
+
+      }
+
 //      //Utils.print("\n\nmyLocation: " + myLocation, "enemyDPS: " + enemyDPS, "friendlyDPS: " + friendlyDPS);
 //      //Utils.print("closestEnemy: " + closestEnemy, "bestEnemyInRange: " + bestEnemyInRange, "bestEnemyOnlyIfMoved: " + bestEnemyOnlyIfMoved, "chosenEnemyToAttack: " + chosenEnemyToAttack);
 //      //Utils.print("scoreDiff: " + scoreDiff, "scoreRatio: " + scoreRatio);
@@ -543,7 +502,9 @@ public class Soldier extends Droid {
         if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
         if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
         // i am NOT closer to our friends --> i'm staying further --> i'm better
-        return !this.myLocation.isWithinDistanceSquared(friendlySoldierCentroid(), other.myLocation.distanceSquaredTo(friendlySoldierCentroid()));
+        MapLocation myFriends = friendlySoldierCentroid();
+        if (myFriends == null) return true;
+        return !this.myLocation.isWithinDistanceSquared(myFriends, other.myLocation.distanceSquaredTo(myFriends));
       }
 
       if (this.mustAttackFirst != other.mustAttackFirst) {
@@ -597,11 +558,21 @@ public class Soldier extends Droid {
         return this.myLocation.distanceSquaredTo(parentArchonLoc) > other.myLocation.distanceSquaredTo(parentArchonLoc);
       }
 
+      if (this.mustMoveFirst != other.mustMoveFirst) {
+        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
+        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
+        return this.mustMoveFirst;
+      }
+
+
+      // what if action ready, moving does not result in the guy in action radius, and other must move first
+
 
       return false;
     }
 
     public boolean execute() throws GameActionException {
+      broadcastJoinOrEndMyFight(MicroInfo.this);
       if (mustMoveFirst) {
         move(Cache.PerTurn.CURRENT_LOCATION.directionTo(myLocation));
         return hasTarget && attackTarget(chosenEnemyToAttack.location);
@@ -788,7 +759,7 @@ public class Soldier extends Droid {
    */
   private void finishSaving() throws GameActionException {
     if (archonToSave == null) return;
-    communicator.enqueueMessage(new ArchonSavedMessage(archonToSave, rc.getRoundNum()));
+    communicator.enqueueMessage(new ArchonSavedMessage(archonToSave));
     archonToSave = null;
   }
 
@@ -807,7 +778,7 @@ public class Soldier extends Droid {
     }
     // if many bois nearby (1/4 of vision)
     int minToRaid = (visionSize-blocked) / VISION_FRACTION_TO_RAID;
-    //rc.setIndicatorString("soldiers: " + nearbySoldiers + " -- need: " + minToRaid);
+    rc.setIndicatorString("soldiers: " + nearbySoldiers + " -- need: " + minToRaid);
     return nearbySoldiers > minToRaid;
   }
 
@@ -817,7 +788,7 @@ public class Soldier extends Droid {
    */
   private void callForRaid(MapLocation location) {
     raidTarget = location;
-    StartRaidMessage message = new StartRaidMessage(raidTarget, rc.getRoundNum());
+    StartRaidMessage message = new StartRaidMessage(raidTarget);
     communicator.enqueueMessage(message);
   }
 
@@ -827,8 +798,8 @@ public class Soldier extends Droid {
    */
   private boolean checkForAndCallRaid() {
     if (!canCallRaid()) return false;
-    //rc.setIndicatorString("Ready to raid!");
-//      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, oppositeLoc, 0,0,255);
+    rc.setIndicatorString("Ready to raid!");
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, oppositeLoc, 0,0,255);
     callForRaid(myPotentialTarget);
     return true;
   }
@@ -837,7 +808,7 @@ public class Soldier extends Droid {
    * send a message to the team that the current raid is either over or invalid
    */
   public void broadcastEndRaid() {
-    EndRaidMessage message = new EndRaidMessage(raidTarget, rc.getRoundNum());
+    EndFightMessage message = new EndFightMessage(raidTarget);
     communicator.enqueueMessage(message);
   }
 
@@ -847,10 +818,28 @@ public class Soldier extends Droid {
    * @throws GameActionException if moving fails
    */
   private boolean moveForRaid() throws GameActionException {
-    //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
+    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
 //    return moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(raidTarget))
     return moveOptimalTowards(raidTarget)
         && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
+  }
+
+  /**
+   * send message to fellow soldiers to join my fight
+   */
+  private void broadcastJoinOrEndMyFight(MicroInfo executedMicro) {
+//    if (executedMicro.chosenEnemyToAttack != null && executedMicro.chosenEnemyToAttack.health <= Cache.Permanent.ROBOT_TYPE.damage) {
+//      communicator.enqueueMessage(new EndFightMessage(executedMicro.chosenEnemyToAttack.location));
+//      return;
+//    }
+//    MapLocation enemy = offensiveEnemyCentroid();
+//    if (enemy == null) return;
+//    MapLocation friends = friendlySoldierCentroid();
+//    if (friends == null) friends = Cache.PerTurn.CURRENT_LOCATION;
+//    MapLocation whereToJoin = enemy;//new MapLocation((enemy.x+friends.x) / 2, (enemy.y+friends.y) / 2);
+//    if (fightToJoin == null || !fightToJoin.isWithinDistanceSquared(whereToJoin, Cache.Permanent.VISION_RADIUS_SQUARED*2)) {
+//      communicator.enqueueMessage(new JoinTheFightMessage(whereToJoin));
+//    }
   }
 
   /**
@@ -974,12 +963,14 @@ public class Soldier extends Droid {
     super.ackMessage(message);
     if (message instanceof StartRaidMessage) {
       ackStartRaidMessage((StartRaidMessage) message);
-    } else if (message instanceof EndRaidMessage) {
-      ackEndRaidMessage((EndRaidMessage) message);
     } else if (message instanceof SaveMeMessage) {
       ackSaveMeMessage((SaveMeMessage) message);
     } else if (message instanceof ArchonSavedMessage) {
       ackArchonSavedMessage((ArchonSavedMessage) message);
+    } else if (message instanceof JoinTheFightMessage) {
+      ackJoinFightMessage((JoinTheFightMessage) message);
+    } else if (message instanceof EndFightMessage) {
+      ackEndFightMessage((EndFightMessage) message);
     }
   }
 
@@ -1004,22 +995,23 @@ public class Soldier extends Droid {
     }
   }
 
-  /**
-   * receive a message that a raid is over
-   * @param message raid ending message with a specific raid target
-   * @throws GameActionException if ack fails
-   */
-  private void ackEndRaidMessage(EndRaidMessage message) throws GameActionException {
-    // TODO: if not ready for raid (maybe not in center yet or something), ignore
-    if (raidTarget != null && raidTarget.equals(message.location)) {
-      raidTarget = null;
-      raidValidated = false;
-//      //System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
-    }
-    if (message.location.equals(myPotentialTarget)) {
-      canStartRaid = false;
-    }
-  }
+//  /**
+//   * receive a message that a raid is over
+//   * @param message raid ending message with a specific raid target
+//   * @throws GameActionException if ack fails
+//   */
+//  private void ackEndRaidMessage(EndRaidMessage message) throws GameActionException {
+//    // TODO: if not ready for raid (maybe not in center yet or something), ignore
+//    if (raidTarget != null && raidTarget.equals(message.location)) {
+//      raidTarget = null;
+//      raidValidated = false;
+////      //System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
+//    }
+//    if (message.location.equals(myPotentialTarget)) {
+//      canStartRaid = false;
+//    }
+//  }
+
 
   /**
    * acknowledge an archon that needs saving
@@ -1036,14 +1028,41 @@ public class Soldier extends Droid {
    * @param message the message to stop saving an archon
    */
   private void ackArchonSavedMessage(ArchonSavedMessage message) {
-    if (archonToSave != null && archonToSave.equals(message.location)) { // not already saving or 2/5 chance to switch
+    if (archonToSave != null && archonToSave.isWithinDistanceSquared(message.location, RobotType.ARCHON.visionRadiusSquared)) { // not already saving or 2/5 chance to switch
       archonToSave = null;
     }
   }
 
+  /**
+   * acknowledge an ongoing fight and decide if we should join
+   * @param message the message to join a fight
+   */
+  private void ackJoinFightMessage(JoinTheFightMessage message) {
+    if (fightToJoin == null || message.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, fightToJoin.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION)-1)) {
+      fightToJoin = message.location;
+    }
+  }
+
+  /**
+   * receive a message that a fight is over
+   * @param message fight ending message with a specific fight location
+   * @throws GameActionException if ack fails
+   */
+  private void ackEndFightMessage(EndFightMessage message) throws GameActionException {
+//    if (fightToJoin != null) {
+//      if (message.location.isWithinDistanceSquared(fightToJoin, Cache.Permanent.VISION_RADIUS_SQUARED*2)) {
+        fightToJoin = null;
+//        if (message.location.isWithinDistanceSquared(explorationTarget, Cache.Permanent.VISION_RADIUS_SQUARED*2)) {
+          randomizeExplorationTarget(true);
+//        }
+//      }
+//    }
+  }
+
+
   private void setIndicatorString(String custom, MapLocation enemyLocation) {
-    //rc.setIndicatorString(custom + "-" + enemyLocation + " aCD:" + rc.getActionCooldownTurns() + " mCD:" + rc.getMovementCooldownTurns());
-//    if (robotToChase != null) //rc.setIndicatorString("Soldier " + custom + " - " + enemyLocation + " robotToChase: " + robotToChase.location);
+    rc.setIndicatorString(custom + "-" + enemyLocation + " aCD:" + rc.getActionCooldownTurns() + " mCD:" + rc.getMovementCooldownTurns());
+//    if (robotToChase != null) rc.setIndicatorString("Soldier " + custom + " - " + enemyLocation + " robotToChase: " + robotToChase.location);
   }
 
 }

@@ -8,10 +8,8 @@ import firstbot.utils.Utils;
  * primarily used for testing
  */
 public class ArchonHelloMessage extends Message {
-  public static final int PRIORITY = 0;
   public static final MessageType TYPE = MessageType.ARCHON_HELLO;
   public static final int MESSAGE_LENGTH = 1;
-  public static final int ROUND = 1;
 
   private static final int HORIZ_MASK = 0b100;
   private static final int VERT_MASK = 0b10;
@@ -23,7 +21,7 @@ public class ArchonHelloMessage extends Message {
   public boolean notRotSym;
 
   public ArchonHelloMessage(MapLocation location, boolean notHorizSym, boolean notVertSym, boolean notRotSym) {
-    super(PRIORITY, TYPE, MESSAGE_LENGTH, ROUND);
+    super(TYPE, MESSAGE_LENGTH);
     this.location = location;
     this.notHorizSym =  notHorizSym;
     this.notVertSym = notVertSym;

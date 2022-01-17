@@ -70,8 +70,8 @@ public class Communicator {
      * @throws GameActionException if reading fails
      */
     public boolean chunkHasDangerousUnits(int chunkIndex) throws GameActionException {
-      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
+//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
       return (chunkInfoInt & ChunkInfo.DANGEROUS_UNIT_MASK) > 0;
     }
     public int chunkInfoBits(int chunkIndex) throws GameActionException {
@@ -81,24 +81,31 @@ public class Communicator {
       return (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & ChunkInfo.CHUNK_INFO_MASK;
     }
     public boolean chunkHasBeenExplored(int chunkIndex) throws GameActionException {
-      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-      return (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) > 0;
+//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+//      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
+      return ((Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & EXPLORATION_AND_LEAD_MASK) > 0;
     }
     public boolean chunkIsGoodForMinerExploration(int chunkIndex) throws GameActionException {
-      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
+//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
       // danger / lead depleted -- OR -- unexplored
       return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
     }
-    public boolean chunkIsGoodForMinerExploration(MapLocation mapLoc) throws GameActionException {
-      int chunkIndex = Utils.locationToChunkIndex(mapLoc);
-      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
+//    public boolean chunkIsGoodForMinerExploration(MapLocation mapLoc) throws GameActionException {
+//      int chunkIndex = Utils.locationToChunkIndex(mapLoc);
+//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+//      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
+//      // danger / lead depleted -- OR -- unexplored
+////      //System.out.println("");
+//      return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
+//    }
+    public boolean chunkIsGoodForOffensiveUnits(int chunkIndex) throws GameActionException {
+//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
+      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
       // danger / lead depleted -- OR -- unexplored
-//      //System.out.println("");
-      return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
+      return (chunkInfoInt & DANGEROUS_UNIT_MASK) > 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
     }
+
 
     /**
      * gets the current chunk and returns the center of the closest optimal chunk for miner to go to
@@ -127,7 +134,7 @@ public class Communicator {
             return Utils.chunkIndexToLocation(chunkToTest);
           case 0b00: // unexplored
           case 0b1000:
-            //System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
+//            //System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
             if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
         }
       }
@@ -175,6 +182,117 @@ public class Communicator {
         int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
         switch (chunkInfoBits(chunkToTest)) {
           case 0b10: // explored+rss
+            return Utils.chunkIndexToLocation(chunkToTest);
+          case 0b00: // unexplored
+            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
+        }
+      }
+      if (unexplored != -1) return Utils.chunkIndexToLocation(unexplored);
+      return null;
+    }
+    public MapLocation centerOfClosestOptimalChunkForOffensiveUnits(MapLocation source, boolean forceNotSource) throws GameActionException {
+      int myChunk = Utils.locationToChunkIndex(source);
+      if (!forceNotSource && chunkIsGoodForMinerExploration(myChunk)) {
+        //System.out.println("closest optimal is self! " + source);
+        return Utils.chunkIndexToLocation(myChunk);
+      }
+//      int leadFullChunk = -1;
+      int unexplored = -1;
+      boolean chunkLowX0 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0;
+      boolean chunkHighX0 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1;
+      boolean chunkLowY0 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0;
+      boolean chunkHighY0 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1;
+      boolean chunkLowX1 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1;
+      boolean chunkHighX1 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2;
+      boolean chunkLowY1 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1;
+      boolean chunkHighY1 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2;
+      for (Direction dir : Utils.directions) {
+//        if (Utils.rng.nextInt(3) == 0) continue;
+        if (chunkLowX0 && dir.dx < 0) continue;
+        if (chunkHighX0 && dir.dx > 0) continue;
+        if (chunkLowY0 && dir.dy < 0) continue;
+        if (chunkHighY0 && dir.dy > 0) continue;
+        int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        switch (chunkInfoBits(chunkToTest)) {
+          case 0b1000: // danger
+          case 0b1001:
+          case 0b1010:
+          case 0b1011:
+          case 0b1100:
+          case 0b1101:
+          case 0b1110:
+          case 0b1111:
+            return Utils.chunkIndexToLocation(chunkToTest);
+          case 0b00: // unexplored
+//            //System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
+            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
+        }
+      }
+      if (unexplored != -1) return Utils.chunkIndexToLocation(unexplored);
+      for (Direction dir : Utils.directions) {
+//        if (Utils.rng.nextInt(3) == 0) continue;
+        if (dir.dx == 0) continue;
+        if (chunkLowX1 && dir.dx < 0) continue;
+        if (chunkHighX1 && dir.dx > 0) continue;
+        if (chunkLowY0 && dir.dy < 0) continue;
+        if (chunkHighY0 && dir.dy > 0) continue;
+        int chunkToTest = myChunk + dir.dx*2 + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        switch (chunkInfoBits(chunkToTest)) {
+          case 0b1000: // danger
+          case 0b1001:
+          case 0b1010:
+          case 0b1011:
+          case 0b1100:
+          case 0b1101:
+          case 0b1110:
+          case 0b1111:
+            return Utils.chunkIndexToLocation(chunkToTest);
+          case 0b00: // unexplored
+            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
+        }
+      }
+//      if (unexplored != -1) return Utils.decodeChunkIndexToLocation(unexplored);
+      for (Direction dir : Utils.directions) {
+//        if (Utils.rng.nextInt(3) == 0) continue;
+        if (dir.dy == 0) continue;
+        if (chunkLowX0 && dir.dx < 0) continue;
+        if (chunkHighX0 && dir.dx > 0) continue;
+        if (chunkLowY1 && dir.dy < 0) continue;
+        if (chunkHighY1 && dir.dy > 0) continue;
+        int chunkToTest = myChunk + dir.dx + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        switch (chunkInfoBits(chunkToTest)) {
+          case 0b1000: // danger
+          case 0b1001:
+          case 0b1010:
+          case 0b1011:
+          case 0b1100:
+          case 0b1101:
+          case 0b1110:
+          case 0b1111:
+            return Utils.chunkIndexToLocation(chunkToTest);
+          case 0b00: // unexplored
+            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
+        }
+      }
+//      if (unexplored != -1) return Utils.decodeChunkIndexToLocation(unexplored);
+      for (Direction dir : Utils.directions) {
+//        if (Utils.rng.nextInt(3) == 0) continue;
+        if (dir.dx == 0) continue;
+        if (dir.dy == 0) continue;
+        if (chunkLowX1 && dir.dx < 0) continue;
+        if (chunkHighX1 && dir.dx > 0) continue;
+        if (chunkLowY1 && dir.dy < 0) continue;
+        if (chunkHighY1 && dir.dy > 0) continue;
+        int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
+        switch (chunkInfoBits(chunkToTest)) {
+          case 0b1000: // danger
+          case 0b1001:
+          case 0b1010:
+          case 0b1011:
+          case 0b1100:
+          case 0b1101:
+          case 0b1110:
+          case 0b1111:
             return Utils.chunkIndexToLocation(chunkToTest);
           case 0b00: // unexplored
             if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
@@ -237,7 +355,8 @@ public class Communicator {
     private int validRegionStart; // 0-62    -- 6 bits [15,10]
     private int validRegionEnd;   // 0-62    -- 6 bits [9,4]
 
-    public static final int SYMMETRY_INFO_IND = VALID_REGION_IND;
+    public static final int SYMMETRY_INFO_SIZE = 0;
+    public static final int SYMMETRY_INFO_IND = VALID_REGION_IND - SYMMETRY_INFO_SIZE;
     public Utils.MapSymmetry knownSymmetry; // determined by next three bools
     public Utils.MapSymmetry guessedSymmetry; // determined by next three bools
     private static final int NOT_HORIZ_MASK = 0b1000;
@@ -250,113 +369,19 @@ public class Communicator {
 
     public boolean dirty;
 
+    public static final int ARCHON_INFO_SIZE = 2;
+    public static final int ARCHON_INFO_IND = SYMMETRY_INFO_IND - ARCHON_INFO_SIZE;
+    public MapLocation ourArchon1;
+    public MapLocation ourArchon2;
+    public MapLocation ourArchon3;
+    public MapLocation ourArchon4;
+
     public MetaInfo() {
       knownSymmetry = null;
       guessedSymmetry = null;
       notHorizontal = false;
       notVertical = false;
       notRotational = false;
-
-//      chunks = new ChunkInfo[Utils.NUM_MAP_CHUNKS];
-//      chunks[0] = new ChunkInfo();
-//      chunks[1] = new ChunkInfo();
-//      chunks[2] = new ChunkInfo();
-//      chunks[3] = new ChunkInfo();
-//      chunks[4] = new ChunkInfo();
-//      chunks[5] = new ChunkInfo();
-//      chunks[6] = new ChunkInfo();
-//      chunks[7] = new ChunkInfo();
-//      chunks[8] = new ChunkInfo();
-//      chunks[9] = new ChunkInfo();
-//      chunks[10] = new ChunkInfo();
-//      chunks[11] = new ChunkInfo();
-//      chunks[12] = new ChunkInfo();
-//      chunks[13] = new ChunkInfo();
-//      chunks[14] = new ChunkInfo();
-//      chunks[15] = new ChunkInfo();
-//      chunks[16] = new ChunkInfo();
-//      chunks[17] = new ChunkInfo();
-//      chunks[18] = new ChunkInfo();
-//      chunks[19] = new ChunkInfo();
-//      chunks[20] = new ChunkInfo();
-//      chunks[21] = new ChunkInfo();
-//      chunks[22] = new ChunkInfo();
-//      chunks[23] = new ChunkInfo();
-//      chunks[24] = new ChunkInfo();
-//      chunks[25] = new ChunkInfo();
-//      chunks[26] = new ChunkInfo();
-//      chunks[27] = new ChunkInfo();
-//      chunks[28] = new ChunkInfo();
-//      chunks[29] = new ChunkInfo();
-//      chunks[30] = new ChunkInfo();
-//      chunks[31] = new ChunkInfo();
-//      chunks[32] = new ChunkInfo();
-//      chunks[33] = new ChunkInfo();
-//      chunks[34] = new ChunkInfo();
-//      chunks[35] = new ChunkInfo();
-//      chunks[36] = new ChunkInfo();
-//      chunks[37] = new ChunkInfo();
-//      chunks[38] = new ChunkInfo();
-//      chunks[39] = new ChunkInfo();
-//      chunks[40] = new ChunkInfo();
-//      chunks[41] = new ChunkInfo();
-//      chunks[42] = new ChunkInfo();
-//      chunks[43] = new ChunkInfo();
-//      chunks[44] = new ChunkInfo();
-//      chunks[45] = new ChunkInfo();
-//      chunks[46] = new ChunkInfo();
-//      chunks[47] = new ChunkInfo();
-//      chunks[48] = new ChunkInfo();
-//      chunks[49] = new ChunkInfo();
-//      chunks[50] = new ChunkInfo();
-//      chunks[51] = new ChunkInfo();
-//      chunks[52] = new ChunkInfo();
-//      chunks[53] = new ChunkInfo();
-//      chunks[54] = new ChunkInfo();
-//      chunks[55] = new ChunkInfo();
-//      chunks[56] = new ChunkInfo();
-//      chunks[57] = new ChunkInfo();
-//      chunks[58] = new ChunkInfo();
-//      chunks[59] = new ChunkInfo();
-//      chunks[60] = new ChunkInfo();
-//      chunks[61] = new ChunkInfo();
-//      chunks[62] = new ChunkInfo();
-//      chunks[63] = new ChunkInfo();
-//      chunks[64] = new ChunkInfo();
-//      chunks[65] = new ChunkInfo();
-//      chunks[66] = new ChunkInfo();
-//      chunks[67] = new ChunkInfo();
-//      chunks[68] = new ChunkInfo();
-//      chunks[69] = new ChunkInfo();
-//      chunks[70] = new ChunkInfo();
-//      chunks[71] = new ChunkInfo();
-//      chunks[72] = new ChunkInfo();
-//      chunks[73] = new ChunkInfo();
-//      chunks[74] = new ChunkInfo();
-//      chunks[75] = new ChunkInfo();
-//      chunks[76] = new ChunkInfo();
-//      chunks[77] = new ChunkInfo();
-//      chunks[78] = new ChunkInfo();
-//      chunks[79] = new ChunkInfo();
-//      chunks[80] = new ChunkInfo();
-//      chunks[81] = new ChunkInfo();
-//      chunks[82] = new ChunkInfo();
-//      chunks[83] = new ChunkInfo();
-//      chunks[84] = new ChunkInfo();
-//      chunks[86] = new ChunkInfo();
-//      chunks[87] = new ChunkInfo();
-//      chunks[88] = new ChunkInfo();
-//      chunks[89] = new ChunkInfo();
-//      chunks[90] = new ChunkInfo();
-//      chunks[91] = new ChunkInfo();
-//      chunks[92] = new ChunkInfo();
-//      chunks[93] = new ChunkInfo();
-//      chunks[94] = new ChunkInfo();
-//      chunks[95] = new ChunkInfo();
-//      chunks[96] = new ChunkInfo();
-//      chunks[97] = new ChunkInfo();
-//      chunks[98] = new ChunkInfo();
-//      chunks[99] = new ChunkInfo();
 
       dirty = false;
     }
@@ -439,6 +464,34 @@ public class Communicator {
       //System.out.printf("NEW SYMMETRY KNOWLEDGE\n\tnot:%s\n\tknown:%s\n\tguess:%s\n", blockedSymmetry, knownSymmetry, guessedSymmetry);
       dirty = true;
       encodeAndWrite();
+    }
+
+    public void readArchonLocs() throws GameActionException {
+      ourArchon1 = Utils.chunkIndexToLocation(Global.rc.readSharedArray(ARCHON_INFO_IND) & 0b11111111);
+      ourArchon2 = Utils.chunkIndexToLocation((Global.rc.readSharedArray(ARCHON_INFO_IND) >>> 8) & 0b11111111);
+      ourArchon3 = Utils.chunkIndexToLocation(Global.rc.readSharedArray(ARCHON_INFO_IND+1) & 0b11111111);
+      ourArchon4 = Utils.chunkIndexToLocation((Global.rc.readSharedArray(ARCHON_INFO_IND+1) >>> 8) & 0b11111111);
+    }
+
+    public void setArchonLocs(int whichArchon, MapLocation archonLoc) throws GameActionException {
+      switch (whichArchon) {
+        case 1:
+          ourArchon1 = archonLoc;
+          Global.rc.writeSharedArray(ARCHON_INFO_IND, Global.rc.readSharedArray(ARCHON_INFO_IND) | Utils.encodeLocation(archonLoc));
+          break;
+        case 2:
+          ourArchon2 = archonLoc;
+          Global.rc.writeSharedArray(ARCHON_INFO_IND, Global.rc.readSharedArray(ARCHON_INFO_IND) | Utils.encodeLocation(archonLoc));
+          break;
+        case 3:
+          ourArchon3 = archonLoc;
+          Global.rc.writeSharedArray(ARCHON_INFO_IND+1, Global.rc.readSharedArray(ARCHON_INFO_IND+1) | Utils.encodeLocation(archonLoc));
+          break;
+        case 4:
+          ourArchon4 = archonLoc;
+          Global.rc.writeSharedArray(ARCHON_INFO_IND+1, Global.rc.readSharedArray(ARCHON_INFO_IND+1) | Utils.encodeLocation(archonLoc));
+          break;
+      }
     }
   }
 
@@ -558,17 +611,21 @@ public class Communicator {
     while (origin < ending) {
 //      //System.out.println("\nBefore  read/ack message: " + Clock.getBytecodeNum());
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
+      if (message == null) {
+        int tries = 1;
+        do {
+          message = readMessageAt(++origin % NUM_MESSAGING_INTS);
+        } while (--tries > 0 && message == null);
+      }
       if (message != null) {
-//      if (message.header.withinCyclic(lastAckdRound, maxRoundNum)) { // skip stale messages
-//      if (message.header.withinRounds(thisRound-2,thisRound)) { // skip stale messages
-      Global.robot.ackMessage(message);
-//      received.add(message);
+        Global.robot.ackMessage(message);
         messages++;
-//      }
         origin += message.size();
 //      //System.out.println("\nCost to read/ack message: " + Clock.getBytecodeNum());
-//      } else {
-//        origin++;
+      } else {
+        metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
+        metaInfo.encodeAndWrite();
+        break;
       }
     }
     return messages;
@@ -595,7 +652,7 @@ public class Communicator {
       //System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
       //System.out.println("Header int: " + headerInt);
       //System.out.println("Header: " + header);
-      metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
+//      metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
       return null;
 //      if (messageOrigin < metaInfo.validRegionEnd || (metaInfo.validRegionStart < metaInfo.validRegionEnd && messageOrigin < NUM_MESSAGING_INTS)) {
 //        return readMessageAt((messageOrigin+1) % NUM_MESSAGING_INTS);
@@ -682,6 +739,8 @@ public class Communicator {
     int origin = metaInfo.validRegionEnd;
     int messageOrigin = (origin + 1) % NUM_MESSAGING_INTS;
     //System.out.printf("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
+    Utils.print(String.format("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits)));
+    Global.rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,0,0);
 //    //System.out.println(message.header);
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
@@ -694,7 +753,7 @@ public class Communicator {
       rc.writeSharedArray(origin, messageChunk);
     }
     sentMessages.add(message);
-    //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,255,0);
+    rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,255,0);
     metaInfo.validRegionEnd = origin;
     if (updateStart) { // first message!
       metaInfo.validRegionStart = origin - message.header.numInformationInts;

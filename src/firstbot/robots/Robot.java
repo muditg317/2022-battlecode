@@ -44,6 +44,7 @@ public abstract class Robot {
     Global.setupGlobals(rc, this);
     Utils.setUpStatics();
     Cache.setup();
+    Utils.cleanPrint();
     this.rc = rc;
     this.communicator = Global.communicator;
 
@@ -51,7 +52,7 @@ public abstract class Robot {
     // Print spawn message
 //    //System.out.println(this.creationStats);
     // Set indicator message
-    //rc.setIndicatorString("Just spawned!");
+    rc.setIndicatorString("Just spawned!");
     turnCount = -1;
   }
 
@@ -84,24 +85,23 @@ public abstract class Robot {
     while (true) {
       // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
       try {
-        Utils.cleanPrint();
         this.runTurnWrapper();
-        if (rc.getType() == RobotType.SOLDIER) {
-          //System.out.println(Cache.PerTurn.print.toString());
+        if (rc.getType() == RobotType.SOLDIER && Cache.PerTurn.print.toString().length() > 5) {
+          System.out.println(Cache.PerTurn.print.toString());
         }
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
         //System.out.println(rc.getType() + " GameActionException");
         //System.out.println(Cache.PerTurn.print);
         e.printStackTrace();
-        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
+        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
         //System.out.println(rc.getType() + " Exception");
         //System.out.println(Cache.PerTurn.print);
         e.printStackTrace();
-        //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
+        rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
       } finally {
         // end turn - make code wait until next turn
@@ -115,6 +115,7 @@ public abstract class Robot {
           }
         }
       }
+      Utils.cleanPrint();
     }
   }
 
@@ -128,7 +129,7 @@ public abstract class Robot {
 
     Cache.updateOnTurn();
     if (!dontYield) {
-      //rc.setIndicatorString("ac: " + rc.getActionCooldownTurns() + " mc: " + rc.getMovementCooldownTurns());
+      rc.setIndicatorString("ac: " + rc.getActionCooldownTurns() + " mc: " + rc.getMovementCooldownTurns());
     }
     dontYield = false;
 
@@ -155,7 +156,7 @@ public abstract class Robot {
     }
 
     if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) { // took too much bytecode
-      //rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
+      rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
       turnCount = rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED;
       dontYield = true;
     } else { // still on our turn logic
@@ -218,7 +219,7 @@ public abstract class Robot {
   protected void updateSymmetryComms() throws GameActionException {
     // TODO: do it based on how many robots we have spawned (or total friends alive) or something
     if (Cache.PerTurn.HEALTH > 20 && communicator.metaInfo.knownSymmetry == null && Cache.PerTurn.ROUND_NUM < MAX_TURNS_FIGURE_SYMMETRY) {
-      RubbleAtLocationMessage rubbleAtLocationMessage = new RubbleAtLocationMessage(Cache.PerTurn.CURRENT_LOCATION, rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.ROUND_NUM);
+      RubbleAtLocationMessage rubbleAtLocationMessage = new RubbleAtLocationMessage(Cache.PerTurn.CURRENT_LOCATION, rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION));
       ackRubbleAtLocationMessage(rubbleAtLocationMessage);
       if (communicator.metaInfo.knownSymmetry == null) communicator.enqueueMessage(rubbleAtLocationMessage);
 //      if (communicator.metaInfo.knownSymmetry == null) communicator.enqueueMessage(rubbleAtLocationMessage);
@@ -234,7 +235,7 @@ public abstract class Robot {
   protected int updateVisibleChunks() throws GameActionException {
     int myChunk = Utils.locationToChunkIndex(Cache.PerTurn.CURRENT_LOCATION);
     if (myChunk == lastChunkUpdate) return 0; // don't run this if we have't changed chunks
-    //rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
+    rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
 //    if (rc.senseNearbyLocationsWithLead().length == 0 || )
     boolean dangerous = Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 2;
     // if high lead, explored+high rss -- else, explored rss
@@ -255,7 +256,7 @@ public abstract class Robot {
 
       if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(chunkCenter, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
 //        //System.out.println("EXPLORED! dangerous: " + dangerous + " leadInfo: " + leadInfo);
-        //rc.setIndicatorDot(chunkCenter, 0, 255, 255);
+        rc.setIndicatorDot(chunkCenter, 0, 255, 255);
         communicator.chunkInfo.markExplored(chunkCenter, dangerous, leadInfo);
         chunksUpdated++;
       }
@@ -535,9 +536,9 @@ public abstract class Robot {
 //      }
 //    }
     if (moved) {
-      //rc.setIndicatorDot(toEscape, 255,0,0);
-      //rc.setIndicatorString("running away from " + toEscape);
-      //rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
+      rc.setIndicatorDot(toEscape, 255,0,0);
+      rc.setIndicatorString("running away from " + toEscape);
+      rc.setIndicatorLine(myLoc, toEscape, 0, 255, 0);
     }
 //    return !myLoc.isWithinDistanceSquared(toEscape, Cache.Permanent.VISION_RADIUS_SQUARED<<4) || !rc.onTheMap(myLoc.add(toEscape.directionTo(Cache.PerTurn.CURRENT_LOCATION)));
     return myLoc.isWithinDistanceSquared(target, Utils.DSQ_1by1);
