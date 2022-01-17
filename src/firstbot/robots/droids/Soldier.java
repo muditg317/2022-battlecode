@@ -553,7 +553,7 @@ public class Soldier extends Droid {
       }
 
       // neither me nor other has huge advantage, and both can attack
-      if (this.mustAttackFirst && other.mustAttackFirst) {
+      if (this.mustAttackFirst) {
         // one set of logic
         // if this goes out of action radius and other does not, then this is better (careful about rubble?)
         // if both go out of action radius, then higher score is better. If tied score, pick further one out of action radius
