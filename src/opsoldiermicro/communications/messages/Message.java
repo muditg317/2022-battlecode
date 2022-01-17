@@ -1,4 +1,4 @@
-package firstbot.communications.messages;
+package opsoldiermicro.communications.messages;
 
 //import java.lang.reflect.Constructor;
 //import java.lang.reflect.InvocationTargetException;

@@ -1,4 +1,4 @@
-package firstbot.robots;
+package opsoldiermicro.robots;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -7,19 +7,19 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.communications.Communicator;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.RubbleAtLocationMessage;
-import firstbot.robots.buildings.Archon;
-import firstbot.robots.buildings.Laboratory;
-import firstbot.robots.buildings.Watchtower;
-import firstbot.robots.droids.Builder;
-import firstbot.robots.droids.Miner;
-import firstbot.robots.droids.Sage;
-import firstbot.robots.droids.Soldier;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
+import opsoldiermicro.communications.Communicator;
+import opsoldiermicro.communications.messages.Message;
+import opsoldiermicro.communications.messages.RubbleAtLocationMessage;
+import opsoldiermicro.robots.buildings.Archon;
+import opsoldiermicro.robots.buildings.Laboratory;
+import opsoldiermicro.robots.buildings.Watchtower;
+import opsoldiermicro.robots.droids.Builder;
+import opsoldiermicro.robots.droids.Miner;
+import opsoldiermicro.robots.droids.Sage;
+import opsoldiermicro.robots.droids.Soldier;
+import opsoldiermicro.utils.Cache;
+import opsoldiermicro.utils.Global;
+import opsoldiermicro.utils.Utils;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = false;

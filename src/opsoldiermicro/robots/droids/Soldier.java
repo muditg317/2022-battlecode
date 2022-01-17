@@ -1,9 +1,9 @@
-package firstbot.robots.droids;
+package opsoldiermicro.robots.droids;
 
 import battlecode.common.*;
-import firstbot.communications.messages.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import opsoldiermicro.communications.messages.*;
+import opsoldiermicro.utils.Cache;
+import opsoldiermicro.utils.Utils;
 
 public class Soldier extends Droid {
   /* fraction of distance to the target where bots should meet up */

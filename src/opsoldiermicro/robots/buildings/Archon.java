@@ -1,12 +1,12 @@
-package firstbot.robots.buildings;
+package opsoldiermicro.robots.buildings;
 
 import battlecode.common.*;
-import firstbot.communications.messages.ArchonHelloMessage;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import opsoldiermicro.communications.messages.ArchonHelloMessage;
+import opsoldiermicro.communications.messages.ArchonSavedMessage;
+import opsoldiermicro.communications.messages.Message;
+import opsoldiermicro.communications.messages.SaveMeMessage;
+import opsoldiermicro.utils.Cache;
+import opsoldiermicro.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +44,7 @@ public class Archon extends Building {
     super(rc);
 //    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
-    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
+//    //System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
 //    lastTurnStartingLead = 0;

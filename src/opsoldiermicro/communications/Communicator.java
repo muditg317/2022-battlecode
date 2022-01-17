@@ -1,11 +1,11 @@
-package firstbot.communications;
+package opsoldiermicro.communications;
 
 import battlecode.common.*;
-import firstbot.communications.messages.Message;
-import firstbot.containers.FastQueue;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
+import opsoldiermicro.communications.messages.Message;
+import opsoldiermicro.containers.FastQueue;
+import opsoldiermicro.utils.Cache;
+import opsoldiermicro.utils.Global;
+import opsoldiermicro.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;

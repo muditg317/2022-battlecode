@@ -1,4 +1,4 @@
-package firstbot.robots.droids;
+package opsoldiermicro.robots.droids;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -6,9 +6,9 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.robots.Robot;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import opsoldiermicro.robots.Robot;
+import opsoldiermicro.utils.Cache;
+import opsoldiermicro.utils.Utils;
 
 public abstract class Droid extends Robot {
 

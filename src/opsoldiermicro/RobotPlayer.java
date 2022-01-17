@@ -1,8 +1,8 @@
-package firstbot;
+package opsoldiermicro;
 
 import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
-import firstbot.robots.Robot;
+import opsoldiermicro.robots.Robot;
 
 /**
  * This RobotPlayer will create a custom object for each type of robot which internally handles what it should do

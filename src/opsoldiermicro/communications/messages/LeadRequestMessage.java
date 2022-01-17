@@ -1,9 +1,9 @@
-package firstbot.communications.messages;
+package opsoldiermicro.communications.messages;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
+import opsoldiermicro.utils.Global;
+import opsoldiermicro.utils.Utils;
 
 
 /**

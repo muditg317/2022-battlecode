@@ -1,4 +1,4 @@
-package firstbot.robots.droids;
+package opsoldiermicro.robots.droids;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -7,11 +7,11 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
-import firstbot.communications.messages.LeadFoundMessage;
-import firstbot.communications.messages.LeadRequestMessage;
-import firstbot.communications.messages.Message;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import opsoldiermicro.communications.messages.LeadFoundMessage;
+import opsoldiermicro.communications.messages.LeadRequestMessage;
+import opsoldiermicro.communications.messages.Message;
+import opsoldiermicro.utils.Cache;
+import opsoldiermicro.utils.Utils;
 
 import java.util.Arrays;
 
@@ -332,7 +332,6 @@ public class Miner extends Droid {
 
     int minBound = 2;
     MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(-1, minBound);
-    System.out.println("getOptimalLeadMiningPosition: " + leadLocs.length);
     while (leadLocs.length > MAX_LEAD_LOCS_LEN) {
       int minLead = 99999;
       int maxLead = -1;
@@ -341,7 +340,7 @@ public class Miner extends Droid {
         if (lead < minLead) minLead = lead;
         if (lead > maxLead) maxLead = lead;
       }
-      System.out.println("minLead: " + minLead + " maxLead: " + maxLead);
+//      //System.out.println("minLead: " + minLead + " maxLead: " + maxLead);
       if (minLead < maxLead) {
         minBound = (maxLead + minLead) / 2;
         leadLocs = rc.senseNearbyLocationsWithLead(-1, minBound);
