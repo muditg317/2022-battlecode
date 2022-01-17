@@ -4,13 +4,14 @@ public class FastQueue<T> {
   private T[] array;
   private int front;
   private int size;
+  private int iter;
 
   public FastQueue(int arraySize) {
     array = (T[]) new Object[arraySize];
   }
 
-  public void push(T message) {
-    array[(front + (size++)) % array.length] = message;
+  public void push(T item) {
+    array[(front + (size++)) % array.length] = item;
   }
 
   public T popFront() {
@@ -26,15 +27,24 @@ public class FastQueue<T> {
     return size == 0;
   }
 
-  public int getSize() {
+  public int size() {
     return size;
   }
 
-  public void reset() {
+  public void clear() {
     size = 0;
   }
 
-  public T getFrontMessage() {
+  public T getFront() {
     return array[front % array.length];
+  }
+
+  public int startIter() {
+    iter = front;
+    return size;
+  }
+
+  public T next() {
+    return array[iter++ % array.length];
   }
 }

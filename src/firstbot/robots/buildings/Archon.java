@@ -12,9 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -50;
+  public static final int SUICIDE_ROUND = -100;
 
-  private int whichArchonAmI;
+  private int whichArchonAmI = 1;
   private List<MapLocation> archonLocs;
 
   private final int localLead;
@@ -42,21 +42,21 @@ public class Archon extends Building {
 
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
-    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
+//    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
     archonLocs = new ArrayList<>();
 //    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
-    lastTurnStartingLead = 0;
+//    lastTurnStartingLead = 0;
     incomeHistory = new int[INCOME_HISTORY_LENGTH];
-    leadIncome = 0;
-    leadSpent = 0;
-    movingTotalIncome = 0;
-    movingAvgIncome = 0;
-
-    lastTurnHealth = 0;
-    healthLostThisTurn = 0;
-    saveMeRequest = null;
+//    leadIncome = 0;
+//    leadSpent = 0;
+//    movingTotalIncome = 0;
+//    movingAvgIncome = 0;
+//
+//    lastTurnHealth = 0;
+//    healthLostThisTurn = 0;
+//    saveMeRequest = null;
   }
 
   @Override
@@ -94,13 +94,13 @@ public class Archon extends Building {
 //        rc.setIndicatorLine(tl, bl, r, g, b);
 //        rc.setIndicatorLine(br, tr, r, g, b);
 //        rc.setIndicatorLine(br, bl, r, g, b);
-////        if (chunk < 33) {
-////          rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
-////        } else if (chunk < 66) {
-////          rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
-////        } else {
-////          rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
-////        }
+//        if (chunk < 33) {
+//          rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
+//        } else if (chunk < 66) {
+//          rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
+//        } else {
+//          rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
+//        }
 //
 //      }
 //    }
@@ -117,8 +117,11 @@ public class Archon extends Building {
 
     // Spawn new droid if none to repair
     int archons = rc.getArchonCount();
-    if (rc.isActionReady() && rc.getRoundNum() % archons == whichArchonAmI % archons) {
-      spawnDroid();
+    if (rc.isActionReady()) {
+      RobotType typeToSpawn = determineSpawnDroidType();
+      if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) >= typeToSpawn.buildCostLead*2 || rc.getRoundNum() % archons == whichArchonAmI % archons || whichArchonAmI == archons) {
+        spawnDroid(typeToSpawn);
+      }
     }
 
     // Repair damaged droid
@@ -251,6 +254,7 @@ public class Archon extends Building {
    * @param message the hello
    */
   public void ackArchonHello(ArchonHelloMessage message) {
+    whichArchonAmI++;
     archonLocs.add(message.location);
   }
 
@@ -281,36 +285,48 @@ public class Archon extends Building {
   /**
    * Spawn some droid around the archon based on some heuristics
    */
-  private void spawnDroid() throws GameActionException {
-    if (needMiner()) {
-      MapLocation bestLead = getWeightedAvgLeadLoc();
-      // TODO: if bestLead is null, spawn on low rubble instead of random
+  private void spawnDroid(RobotType typeToSpawn) throws GameActionException {
+    switch(typeToSpawn) {
+      case MINER:
+        MapLocation bestLead = getWeightedAvgLeadLoc();
+        // TODO: if bestLead is null, spawn on low rubble instead of random
 
-      Direction dir = bestLead == null
-          ? Utils.randomDirection()
-          : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
-      // using getOptimalDirectionTowards(bestLead) causes slightly worse performance lol
-      if (dir == Direction.CENTER) dir = Utils.randomDirection();
+        Direction dir = bestLead == null
+                ? Utils.randomDirection()
+                : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
+        // using getOptimalDirectionTowards(bestLead) causes slightly worse performance lol
+        if (dir == Direction.CENTER) dir = Utils.randomDirection();
 
 //      System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
-      if (buildRobot(RobotType.MINER, dir)) {
-        rc.setIndicatorString("Spawn miner!");
-        minersSpawned++;
-        leadSpent += RobotType.MINER.buildCostLead;
-      }
-    } else if (needBuilder()) {
-      if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
-        rc.setIndicatorString("Spawn builder!");
-        buildersSpawned++;
-        leadSpent += RobotType.BUILDER.buildCostLead;
-      }
-    } else {
-      if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
-        rc.setIndicatorString("Spawn soldier!");
-        soldiersSpawned++;
-        leadSpent += RobotType.SOLDIER.buildCostLead;
-      }
+        if (buildRobot(RobotType.MINER, dir)) {
+          rc.setIndicatorString("Spawn miner!");
+          minersSpawned++;
+          leadSpent += RobotType.MINER.buildCostLead;
+        }
+        break;
+      case BUILDER:
+        if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
+          rc.setIndicatorString("Spawn builder!");
+          buildersSpawned++;
+          leadSpent += RobotType.BUILDER.buildCostLead;
+        }
+        break;
+      case SOLDIER:
+        if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
+          rc.setIndicatorString("Spawn soldier!");
+          soldiersSpawned++;
+          leadSpent += RobotType.SOLDIER.buildCostLead;
+        }
     }
+  }
+
+  /**
+   * Spawn some droid around the archon based on some heuristics
+   */
+  private RobotType determineSpawnDroidType() throws GameActionException {
+    if (needMiner()) return RobotType.MINER;
+    else if (needBuilder()) return RobotType.BUILDER;
+    else return RobotType.SOLDIER;
   }
 
   /**

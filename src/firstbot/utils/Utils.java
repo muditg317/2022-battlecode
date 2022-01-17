@@ -85,7 +85,7 @@ public class Utils {
   };
 
   /** The number of chunks that the map should be split into */
-  public static final int NUM_MAP_CHUNKS = 100;
+  public static final int MAX_MAP_CHUNKS = 100;
 
   /** related to above */
   public static final int CHUNK_INFOS_PER_INT = 4;
@@ -292,6 +292,25 @@ public class Utils {
     int x = location.x - (location.x % Cache.Permanent.CHUNK_WIDTH);
     int y = location.y - (location.y % Cache.Permanent.CHUNK_HEIGHT);
     return new MapLocation(x + Cache.Permanent.CHUNK_WIDTH / 2, y + Cache.Permanent.CHUNK_HEIGHT / 2);
+  }
+
+  public static void print(String s) {
+    Cache.PerTurn.print.append(s).append("\n");
+  }
+
+  public static void print(String s, String s2) {
+    print(s); print(s2);
+  }
+
+  public static void print(String s, String s2, String s3) {
+    print(s); print(s2); print(s3);
+  }
+
+  public static void cleanPrint() {
+    Cache.PerTurn.print = new StringBuilder();
+    Cache.PerTurn.print.append(" *** ");
+    Cache.PerTurn.print.append(Cache.PerTurn.CURRENT_LOCATION);
+    Cache.PerTurn.print.append(" ***\n");
   }
 
   /*

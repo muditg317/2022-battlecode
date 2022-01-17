@@ -84,16 +84,20 @@ public abstract class Robot {
     while (true) {
       // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
       try {
+        Utils.cleanPrint();
         this.runTurnWrapper();
+//        System.out.println(Cache.PerTurn.print.toString());
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
+        System.out.println(Cache.PerTurn.print);
         e.printStackTrace();
         rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
         System.out.println(rc.getType() + " Exception");
+        System.out.println(Cache.PerTurn.print);
         e.printStackTrace();
         rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
@@ -119,6 +123,7 @@ public abstract class Robot {
 //    System.out.println("\nvery start - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
 //      System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
+
     Cache.updateOnTurn();
     if (!dontYield) {
       rc.setIndicatorString("ac: " + rc.getActionCooldownTurns() + " mc: " + rc.getMovementCooldownTurns());
@@ -142,6 +147,7 @@ public abstract class Robot {
     MapLocation initial = Cache.PerTurn.CURRENT_LOCATION;
     runTurnTypeWrapper();
 
+    // if the bot moved on its turn
     if (!initial.equals(Cache.PerTurn.CURRENT_LOCATION)) {
       afterTurnWhenMoved();
     }
@@ -155,7 +161,7 @@ public abstract class Robot {
       Utils.startByteCodeCounting("sending");
 //      System.out.println("Bytecodes before send all messages: " + (Clock.getBytecodeNum()));
       communicator.sendQueuedMessages();
-      communicator.updateMetaIntsIfNeeded();
+//      communicator.updateMetaIntsIfNeeded();
 //      System.out.println("Bytecodes after send all messages: " + (Clock.getBytecodeNum()));
       Utils.finishByteCodeCounting("sending");
 //    }
@@ -226,7 +232,7 @@ public abstract class Robot {
   protected int updateVisibleChunks() throws GameActionException {
     int myChunk = Utils.locationToChunkIndex(Cache.PerTurn.CURRENT_LOCATION);
     if (myChunk == lastChunkUpdate) return 0; // don't run this if we have't changed chunks
-//    rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
+    rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
 //    if (rc.senseNearbyLocationsWithLead().length == 0 || )
     boolean dangerous = Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 2;
     // if high lead, explored+high rss -- else, explored rss
@@ -243,15 +249,17 @@ public abstract class Robot {
       if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
       int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
       MapLocation chunkCenter = Utils.chunkIndexToLocation(chunkToTest);
-      if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(chunkCenter, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
+//      System.out.println(Cache.PerTurn.CURRENT_LOCATION + " -- upVisChunks\nchunkToTest: " + chunkToTest + " chunkCenter: " + chunkCenter + " dir: " + dir);
 
+      if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(chunkCenter, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
+//        System.out.println("EXPLORED! dangerous: " + dangerous + " leadInfo: " + leadInfo);
         rc.setIndicatorDot(chunkCenter, 0, 255, 255);
         communicator.chunkInfo.markExplored(chunkCenter, dangerous, leadInfo);
         chunksUpdated++;
       }
     }
     if (chunksUpdated > 0) {
-      System.out.println("Update " + chunksUpdated + " chunks! -- from " + Cache.PerTurn.CURRENT_LOCATION);
+//      System.out.println("Update " + chunksUpdated + " chunks! -- from " + Cache.PerTurn.CURRENT_LOCATION);
       lastChunkUpdate = myChunk;
     }
     return chunksUpdated;
@@ -434,6 +442,7 @@ public abstract class Robot {
    * @throws GameActionException if movement fails
    */
   protected boolean moveOptimalTowards(MapLocation target) throws GameActionException {
+    Utils.print("RUNNING moveOptimalTowards(): ", "target: " + target);
     if (!rc.isMovementReady()) return false;
 
     Direction bestDirection = getOptimalDirectionTowards(target);
@@ -461,7 +470,7 @@ public abstract class Robot {
     for (Direction candidateDir : Utils.directionsNine) {
       newLoc = myLoc.add(candidateDir);
       newLocDist = newLoc.distanceSquaredTo(source);
-      if (candidateDir == Direction.CENTER || rc.canMove(candidateDir)) {// && newLocDist >= dToLoc) {
+      if (candidateDir == Direction.CENTER || (rc.canMove(candidateDir) && newLocDist >= dToLoc)) {
         if (rc.canSenseLocation(newLoc)) {
           int rubble = rc.senseRubble(newLoc);
           if (rubble < bestPosRubble || (rubble == bestPosRubble && newLocDist > bestPosDist)) {
@@ -601,10 +610,10 @@ public abstract class Robot {
    * @return the map location where there are offensive enemies (null if none)
    */
   private MapLocation cachedEnemyCentroid;
-  private int cacheStateOnCalc = -1;
+  private int cacheStateOnCalcOffensiveEnemyCentroid = -1;
   protected MapLocation offensiveEnemyCentroid() {
-    if (cacheStateOnCalc == Cache.PerTurn.cacheState) return cachedEnemyCentroid;
-    cacheStateOnCalc = Cache.PerTurn.cacheState;
+    if (cacheStateOnCalcOffensiveEnemyCentroid == Cache.PerTurn.cacheState) return cachedEnemyCentroid;
+    cacheStateOnCalcOffensiveEnemyCentroid = Cache.PerTurn.cacheState;
     if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length == 0) return (cachedEnemyCentroid = null);
     int avgX = 0;
     int avgY = 0;
@@ -617,6 +626,29 @@ public abstract class Robot {
       }
     }
     return (cachedEnemyCentroid = (count == 0 ? null : new MapLocation(avgX / count, avgY / count)));
+  }
+
+  /**
+   * calculate the average location of friendly soldiers
+   * @return the map location where there are offensive enemies (null if none)
+   */
+  private MapLocation cachedFriendlyCentroid;
+  private int cacheStateOnCalcFriendlySoldierCentroid = -1;
+  protected MapLocation friendlySoldierCentroid() {
+    if (cacheStateOnCalcFriendlySoldierCentroid == Cache.PerTurn.cacheState) return cachedFriendlyCentroid;
+    cacheStateOnCalcFriendlySoldierCentroid = Cache.PerTurn.cacheState;
+    if (Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS.length == 0) return (cachedFriendlyCentroid = null);
+    int avgX = 0;
+    int avgY = 0;
+    int count = 0;
+    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+      if (friend.type == RobotType.SOLDIER) { // friend can hurt me
+        avgX += friend.location.x;
+        avgY += friend.location.y;
+        count++;
+      }
+    }
+    return (cachedFriendlyCentroid = (count == 0 ? null : new MapLocation(avgX / count, avgY / count)));
   }
 
   /**

@@ -23,9 +23,10 @@ public class Cache {
         public static int CHUNK_HEIGHT;
         public static int NUM_VERTICAL_CHUNKS;
         public static int CHUNK_EXPLORATION_RADIUS_SQUARED;
+        public static int NUM_CHUNKS;
 
         private static void setupChunkBounds() {
-            final int minAreaPerChunk = (int) Math.ceil(MAP_AREA / (double) Utils.NUM_MAP_CHUNKS);
+            final int minAreaPerChunk = (int) Math.ceil(MAP_AREA / (double) Utils.MAX_MAP_CHUNKS);
             // int minMapArea = 20x20 = 400 / 100 == 4
 //            int bestArea = (GameConstants.MAP_MAX_WIDTH * GameConstants.MAP_MAX_HEIGHT / Utils.NUM_MAP_CHUNKS) + 1;
             switch (minAreaPerChunk) {
@@ -115,7 +116,7 @@ public class Cache {
             }
 
             NUM_HORIZONTAL_CHUNKS = MAP_WIDTH / CHUNK_WIDTH;
-            if (MAP_WIDTH % CHUNK_WIDTH > 0) { // only allow chunk if more than 1 column of it's locs are on the map
+            if (MAP_WIDTH % CHUNK_WIDTH > 0 && MAP_WIDTH % CHUNK_WIDTH < Math.sqrt(CHUNK_EXPLORATION_RADIUS_SQUARED)) { // only allow chunk if more than 1 column of it's locs are on the map
                 NUM_HORIZONTAL_CHUNKS++;
             }
 
@@ -123,6 +124,8 @@ public class Cache {
             if (MAP_HEIGHT % CHUNK_HEIGHT > 0) { // only allow chunk if more than 1 row of it's locs are on the map
                 NUM_VERTICAL_CHUNKS++;
             }
+
+            NUM_CHUNKS = NUM_HORIZONTAL_CHUNKS * NUM_VERTICAL_CHUNKS;
 
 //            System.out.println("MAP WIDTH = " + MAP_WIDTH + " MAP HEIGHT = " + MAP_HEIGHT);
 //            System.out.println("CHUNK_WIDTH: " + Cache.Permanent.CHUNK_WIDTH + " CHUNK_HEIGHT: " + Cache.Permanent.CHUNK_HEIGHT);
@@ -157,6 +160,7 @@ public class Cache {
         public static MapLocation CURRENT_LOCATION;
         public static int LEVEL;
         public static int HEALTH;
+        public static StringBuilder print;
 //        public static MapLocation[] NEARBY_LEAD_MIN_2;
 //        public static MapLocation[] NEARBY_LEAD_2;
 

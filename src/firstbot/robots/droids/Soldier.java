@@ -2,6 +2,7 @@ package firstbot.robots.droids;
 
 import battlecode.common.*;
 import firstbot.communications.messages.*;
+import firstbot.containers.FastQueue;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
@@ -25,8 +26,6 @@ public class Soldier extends Droid {
 
   MapLocation archonToSave;
 
-
-
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
     if (rc.senseNearbyLocationsWithLead().length > 15) VISION_FRACTION_TO_RAID = 6;
@@ -48,11 +47,17 @@ public class Soldier extends Droid {
     canStartRaid = true;
   }
 
-  boolean enemySoldierExists;
-  boolean enemyMinerExists;
-  boolean enemyBuilderExists;
-  boolean enemyArchonExists;
-  boolean enemySageExists;
+  boolean enemySoldierExistsInVision;
+  boolean enemyMinerExistsInVision;
+  boolean enemyBuilderExistsInVision;
+  boolean enemyArchonExistsInVision;
+  boolean enemySageExistsInVision;
+
+  boolean enemySoldierExistsInAction;
+  boolean enemyMinerExistsInAction;
+  boolean enemyBuilderExistsInAction;
+  boolean enemyArchonExistsInAction;
+  boolean enemySageExistsInAction;
 
 
   @Override
@@ -61,7 +66,8 @@ public class Soldier extends Droid {
 
     // miner-like random exploration (random target and go to it)
 
-    if (archonToSave != null) {
+    if (archonToSave != null && !needToRunHomeForSaving && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+      Utils.print("archonToSave: " + archonToSave);
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
@@ -71,13 +77,28 @@ public class Soldier extends Droid {
       robotToChase = null;
     }
 
-    if (processEnemiesInVision() || !needToRunHomeForSaving) attackPriority();
+    {
+      // if we cannot move, attack is ready, and there is an enemy in action --> ATTACK!
+      if (!rc.isMovementReady() && rc.isActionReady() && processEnemiesInAction()) {
+          attackPriority(enemySoldierExistsInAction, enemyMinerExistsInAction, enemyBuilderExistsInAction, enemyArchonExistsInAction, enemySageExistsInAction);
+      }
+      // always do this as it sets up internal variables for us to use later?
+      if (processEnemiesInVision() || !needToRunHomeForSaving) {
+        //todo: robot remembers soldiers?
+        attackPriority(enemySoldierExistsInVision, enemyMinerExistsInVision, enemyBuilderExistsInVision, enemyArchonExistsInVision, enemySageExistsInVision);
+      }
 
+      // if we can still attack and there are enemies, ATTACK! This happens when we do not move on purpose yet there are higher priority enemies in vision...
+      if (rc.isActionReady() && processEnemiesInAction()) {
+        boolean tmpNeedToRunHomeForSaving = needToRunHomeForSaving;
+        needToRunHomeForSaving = true; // this will disable any movement options for us (I dont think it's needed but just in case)
+        attackPriority(enemySoldierExistsInAction, enemyMinerExistsInAction, enemyBuilderExistsInAction, enemyArchonExistsInAction, enemySageExistsInAction);
+        needToRunHomeForSaving = tmpNeedToRunHomeForSaving;
+      }
+    }
 
     // store global var robotInfo of the thing we are chasing
     // if we are chasing, don't search for new targets -- bytecode optimization stuff
-//    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
-//    System.out.println("\nrobotToChase: " + robotToChase + "\ntarget: " + target + "\nreachedTarget: " + reachedTarget);
 
     if (robotToChase != null) {
       if (!rc.canSenseRobot(robotToChase.ID)) {
@@ -160,186 +181,56 @@ public class Soldier extends Droid {
 
   }
 
-  @Override
-  public void ackMessage(Message message) throws GameActionException {
-    super.ackMessage(message);
-    if (message instanceof StartRaidMessage) {
-      ackStartRaidMessage((StartRaidMessage) message);
-    } else if (message instanceof EndRaidMessage) {
-      ackEndRaidMessage((EndRaidMessage) message);
-    } else if (message instanceof SaveMeMessage) {
-      ackSaveMeMessage((SaveMeMessage) message);
-    } else if (message instanceof ArchonSavedMessage) {
-      ackArchonSavedMessage((ArchonSavedMessage) message);
-    }
-  }
-
-  /**
-   * receive a message to start a raid
-   * @param message the raid message
-   * @throws GameActionException if some part of ack fails
-   */
-  private void ackStartRaidMessage(StartRaidMessage message) throws GameActionException {
-    // TODO: if not ready for raid (maybe not in center yet or something), ignore
-//    System.out.println("Got start raid" + message.location);
-//    if (raidValidated) {
-//      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-//        if (enemy.type == RobotType.ARCHON && raidTarget.equals(enemy.location)) { // already raiding a different archon
-//          return;
-//        }
-//      }
-//    }
-    raidTarget = message.location;
-    if (raidTarget.equals(myPotentialTarget)) {
-      canStartRaid = false;
-    }
-  }
-
-  /**
-   * receive a message that a raid is over
-   * @param message raid ending message with a specific raid target
-   * @throws GameActionException if ack fails
-   */
-  private void ackEndRaidMessage(EndRaidMessage message) throws GameActionException {
-    // TODO: if not ready for raid (maybe not in center yet or something), ignore
-    if (raidTarget != null && raidTarget.equals(message.location)) {
-      raidTarget = null;
-      raidValidated = false;
-//      System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
-    }
-    if (message.location.equals(myPotentialTarget)) {
-      canStartRaid = false;
-    }
-  }
-
-  /**
-   * acknowledge an archon that needs saving
-   * @param message the request for saving from an archon
-   */
-  private void ackSaveMeMessage(SaveMeMessage message) {
-    if (archonToSave == null || Utils.rng.nextInt(5) < 2) { // not already saving or 2/5 chance to switch
-      archonToSave = message.location;
-    }
-  }
-
-  /**
-   * acknowledge an archon is done being saved
-   * @param message the message to stop saving an archon
-   */
-  private void ackArchonSavedMessage(ArchonSavedMessage message) {
-    if (archonToSave != null && archonToSave.equals(message.location)) { // not already saving or 2/5 chance to switch
-      archonToSave = null;
-    }
-  }
-
-  public void attackPriority() throws GameActionException {
-//    System.out.println("Soldier " + Cache.PerTurn.CURRENT_LOCATION + " --\nenemySoldierExists: " + enemySoldierExists + "\nenemyMinerExists: " + enemyMinerExists + "\nenemyBuilderExists: " + enemyBuilderExists + "\nenemyArchonExists: " + enemyArchonExists + "\nenemySageExists: " + enemySageExists);
-//    System.out.println("isMovementDisabled: " + isMovementDisabled + "robotToChase: " + robotToChase);
-    if (enemySoldierExists) attackEnemySoldier();
-    else if (enemyMinerExists || enemyBuilderExists) attackAndChaseEnemyMinerOrBuilder();
-    else if (enemyArchonExists) attackAndChaseEnemyArchon();
-    else if (enemySageExists) attackEnemySage();
-    else if (!needToRunHomeForSaving) {
-//      if (lastSoldierAttack != null) {
-//        if (lastSoldierTradeScore > 0) {
-//          moveOptimalTowards(lastSoldierAttack);
-//        } else {
-//          moveOptimalAway(lastSoldierAttack);
-//        }
-////        if (!rc.canSenseLocation(lastSoldierAttack) || rc.senseRobotAtLocation(lastSoldierAttack) == null) {
-//        lastSoldierAttack = null;
-////        }
-//      }
-      if (robotToChase != null) {
-        if (!robotToChase.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1)) {
-//          System.out.println("MOVE TO CACHED LOCATION");
-          moveOptimalTowards(robotToChase.location);
-        } else {
-//          System.out.println("RESET ROBOT TO CHASE");
-          robotToChase = null;
-        }
-      }
-//      System.out.println("robotToChase: " + robotToChase);
-      if (robotToChase == null) {
-        doExploration();
-      }
-      // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
-      // cached location is set to null if we go there and no enemy is found in vision radius
-//      setIndicatorString("no enemy", null);
-    }
-  }
-
-  /**
-   * iterate over all of vision and set all booleans about soldier existence
-   * @return true if there are any enemies
-   * @throws GameActionException if any sensing fails
-   */
-  private boolean processEnemiesInVision() throws GameActionException {
-    // get all robots in vision
-    enemySoldierExists = false;
-    enemyMinerExists = false;
-    enemyBuilderExists = false;
-    enemyArchonExists = false;
-    enemySageExists = false;
-
-    for (RobotInfo robot : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-      switch(robot.type) {
-        case SOLDIER:
-          enemySoldierExists = true;
-          break;
-        case MINER:
-          enemyMinerExists = true;
-          break;
-        case BUILDER:
-          enemyBuilderExists = true;
-          break;
-        case ARCHON:
-          enemyArchonExists = true;
-          break;
-        case SAGE:
-          enemySageExists = true;
-          break;
-      }
-    }
-
-    return enemySoldierExists || enemyMinerExists || enemyBuilderExists || enemyArchonExists || enemySageExists;
-  }
-
+  private FastQueue<MicroInfo> movementMicroOptions = new FastQueue<>(9);
   private boolean attackEnemySoldier() throws GameActionException {
-    // avoid soldiers within action radius
-    // does moving adjacent loc improve trade-score
-    // keep enemies at edge of action radius
+    movementMicroOptions.clear();
+    movementMicroOptions.push(new MicroInfo(Cache.PerTurn.CURRENT_LOCATION));
+    for (Direction dir : Utils.directions) {
+      if (rc.canMove(dir)) movementMicroOptions.push(new MicroInfo(Cache.PerTurn.CURRENT_LOCATION.add(dir)));
+    }
 
+    for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+      for (int i = movementMicroOptions.startIter(); --i >= 0;) {
+        movementMicroOptions.next().update(enemy);
+      }
+    }
 
-    // if we see soldier, keep soldier on the edge of action radius (consider low rubble squares with < rubble)
-    // maybe if we a function -->
-    //  E = # of enemy soldiers that can attack you... F = # of friendly soldiers that can attack closest enemy to you
-    //  R = rubble at some location  (consider later maybe: EE is number of enemies that can attack you at that location radius?)
-    // calculating EE is not too expensive --> senseRobotsAtLocation(candidate, actionRadius + constant <-- if their soldiers move in) => (take soldiers sum)
+    MicroInfo best = movementMicroOptions.popFront();
+    MicroInfo curr;
+    while (!movementMicroOptions.isEmpty()) {
+      if ((curr = movementMicroOptions.popFront()).isBetterThan(best)) {
+        best = curr;
+      }
+    }
 
-    // currentBest: (# of attacks I can do till I die) = (# of turns till I die) / (# of turns between action cooldown)
-    // consider candidate ': (# of attacking I can do till I die)' = (# of turns till I die)' / (# of turns between action cooldown)'
-    // candidate > currentBest, currentBest = candidate
-    // (# of turns till I die)' / (# of turns between action cooldown)' > (# of turns till I die) / (# of turns between action cooldown)
+    return best.execute();
+  }
+
+  private boolean attackEnemySoldierOld() throws GameActionException {
+
+    Utils.print("RUNNING attackEnemySoldier()");
 
     double bestScore = Double.NEGATIVE_INFINITY;
     MapLocation bestLocation = null;
     MapLocation bestEnemySoldier = null;
     int bestDistance = -1;
 
-    boolean currentLocationInActionRange = false;
+    boolean hasHugeAdvantage = false;
+    boolean cannotAttackSoMoveAway = false;
+    boolean canAttackSoMoveIn = false;
+
 
     // my location and all adjacent locations
     for (Direction dir : Utils.directionsNine) {
-      if (dir != Direction.CENTER && (needToRunHomeForSaving || !rc.canMove(dir))) continue; // TODO: figure out why this makes it worse
+      if (dir != Direction.CENTER && (needToRunHomeForSaving || !rc.canMove(dir))) continue;
       MapLocation candidate = Cache.PerTurn.CURRENT_LOCATION.add(dir);
-//      if (!rc.canSenseLocation(candidate)) continue;
 
       int numEnemySoldiers = 0;
       double averageEnemyDamagePerRound = 0;
       int minDistance = Integer.MAX_VALUE;
       MapLocation closestEnemySoldier = null; // can only be null iff averageEnemyDamagePerRound == 0 and averageEnemyDamagePerRound == 0, score=0
 
+      // use vision radius to count enemies (assume they can all attack and will move into action radius if needed), and calculate DPS
       for (RobotInfo enemy : rc.senseNearbyRobots(candidate, Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
         if (enemy.type == RobotType.SOLDIER) {
           numEnemySoldiers++;
@@ -356,6 +247,7 @@ public class Soldier extends Droid {
         }
       }
 
+      // use vision radius centered on closest enemy to count friends (assume friends can all attack and will move into action radius if needed), and calculate DPS
       int numFriendlySoldiers = 0;
       double averageFriendlyDamagePerRound = 0;
       if (closestEnemySoldier != null) {
@@ -375,31 +267,18 @@ public class Soldier extends Droid {
           }
         }
       }
+      if (closestEnemySoldier == null) continue;
 
-      if (Direction.CENTER.equals(dir) && closestEnemySoldier != null) currentLocationInActionRange = true;
+      double scoreDiff = averageFriendlyDamagePerRound - averageEnemyDamagePerRound;
+      double scoreRatio = averageFriendlyDamagePerRound / averageEnemyDamagePerRound;
 
-      // if the score is non-negative:
-        // if my current location is not in action range of any soldier enemy AND I can attack if I were in range of an enemy, and the candidate score is equal to the best score so far
-        // pick the movement between candidate and bestLocationFoundSoFar where we have largest distance s.t. distance <= action radius
+      // closestEnemySoldier guaranteed not null bc otherwise friendly and enemy would both be 0
+      if (scoreRatio >= 2 || scoreDiff >= 5) { // huge advantage
+        // "go in"
+        hasHugeAdvantage = true;
+      }
 
-        // WEIRD CASE (GO AGAINST SCORE):
-        // if my current location is not in action range of any soldier enemy AND I cannot attack due to cooldown even if I were in range of an enemy, and the candidate score is equal to the best score so far
-        // pick the movement between candidate and bestLocationFoundSoFar where we satisfy distance > action radius and rubble is the lowest (then maximum distance for rubble ties)
-
-        // if my current location is in action range of an enemy AND I can attack, and the candidate score is equal to the best score so far
-        // move to least rubble square (technically score should account for this already)? or attack and then pick the movement between candidate and bestLocationFoundSoFar with highest distance
-
-        // WEIRD CASE (GO AGAINST SCORE):
-        // if my current location is in action range of an enemy AND I cannot attack this turn due to cooldown, and the candidate score is equal to the best score so far
-        // pick the movement between candidate and bestLocationFoundSoFar where we satisfy distance > action radius and rubble is the lowest (then maximum distance for rubble ties)
-
-
-      // if my current location is in range of an enemy AND I can attack if I were in range of an enemy, and the candidate score is equal to the best score so far
-      // pick the movement between candidate and bestLocationFoundSoFar
-
-      // if I move to the candidate location, what is the distance to the closest enemy soldier?
-      // if I move to the current best location, what is the distance to the closest enemy soldier?
-      // pick the one with largest distance s.t distance <= action radius
+      boolean needToGoInToAttack = rc.isActionReady() && !closestEnemySoldier.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED);
 
       double score = 1.01 * averageFriendlyDamagePerRound - averageEnemyDamagePerRound;
 //      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound + "\nscore: " + score);
@@ -432,26 +311,6 @@ public class Soldier extends Droid {
       }
 
 
-//      if (bestScore == score && score >= 0) {
-//        if (!currentLocationInActionRange && closestEnemySoldier != null) { // if I am not in range of any enemy soldier currently and moving would put me in range
-//          if (rc.isActionReady()) { // is ready to attack (case 1)
-//            if (bestDistance != -1) {
-//
-//            }
-//          } else { // case 2
-//
-//          }
-//        }
-//
-//      }
-
-
-//      if (score == bestScore && closestEnemySoldier != null) {
-//        // choose the location that is furthest from the enemy but still in action radius
-//        int candidateEnemyDistance = candidate.distanceSquaredTo(closestEnemySoldier); //candidate to closestEnemySoldier and current to closestEnemySoldier
-//        int currentEnemyDistance = bestLocation.distanceSquaredTo(closestEnemySoldier);
-//        if (currentEnemyDistance < candidateEnemyDistance && currentEnemyDistance <= Cache.Permanent.ACTION_RADIUS_SQUARED) isBetter = true;
-//      }
 
       if (isBetter) {
         bestScore = score;
@@ -472,59 +331,248 @@ public class Soldier extends Droid {
       }
     }
 
-    // TODO: why does using this make it worse???? wtf
-//    return attackAtAndMoveTo(bestEnemySoldier, bestLocation, true);
 
-//    boolean attacked = false;
     if (bestEnemySoldier != null) {
-//      if (rc.canAttack(bestEnemySoldier)) attacked |= attackTarget(bestEnemySoldier);
       lastSoldierAttack = bestEnemySoldier;
       lastSoldierTradeScore = bestScore;
     }
 
-//    if (bestLocation != null) {
-//      // might want to move out if bestLocation score is low (after attacking tho)
-//      if (rc.isMovementReady()) {
-//        // TODO: switching to this makes it worse????
-//        move(Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocation));
-////        moveOptimalTowards(bestLocation);
-//      }
-//    }
-//    if (bestEnemySoldier != null) {
-//      if (rc.canAttack(bestEnemySoldier)) attacked |= attackTarget(bestEnemySoldier);
-//    }
     return attackAtAndMoveTo(bestEnemySoldier, bestLocation, false);
 
-//    return attacked;
+  }
 
+  private class MicroInfo {
+    private MapLocation myLocation;
+//    private FastQueue<RobotInfo> soldierFriendsFastQueue;
+//    private int numFriendsAvailable;
+    private int numEnemies;
+    private double enemyDPS;
+    private int numHelpingFriends;
+    private double friendlyDPS;
+    private RobotInfo closestEnemy;
+    private int dToClosest = 9999;
+    private RobotInfo bestEnemyInRange;
+    private int healthOfBestInRange = 9999;
+    private RobotInfo bestEnemyOnlyIfMoved;
+    private int healthOfBestIfMoved = 9999;
 
-    // let this bot determine for the local patch -> rate of our damage vs rate of enemy damage
-    // pick the 3x3 location where the value (rate of our damage - rate of enemy damage) is highest
+    private RobotInfo chosenEnemyToAttack;
+    private double scoreDiff;
+    private double scoreRatio;
+    private boolean hasHugeAdvantage;
 
-    // if the value is negative at location, we should leave the area entirely!
-    // if the value is positive at location, we should stay in the area!
+    private boolean hasTarget;
+    private boolean mustMoveFirst;
+    private boolean mustAttackFirst;
 
-//    if (rc.isMovementReady()) {
-//      // my location and all adjacent locations
-//      for (Direction dir : Utils.directions) {
-//        MapLocation candidate = Cache.PerTurn.CURRENT_LOCATION.add(dir);
-//        if (!rc.canSenseLocation(candidate)) continue;
+    private boolean isMovingFurtherAway;
+    private boolean isLeavingActionRadius;
+    private boolean isEnteringActionRadius;
 
-
-//        int rateOfOurDamage = 0;
-//        int rateOfEnemyDamage = 0;
-//        // for all enemies, see how many can attack us
-//        for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-//          if (friend.type != RobotType.SOLDIER || friend.location.equals(Cache.PerTurn.CURRENT_LOCATION)) continue;
-//          for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-//            if (enemy.type != RobotType.SOLDIER) continue;
-//
-//
-//            }
-//          }
+    public MicroInfo(MapLocation myLocation) {
+      this.myLocation = myLocation;
+//      this.soldierFriendsFastQueue = new FastQueue<>(10);
+//      for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+//        if (friend.type == RobotType.SOLDIER) {
+//          if (++numFriendsAvailable <= 10) soldierFriendsFastQueue.push(friend);
 //        }
 //      }
-//  }
+    }
+
+    /**
+     * update this micro info with the provided enemy within current vision radius
+     *    info should decide if this enemy is relevant to it or not
+     *    guaranteed closestEnemy is nonNull, but bestEnemyInRange and bestEnemyOnlyIfMoved may be null
+     * @param nextEnemy
+     * @throws GameActionException
+     */
+    public void update(RobotInfo nextEnemy) throws GameActionException {
+      if (nextEnemy.type != RobotType.SOLDIER) return;
+      if (nextEnemy.location.distanceSquaredTo(myLocation) < dToClosest) {
+        closestEnemy = nextEnemy;
+        dToClosest = nextEnemy.location.distanceSquaredTo(myLocation);
+      }
+
+      // if enemy is within action radius of current location, select the minimum health enemy.
+      // If the enemy is not within action radius of current location, check if it will be after moving
+      if (nextEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        if (nextEnemy.health < healthOfBestInRange) {
+          bestEnemyInRange = nextEnemy;
+          healthOfBestInRange = nextEnemy.health;
+        }
+      } else if (nextEnemy.location.isWithinDistanceSquared(myLocation, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        // enemy was not in current action range but is in action range of candidate location
+        if (nextEnemy.health < healthOfBestIfMoved) {
+          bestEnemyOnlyIfMoved = nextEnemy;
+          healthOfBestIfMoved = nextEnemy.health;
+        }
+      }
+
+      if (nextEnemy.location.isWithinDistanceSquared(myLocation, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+        // if enemy can see you, assume they can move in and hurt you
+        numEnemies++;
+        double turnsTillNextCooldown = Utils.turnsTillNextCooldown(nextEnemy.type.actionCooldown, rc.senseRubble(nextEnemy.location));
+        enemyDPS += (nextEnemy.type.damage / turnsTillNextCooldown);
+      }
+//      int friendsToCheck = soldierFriendsFastQueue.size();
+//      for (int i = 0; i < friendsToCheck; i++) {
+//        RobotInfo friend = soldierFriendsFastQueue.popFront();
+//        if (friend.location.isWithinDistanceSquared(nextEnemy.location, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+//          // if friend can see enemy, assume they can help you
+//          numHelpingFriends++;
+//          double turnsTillNextCooldown = Utils.turnsTillNextCooldown(10, rc.senseRubble(friend.location));
+//          friendlyDPS += (3 / turnsTillNextCooldown);
+//          break;
+//        }
+//        soldierFriendsFastQueue.push(friend);
+//      }
+    }
+
+    private void computeFriendlyDPSWithClosestEnemy() throws GameActionException {
+      if (closestEnemy.location.isWithinDistanceSquared(myLocation, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        // if the closest enemy is in range, chose it as attack priority
+        numHelpingFriends++;
+        double turnsTillNextCooldown = Utils.turnsTillNextCooldown(rc.getType().actionCooldown, rc.senseRubble(myLocation));
+        friendlyDPS += (3 / turnsTillNextCooldown);
+      }
+      for (RobotInfo friendly : rc.senseNearbyRobots(
+              closestEnemy.location,
+              Cache.Permanent.VISION_RADIUS_SQUARED,
+              Cache.Permanent.OUR_TEAM)) {
+        if (friendly.type == RobotType.SOLDIER) {
+          numHelpingFriends++;
+          double turnsTillNextCooldown = Utils.turnsTillNextCooldown(friendly.type.actionCooldown, rc.senseRubble(friendly.location));
+          friendlyDPS += (3 / turnsTillNextCooldown);
+        }
+      }
+    }
+
+    /**
+     * if there are enemies only reachable by moving,
+     *    pick the better one
+     *    mark ourselves as needing to move first
+     *   NOTE - chosenEnemyToAttack CAN still be NULL
+     */
+    public void pickBestEnemyToAttack() {
+      chosenEnemyToAttack = bestEnemyInRange;
+      if (bestEnemyOnlyIfMoved != null) { // there is an enemy that can only be reached by moving, decide if it is better than current choice
+        if (chosenEnemyToAttack == null || bestEnemyOnlyIfMoved.health < chosenEnemyToAttack.health) {
+          chosenEnemyToAttack = bestEnemyOnlyIfMoved;
+          mustMoveFirst = true;
+        }
+      }
+      // technically both can be false but if we dont HAVE to move first, we might as well not move first
+      //    b/c you won't reveal a better target
+      //    exception: 25 -> 13 but whatever
+      hasTarget = chosenEnemyToAttack != null;
+      mustAttackFirst = hasTarget && !mustMoveFirst && rc.isActionReady();
+      // has a target and candidate is further awat
+      isMovingFurtherAway = hasTarget && chosenEnemyToAttack.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) < chosenEnemyToAttack.location.distanceSquaredTo(myLocation);
+      isLeavingActionRadius = isMovingFurtherAway && !chosenEnemyToAttack.location.isWithinDistanceSquared(myLocation, Cache.Permanent.ACTION_RADIUS_SQUARED);
+      isEnteringActionRadius = !isMovingFurtherAway && ;
+    }
+
+    public void finalizeInfo() throws GameActionException {
+      computeFriendlyDPSWithClosestEnemy();
+      pickBestEnemyToAttack();
+
+      scoreDiff = friendlyDPS - enemyDPS;
+      if (enemyDPS == 0) { // there were only enemies in vision which we have now run away from
+        // almost guaranteed no enemies in current action radius since there would still be in vision
+        //    exception is the 13->25 distance locations
+        scoreRatio = friendlyDPS;
+      } else {
+        scoreRatio = friendlyDPS / enemyDPS;
+      }
+
+
+      // closestEnemySoldier guaranteed not null bc otherwise friendly and enemy would both be 0
+//      if (scoreRatio >= 2 || scoreDiff >= 5) { // huge advantage -->  "go in"
+//        hasHugeAdvantage = true;
+//      }
+
+
+      // true when:
+      //    I must go in
+
+    }
+
+    // within high advantage
+    //    among tiles that get closer, choose highest score
+    //    pick higher score, then lower rubble, then less distance? =>
+
+    public boolean isBetterThan(MicroInfo other) throws GameActionException {
+      if (this.hasHugeAdvantage != other.hasHugeAdvantage) return this.hasHugeAdvantage;
+      if (this.hasHugeAdvantage) {
+        if (this.hasTarget != other.hasTarget) return this.hasTarget;
+        if (!this.hasTarget) return false;
+        boolean thisCloser = this.myLocation.isWithinDistanceSquared(this.closestEnemy.location, Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(this.closestEnemy.location));
+        if (thisCloser
+            != other.myLocation.isWithinDistanceSquared(other.closestEnemy.location, Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(other.closestEnemy.location))
+        ) return thisCloser;
+        if (!thisCloser) return false;
+        if (this.myLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) return false;
+        if (other.myLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) return true;
+        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
+        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
+        if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
+        if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
+        // i am NOT closer to our friends --> i'm staying further --> i'm better
+        return !this.myLocation.isWithinDistanceSquared(friendlySoldierCentroid(), other.myLocation.distanceSquaredTo(friendlySoldierCentroid()));
+      }
+
+      // neither me nor other has huge advantage, and both can attack
+      if (mustAttackFirst) {
+        // one set of logic
+        // if this goes out of action radius and other does not, then this is better (careful about rubble?)
+        // if both go out of action radius, then higher score is better. If tied score, pick further one out of action radius
+        // if neither go out of action radius,
+
+        if (this.isLeavingActionRadius != other.isLeavingActionRadius) return this.isLeavingActionRadius;
+        if (this.isLeavingActionRadius) { //both are leaving
+          if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
+          if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
+          if (rc.senseRubble(this.myLocation) < rc.senseRubble(other.myLocation)) return true;
+          if (rc.senseRubble(this.myLocation) > rc.senseRubble(other.myLocation)) return false;
+          if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
+          if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
+          return this.myLocation.distanceSquaredTo(parentArchonLoc)  other.myLocation.distanceSquaredTo(parentArchonLoc);
+        } else { // both are staying in action radius
+          if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
+          if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
+          if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
+          if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
+          if (rc.senseRubble(this.myLocation) < rc.senseRubble(other.myLocation)) return true;
+          if (rc.senseRubble(this.myLocation) > rc.senseRubble(other.myLocation)) return false;
+          return this.myLocation.distanceSquaredTo(parentArchonLoc) < other.myLocation.distanceSquaredTo(parentArchonLoc);
+        }
+
+      } else if (rc.isActionReady() && mustMoveFirst) {
+        // other set
+        // if this can go in action radius and other cannot, this is better
+        // choose positive score
+        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
+        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
+        if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
+        if (this.myLocation.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.myLocation.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
+        if (rc.senseRubble(this.myLocation) < rc.senseRubble(other.myLocation)) return true;
+        if (rc.senseRubble(this.myLocation) > rc.senseRubble(other.myLocation)) return false;
+        return this.myLocation.distanceSquaredTo(parentArchonLoc) > other.myLocation.distanceSquaredTo(parentArchonLoc);
+      }
+
+
+      return false;
+    }
+
+    public boolean execute() throws GameActionException {
+      if (mustMoveFirst) {
+        move(Cache.PerTurn.CURRENT_LOCATION.directionTo(myLocation));
+        return hasTarget && attackTarget(chosenEnemyToAttack.location);
+      }
+      boolean attacked = hasTarget && attackTarget(chosenEnemyToAttack.location);
+      move(Cache.PerTurn.CURRENT_LOCATION.directionTo(myLocation));
+      return attacked;
+    }
   }
 
   /**
@@ -533,10 +581,9 @@ public class Soldier extends Droid {
    * @return true if attacked
    * @throws GameActionException if sensing or attacking fails
    */
-  private boolean attackAndChaseEnemyMinerOrBuilder() throws GameActionException {
-    MapLocation enemyLocation = setNonOffensiveDroidToChaseAndChooseTarget();
-//    System.out.println("ATTACK MINER -- enemyLocation: " + enemyLocation + " minHealth: " + minHealth + " isMovementReady: " + rc.isMovementReady());
-//    System.out.println("robotToChase: " + robotToChase);
+  private boolean attackAndChaseEnemyMinerOrBuilder(boolean enemyMinerExists, boolean enemyBuilderExists) throws GameActionException {
+    MapLocation enemyLocation = setNonOffensiveDroidToChaseAndChooseTarget(enemyMinerExists, enemyBuilderExists);
+    Utils.print("RUNNING attackEnemyMinerOrBuilder()", "enemyLocation: " + enemyLocation);
     setIndicatorString("attackEnemyMiner/Builder", enemyLocation);
 
     return attackAtAndMoveTo(enemyLocation, enemyLocation, true);
@@ -549,7 +596,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if sensing or attacking fails
    */
   private boolean attackAndChaseEnemyArchon() throws GameActionException {
-
+    Utils.print("RUNNING attackEnemyArchon()");
     // move towards and attack
     RobotInfo archon = findLowestHealthEnemyOfType(RobotType.ARCHON);
     MapLocation enemyLocation = archon.location;
@@ -574,6 +621,7 @@ public class Soldier extends Droid {
    * @return true if attacked
    */
   private boolean attackEnemySage() {
+    Utils.print("RUNNING attackEnemySage()");
     // if they attacked us, then let's attack them back for X (18) rounds.
     // Otherwise or after 18 rounds, add location to "banned" list and avoid getting close to it again or something
     // TODO: get health last round (based on health loss determine if sage attacked)
@@ -592,7 +640,7 @@ public class Soldier extends Droid {
    *    will ATTACK lowest health unit in action range
    * @return the coords of the enemy to attack
    */
-  private MapLocation setNonOffensiveDroidToChaseAndChooseTarget() {
+  private MapLocation setNonOffensiveDroidToChaseAndChooseTarget(boolean enemyMinerExists, boolean enemyBuilderExists) {
     // possibly do score function of health and distance to enemy
     // TODO: ensure that the below priority system works
     // if not, revert to simple, choose miner > builder
@@ -690,7 +738,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if checking fails
    */
   private boolean checkDoneSaving() throws GameActionException {
-    if (!archonToSave.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) return false;
+    if (!archonToSave.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) return false;
 //    RobotInfo archon = rc.senseRobotAtLocation(archonToSave);
 //    if (archon == null) return true;
     return !offensiveEnemiesNearby();
@@ -780,31 +828,185 @@ public class Soldier extends Droid {
   }
 
   /**
-   * attack a nearby enemy (kinda random based on order from sense function)
-   * @return true if attacked
-   * @throws GameActionException if attacking fails
+   * iterate over all of vision and set all booleans about soldier existence
+   * @return true if there are any enemies
+   * @throws GameActionException if any sensing fails
    */
-  private boolean attackNearby() throws GameActionException {
-    if (!rc.isActionReady()) return false;
+  private boolean processEnemiesInVision() throws GameActionException {
+    // get all robots in vision
+    enemySoldierExistsInVision = false;
+    enemyMinerExistsInVision = false;
+    enemyBuilderExistsInVision = false;
+    enemyArchonExistsInVision = false;
+    enemySageExistsInVision = false;
 
-    for (RobotInfo enemy : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
-      MapLocation toAttack = enemy.location;
-      if (rc.canAttack(toAttack)) {
-        rc.attack(toAttack);
-        if (raidTarget != null && enemy.health < Cache.Permanent.ROBOT_TYPE.damage) { // we killed it
-          if (enemy.type == RobotType.ARCHON && enemy.location.distanceSquaredTo(raidTarget) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
-            rc.setIndicatorString("Archon target killed! -- end raid");
-            broadcastEndRaid();
-          }
-        }
-        return true;
+    for (RobotInfo robot : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+      switch(robot.type) {
+        case SOLDIER:
+          enemySoldierExistsInVision = true;
+          break;
+        case MINER:
+          enemyMinerExistsInVision = true;
+          break;
+        case BUILDER:
+          enemyBuilderExistsInVision = true;
+          break;
+        case ARCHON:
+          enemyArchonExistsInVision = true;
+          break;
+        case SAGE:
+          enemySageExistsInVision = true;
+          break;
       }
     }
-    return false;
+
+    return enemySoldierExistsInVision || enemyMinerExistsInVision || enemyBuilderExistsInVision || enemyArchonExistsInVision || enemySageExistsInVision;
+  }
+
+  /**
+   * iterate over all of action and set all booleans about soldier existence
+   * @return true if there are any enemies
+   * @throws GameActionException if any sensing fails
+   */
+  private boolean processEnemiesInAction() throws GameActionException {
+    enemySoldierExistsInAction = false;
+    enemyMinerExistsInAction = false;
+    enemyBuilderExistsInAction = false;
+    enemyArchonExistsInAction = false;
+    enemySageExistsInAction = false;
+
+    for (RobotInfo robot : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
+      switch(robot.type) {
+        case SOLDIER:
+          enemySoldierExistsInAction = true;
+          break;
+        case MINER:
+          enemyMinerExistsInAction = true;
+          break;
+        case BUILDER:
+          enemyBuilderExistsInAction = true;
+          break;
+        case ARCHON:
+          enemyArchonExistsInAction = true;
+          break;
+        case SAGE:
+          enemySageExistsInAction = true;
+          break;
+      }
+    }
+    return enemySoldierExistsInAction || enemyMinerExistsInAction || enemyBuilderExistsInAction || enemyArchonExistsInAction || enemySageExistsInAction;
+  }
+
+  public void attackPriority(boolean enemySoldierExists, boolean enemyMinerExists,
+                             boolean enemyBuilderExists, boolean enemyArchonExists,
+                             boolean enemySageExists) throws GameActionException {
+    if (enemySoldierExists) attackEnemySoldier();
+    else if (enemyMinerExists || enemyBuilderExists) attackAndChaseEnemyMinerOrBuilder(enemyMinerExists, enemyBuilderExists);
+    else if (enemyArchonExists) attackAndChaseEnemyArchon();
+    else if (enemySageExists) attackEnemySage();
+    else if (!needToRunHomeForSaving) {
+//      if (lastSoldierAttack != null) {
+//        if (lastSoldierTradeScore > 0) {
+//          moveOptimalTowards(lastSoldierAttack);
+//        } else {
+//          moveOptimalAway(lastSoldierAttack);
+//        }
+////        if (!rc.canSenseLocation(lastSoldierAttack) || rc.senseRobotAtLocation(lastSoldierAttack) == null) {
+//        lastSoldierAttack = null;
+////        }
+//      }
+      if (robotToChase != null) {
+        Utils.print("robotToChase: " + robotToChase);
+        attackAtAndMoveTo(robotToChase.location, robotToChase.location, true);
+        if (robotToChase.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+          robotToChase = null;
+        }
+      }
+
+      if (robotToChase == null) {
+        doExploration();
+      }
+      // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location
+      // cached location is set to null if we go there and no enemy is found in vision radius
+//      setIndicatorString("no enemy", null);
+    }
+  }
+
+  @Override
+  public void ackMessage(Message message) throws GameActionException {
+    super.ackMessage(message);
+    if (message instanceof StartRaidMessage) {
+      ackStartRaidMessage((StartRaidMessage) message);
+    } else if (message instanceof EndRaidMessage) {
+      ackEndRaidMessage((EndRaidMessage) message);
+    } else if (message instanceof SaveMeMessage) {
+      ackSaveMeMessage((SaveMeMessage) message);
+    } else if (message instanceof ArchonSavedMessage) {
+      ackArchonSavedMessage((ArchonSavedMessage) message);
+    }
+  }
+
+  /**
+   * receive a message to start a raid
+   * @param message the raid message
+   * @throws GameActionException if some part of ack fails
+   */
+  private void ackStartRaidMessage(StartRaidMessage message) throws GameActionException {
+    // TODO: if not ready for raid (maybe not in center yet or something), ignore
+//    System.out.println("Got start raid" + message.location);
+//    if (raidValidated) {
+//      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+//        if (enemy.type == RobotType.ARCHON && raidTarget.equals(enemy.location)) { // already raiding a different archon
+//          return;
+//        }
+//      }
+//    }
+    raidTarget = message.location;
+    if (raidTarget.equals(myPotentialTarget)) {
+      canStartRaid = false;
+    }
+  }
+
+  /**
+   * receive a message that a raid is over
+   * @param message raid ending message with a specific raid target
+   * @throws GameActionException if ack fails
+   */
+  private void ackEndRaidMessage(EndRaidMessage message) throws GameActionException {
+    // TODO: if not ready for raid (maybe not in center yet or something), ignore
+    if (raidTarget != null && raidTarget.equals(message.location)) {
+      raidTarget = null;
+      raidValidated = false;
+//      System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
+    }
+    if (message.location.equals(myPotentialTarget)) {
+      canStartRaid = false;
+    }
+  }
+
+  /**
+   * acknowledge an archon that needs saving
+   * @param message the request for saving from an archon
+   */
+  private void ackSaveMeMessage(SaveMeMessage message) {
+    if (archonToSave == null || Utils.rng.nextInt(5) < 2) { // not already saving or 2/5 chance to switch
+      archonToSave = message.location;
+    }
+  }
+
+  /**
+   * acknowledge an archon is done being saved
+   * @param message the message to stop saving an archon
+   */
+  private void ackArchonSavedMessage(ArchonSavedMessage message) {
+    if (archonToSave != null && archonToSave.equals(message.location)) { // not already saving or 2/5 chance to switch
+      archonToSave = null;
+    }
   }
 
   private void setIndicatorString(String custom, MapLocation enemyLocation) {
     rc.setIndicatorString(custom + "-" + enemyLocation + " aCD:" + rc.getActionCooldownTurns() + " mCD:" + rc.getMovementCooldownTurns());
 //    if (robotToChase != null) rc.setIndicatorString("Soldier " + custom + " - " + enemyLocation + " robotToChase: " + robotToChase.location);
   }
+
 }

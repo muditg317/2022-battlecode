@@ -72,7 +72,7 @@ public class Miner extends Droid {
     } else if (!needToRunHomeForSaving) {
       if (/*Cache.PerTurn.ROUND_NUM >= 15 && */ resourcesLeft && followLead()) {
         // performs action of moving to lead
-      } else {
+      } else if (!needToRunHomeForSuicide) {
         doExploration();
 //      reachedTarget = goToTarget(); // performs action of moving to target location
       }

@@ -24,7 +24,7 @@ public class Communicator {
    *    lead presence, danger, etc
    */
   public static class ChunkInfo {
-    public static final int NUM_CHUNK_INTS = Utils.NUM_MAP_CHUNKS / Utils.CHUNK_INFOS_PER_INT;
+    public static final int NUM_CHUNK_INTS = Utils.MAX_MAP_CHUNKS / Utils.CHUNK_INFOS_PER_INT;
     public static final int CHUNK_INTS_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_CHUNK_INTS;
     public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
 
@@ -96,6 +96,7 @@ public class Communicator {
       int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
       int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
       // danger / lead depleted -- OR -- unexplored
+//      System.out.println("");
       return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
     }
 
@@ -397,6 +398,7 @@ public class Communicator {
      */
     public boolean encodeAndWrite() throws GameActionException {
       if (!dirty) return false;
+//      System.out.println("Update " + this);
       Global.rc.writeSharedArray(VALID_REGION_IND,
             validRegionStart << 10
           | validRegionEnd << 4
@@ -440,7 +442,7 @@ public class Communicator {
     }
   }
 
-  private static final int MIN_BYTECODES_TO_SEND_MESSAGE = 1000;
+  private static final int MIN_BYTECODES_TO_SEND_MESSAGE = 2000;
 
   private final RobotController rc;
 //  private final int[] sharedBuffer;
@@ -556,7 +558,7 @@ public class Communicator {
     while (origin < ending) {
 //      System.out.println("\nBefore  read/ack message: " + Clock.getBytecodeNum());
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
-//      if (message != null) {
+      if (message != null) {
 //      if (message.header.withinCyclic(lastAckdRound, maxRoundNum)) { // skip stale messages
 //      if (message.header.withinRounds(thisRound-2,thisRound)) { // skip stale messages
       Global.robot.ackMessage(message);
@@ -567,7 +569,7 @@ public class Communicator {
 //      System.out.println("\nCost to read/ack message: " + Clock.getBytecodeNum());
 //      } else {
 //        origin++;
-//      }
+      }
     }
     return messages;
   }
@@ -593,10 +595,12 @@ public class Communicator {
       System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
       System.out.println("Header int: " + headerInt);
       System.out.println("Header: " + header);
-      if (messageOrigin < metaInfo.validRegionEnd || (metaInfo.validRegionStart < metaInfo.validRegionEnd && messageOrigin < NUM_MESSAGING_INTS)) {
-        return readMessageAt((messageOrigin+1) % NUM_MESSAGING_INTS);
-      }
-      throw e;
+      metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
+      return null;
+//      if (messageOrigin < metaInfo.validRegionEnd || (metaInfo.validRegionStart < metaInfo.validRegionEnd && messageOrigin < NUM_MESSAGING_INTS)) {
+//        return readMessageAt((messageOrigin+1) % NUM_MESSAGING_INTS);
+//      }
+//      throw e;
     }
 
     switch (header.numInformationInts) {
@@ -677,7 +681,7 @@ public class Communicator {
     int[] messageBits = message.toEncodedInts();
     int origin = metaInfo.validRegionEnd;
     int messageOrigin = (origin + 1) % NUM_MESSAGING_INTS;
-//    System.out.printf("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
+    System.out.printf("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
 //    System.out.println(message.header);
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
