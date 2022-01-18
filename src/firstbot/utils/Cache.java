@@ -127,9 +127,9 @@ public class Cache {
 
             NUM_CHUNKS = NUM_HORIZONTAL_CHUNKS * NUM_VERTICAL_CHUNKS;
 
-//            System.out.println("MAP WIDTH = " + MAP_WIDTH + " MAP HEIGHT = " + MAP_HEIGHT);
-//            System.out.println("CHUNK_WIDTH: " + Cache.Permanent.CHUNK_WIDTH + " CHUNK_HEIGHT: " + Cache.Permanent.CHUNK_HEIGHT);
-//            System.out.println("NUM_HORIZONTAL_CHUNKS: " + Cache.Permanent.NUM_HORIZONTAL_CHUNKS + " NUM_VERTICAL_CHUNKS: " + Cache.Permanent.NUM_VERTICAL_CHUNKS);
+//            //System.out.println("MAP WIDTH = " + MAP_WIDTH + " MAP HEIGHT = " + MAP_HEIGHT);
+//            //System.out.println("CHUNK_WIDTH: " + Cache.Permanent.CHUNK_WIDTH + " CHUNK_HEIGHT: " + Cache.Permanent.CHUNK_HEIGHT);
+//            //System.out.println("NUM_HORIZONTAL_CHUNKS: " + Cache.Permanent.NUM_HORIZONTAL_CHUNKS + " NUM_VERTICAL_CHUNKS: " + Cache.Permanent.NUM_VERTICAL_CHUNKS);
 
         }
     }

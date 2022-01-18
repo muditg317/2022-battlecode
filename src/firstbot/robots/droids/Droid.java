@@ -1,11 +1,6 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
+import battlecode.common.*;
 import firstbot.robots.Robot;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
@@ -49,7 +44,7 @@ public abstract class Droid extends Robot {
     int distance = Utils.maxSingleAxisDist(Cache.PerTurn.CURRENT_LOCATION, parentArchonLoc);
 
     if (this instanceof Soldier) {
-//      rc.setIndicatorString(Cache.PerTurn.HEALTH + "/" + Cache.Permanent.MAX_HEALTH);
+//      //rc.setIndicatorString(Cache.PerTurn.HEALTH + "/" + Cache.Permanent.MAX_HEALTH);
 
       // go back if health is less than half, unless you are closer to the archon already (then its equal to distance from archon?)
       if (Cache.PerTurn.HEALTH < Math.min(4 + distance * DISTANCE_FACTOR_TO_RUN_HOME, Cache.Permanent.MAX_HEALTH * HEALTH_FACTOR_TO_RUN_HOME)) {
@@ -234,10 +229,10 @@ public abstract class Droid extends Robot {
                 ? null
                 : communicator.chunkInfo.centerOfClosestOptimalChunkForMiners(Cache.PerTurn.CURRENT_LOCATION, forceNotSelf);
         exploringRandomly = false;
-//    System.out.println("new target - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
+//    //System.out.println("new target - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
         if (explorationTarget == null) {
           int attempts = 10;
-//      rc.setIndicatorString("no unexplored local chunks");
+//      //rc.setIndicatorString("no unexplored local chunks");
           int chunkToTry = -1;
           do {
             chunkToTry = Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS);
@@ -250,27 +245,41 @@ public abstract class Droid extends Robot {
         break;
       case SOLDIER:
       case SAGE:
-        explorationTarget = Utils.rng.nextInt(10) < 3 || explorationTarget == null // rng 30% of time
-                ? null
-                : communicator.chunkInfo.centerOfClosestOptimalChunkForOffensiveUnits(Cache.PerTurn.CURRENT_LOCATION, forceNotSelf);
+        MapLocation oldExplorationTarget = explorationTarget;
+        explorationTarget = null;
         exploringRandomly = false;
-//    System.out.println("new target - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
-        if (explorationTarget == null) {
-          int attempts = 10;
-//      rc.setIndicatorString("no unexplored local chunks");
-          int chunkToTry = -1;
-          do {
-            chunkToTry = Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS);
-          } while (--attempts >= 0 && !communicator.chunkInfo.chunkIsGoodForOffensiveUnits(chunkToTry));
-          explorationTarget = Utils.chunkIndexToLocation(chunkToTry);
-          if (attempts == -1) {
-            exploringRandomly = true;
+//    //System.out.println("new target - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
+        for (int i = 0; i < Cache.Permanent.NUM_CHUNKS; i++) {
+          if (communicator.chunkInfo.chunkIsGoodForOffensiveUnits(i)) {
+            MapLocation chunkLocation = Utils.chunkIndexToLocation(i);
+//              Utils.print("chunkIsGoodForOffensiveUnits: " + chunkLocation, " dangerous: " + communicator.chunkInfo.chunkHasDanger(i));
+            if (explorationTarget == null) explorationTarget = chunkLocation;
+            if (parentArchonLoc.distanceSquaredTo(explorationTarget) > parentArchonLoc.distanceSquaredTo(chunkLocation)) {
+              explorationTarget = chunkLocation;
+//                Utils.print("explorationTarget: " + i);
+            }
           }
         }
+        Utils.print("explorationTarget: " + explorationTarget);
+//          Utils.submitPrint();
+        if (explorationTarget == null) {
+          explorationTarget = Utils.chunkIndexToLocation(Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS));
+          if (oldExplorationTarget != null && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(oldExplorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
+            explorationTarget = oldExplorationTarget;
+          }
+          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+          exploringRandomly = true;
+        } else {
+          int chunkIndex = Utils.locationToChunkIndex(explorationTarget);
+          if (communicator.chunkInfo.chunkHasDanger(chunkIndex)) rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+          else if (communicator.chunkInfo.chunkNotExploredLead(chunkIndex)) rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+        }
+
         break;
       case BUILDER:
         Utils.randomMapLocation();
     }
+//    Utils.submitPrint();
   }
 
   private static final int RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH = 5;
@@ -289,8 +298,8 @@ public abstract class Droid extends Robot {
     Direction desired = getOptimalDirectionTowards(explorationTarget);
     if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
     if (desired == null) {
-      rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
-//      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
+      //rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
+//      //System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
       return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
     }
     boolean changed = checkTooMuchRubbleOnPathToExploration(desired);
@@ -298,16 +307,16 @@ public abstract class Droid extends Robot {
       desired = getOptimalDirectionTowards(explorationTarget);
       if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
       if (desired == null) {
-        rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
-//      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
+        //rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
+//      //System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
         return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
       }
     }
     if (move(desired)) {
-      rc.setIndicatorString("Approaching explorationTarget" + explorationTarget);
+      //rc.setIndicatorString("Approaching explorationTarget" + explorationTarget);
 //    moveInDirLoose(goal);
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 10, 10);
-      rc.setIndicatorDot(explorationTarget, 0, 255, 0);
+      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 10, 10);
+      //rc.setIndicatorDot(explorationTarget, 0, 255, 0);
     }
     return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
   }
@@ -319,10 +328,10 @@ public abstract class Droid extends Robot {
     if (((this instanceof Soldier && rubbleThere >= 25 && rubbleThere > myRubble1p5)
             || (this instanceof Miner && rubbleThere >= 50 && rubbleThere > myRubble1p5)
     )) {
-      System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
-      System.out.println("Rubble: " + rubbleThere);
-      System.out.println("times tried: " + timesTriedEnterHighRubble);
-      System.out.println("Just go through: " + justGoThrough);
+      //System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
+      //System.out.println("Rubble: " + rubbleThere);
+      //System.out.println("times tried: " + timesTriedEnterHighRubble);
+      //System.out.println("Just go through: " + justGoThrough);
       timesTriedEnterHighRubble++;
       if (timesTriedEnterHighRubble < RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH) {
         randomizeExplorationTarget(true);
@@ -344,10 +353,10 @@ public abstract class Droid extends Robot {
 //      ) && ((this instanceof Soldier && rubbleDesired >= 25 && rubbleDesired > myRubble1p5)
 //              || (this instanceof Miner && rubbleDesired >= 50 && rubbleDesired > myRubble1p5)
 //      )) {
-//        System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
-//        System.out.println("Rubble: " + rubbleThere);
-//        System.out.println("times tried: " + timesTriedEnterHighRubble);
-//        System.out.println("Just go through: " + justGoThrough);
+//        //System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
+//        //System.out.println("Rubble: " + rubbleThere);
+//        //System.out.println("times tried: " + timesTriedEnterHighRubble);
+//        //System.out.println("Just go through: " + justGoThrough);
 //        timesTriedEnterHighRubble++;
 //        if (timesTriedEnterHighRubble < RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH) {
 //          randomizeExplorationTarget(true);
@@ -371,7 +380,56 @@ public abstract class Droid extends Robot {
   protected boolean doExploration() throws GameActionException {
     Utils.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
     // if we are explorating smartly and the chunk has been explored already
-//    System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
+//    //System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
+    if (explorationTarget != null && rc.getType() == RobotType.SOLDIER) {
+      if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
+        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+      } else if (communicator.chunkInfo.chunkNotExploredLead(Utils.locationToChunkIndex(explorationTarget))) {
+        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+      } else {
+        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+      }
+    }
+    if (!exploringRandomly) {
+      boolean needToChange = false;
+      switch (Cache.Permanent.ROBOT_TYPE) {
+        case MINER:
+          needToChange = !communicator.chunkInfo.chunkIsGoodForMinerExploration(Utils.locationToChunkIndex(explorationTarget));
+          break;
+        case SOLDIER:
+        case SAGE:
+          needToChange = !communicator.chunkInfo.chunkIsGoodForOffensiveUnits(Utils.locationToChunkIndex(explorationTarget));
+      }
+      if (needToChange || rc.getType() == RobotType.SOLDIER || rc.getType() == RobotType.SAGE) {
+//      //System.out.printf("TARGET IS BAD\n\tmyLoc:%s\n\ttarget:%s\n\texplRndm:%s\n\tbits:%d\n",Cache.PerTurn.CURRENT_LOCATION,explorationTarget,exploringRandomly,communicator.chunkInfo.chunkInfoBits(Utils.locationToChunkIndex(explorationTarget)));
+        randomizeExplorationTarget(true);
+//      //System.out.println("Reset to " + explorationTarget);
+        //rc.setIndicatorString("bad target... now go to - " + explorationTarget);
+      }
+    }
+    Utils.print("new explorationTarget: " + explorationTarget);
+    if (goToExplorationTarget()) {
+      updateVisibleChunks();
+      MapLocation oldTarget = explorationTarget;
+      randomizeExplorationTarget(true);
+      //rc.setIndicatorString("explored " + oldTarget + " -- now: " + explorationTarget);
+      timesTriedEnterHighRubble = 0;
+      justGoThrough = false;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * generic exploration process for droids to see the rest of the map
+   * @return true if the target was reached & updated
+   * @throws GameActionException if exploring/moving fails
+   */
+  protected boolean doExplorationSoldier() throws GameActionException {
+    Utils.print("RUNNING doExplorationSoldier(): ", "old explorationTarget: " + explorationTarget);
+    // if we are explorating smartly and the chunk has been explored already
+//    //System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
+
     if (!exploringRandomly) {
       boolean needToChange = false;
       switch (Cache.Permanent.ROBOT_TYPE) {
@@ -383,10 +441,10 @@ public abstract class Droid extends Robot {
           needToChange = !communicator.chunkInfo.chunkIsGoodForOffensiveUnits(Utils.locationToChunkIndex(explorationTarget));
       }
       if (needToChange) {
-//      System.out.printf("TARGET IS BAD\n\tmyLoc:%s\n\ttarget:%s\n\texplRndm:%s\n\tbits:%d\n",Cache.PerTurn.CURRENT_LOCATION,explorationTarget,exploringRandomly,communicator.chunkInfo.chunkInfoBits(Utils.locationToChunkIndex(explorationTarget)));
+//      //System.out.printf("TARGET IS BAD\n\tmyLoc:%s\n\ttarget:%s\n\texplRndm:%s\n\tbits:%d\n",Cache.PerTurn.CURRENT_LOCATION,explorationTarget,exploringRandomly,communicator.chunkInfo.chunkInfoBits(Utils.locationToChunkIndex(explorationTarget)));
         randomizeExplorationTarget(true);
-//      System.out.println("Reset to " + explorationTarget);
-        rc.setIndicatorString("bad target... now go to - " + explorationTarget);
+//      //System.out.println("Reset to " + explorationTarget);
+        //rc.setIndicatorString("bad target... now go to - " + explorationTarget);
       }
     }
     Utils.print("new explorationTarget: " + explorationTarget);
@@ -394,7 +452,7 @@ public abstract class Droid extends Robot {
       updateVisibleChunks();
       MapLocation oldTarget = explorationTarget;
       randomizeExplorationTarget(true);
-      rc.setIndicatorString("explored " + oldTarget + " -- now: " + explorationTarget);
+      //rc.setIndicatorString("explored " + oldTarget + " -- now: " + explorationTarget);
       timesTriedEnterHighRubble = 0;
       justGoThrough = false;
       return true;

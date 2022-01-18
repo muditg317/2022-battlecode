@@ -80,9 +80,9 @@ public abstract class Message {
     }
 
     public static Header fromReadInt(int readInt) {
-//      System.out.println("pre arr " + Clock.getBytecodeNum());
+//      //System.out.println("pre arr " + Clock.getBytecodeNum());
 //      MessageType t = MessageType.values[(readInt >>> TYPE_START) & TYPE_MAX];
-//      System.out.println("\tpost arr" + Clock.getBytecodeNum());
+//      //System.out.println("\tpost arr" + Clock.getBytecodeNum());
 //      switch ((readInt >>> TYPE_START) & TYPE_MAX) {
 //        case 0: return new Header(MessageType.ARCHON_HELLO, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
 //        case 1: return new Header(MessageType.LEAD_FOUND, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
