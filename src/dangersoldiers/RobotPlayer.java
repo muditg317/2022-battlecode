@@ -1,8 +1,8 @@
-package firstbot;
+package dangersoldiers;
 
 import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
-import firstbot.robots.Robot;
+import dangersoldiers.robots.Robot;
 
 /**
  * This RobotPlayer will create a custom object for each type of robot which internally handles what it should do
@@ -24,7 +24,7 @@ public strictfp class RobotPlayer {
                 Robot robot = Robot.fromRC(rc);
                 robot.runLoop();
             } catch (Exception e) {
-                System.out.println("FATAL ERROR - " + rc.getLocation());
+                //System.out.println("FATAL ERROR - " + rc.getLocation());
                 e.printStackTrace();
                 rc.resign();
             }
