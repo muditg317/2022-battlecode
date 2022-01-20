@@ -27,6 +27,8 @@ public class Soldier extends Droid {
 
   MapLocation fightToJoin;
 
+  private boolean chasingCommedEnemy;
+
   public Soldier(RobotController rc) throws GameActionException {
     super(rc);
     if (rc.senseNearbyLocationsWithLead().length > 15) VISION_FRACTION_TO_RAID = 6;
@@ -67,8 +69,12 @@ public class Soldier extends Droid {
 
     // miner-like random exploration (random target and go to it)
 
-    if (fightToJoin != null && !fightToJoin.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED*2)) {
-      explorationTarget = fightToJoin;
+//    if (fightToJoin != null && !fightToJoin.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED*2)) {
+//      explorationTarget = fightToJoin;
+//    }
+    if (closestCommedEnemy != null) {
+      explorationTarget = closestCommedEnemy;
+      chasingCommedEnemy = true;
     }
 
     if (archonToSave != null && !needToRunHomeForSaving && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
@@ -953,6 +959,10 @@ public class Soldier extends Droid {
       }
 
       if (robotToChase == null) {
+        if (closestCommedEnemy == null && chasingCommedEnemy) {
+          randomizeExplorationTarget(true);
+          chasingCommedEnemy = false;
+        }
         doExploration();
       }
       // if no one is in vision, we 1) go to the cached location if exists or 2) the random target location

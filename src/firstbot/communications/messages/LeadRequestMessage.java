@@ -59,7 +59,7 @@ public class LeadRequestMessage extends Message {
   public boolean readSharedResponse() throws GameActionException {
     if (!Global.communicator.headerMatches(writeInfo.startIndex, header)) return false; // return false if the message is no longer valid
     //System.out.println("Read response at " + (writeInfo.startIndex+1));
-    int[] information = Global.communicator.readInts(writeInfo.startIndex+1, header.numInformationInts);
+    int[] information = Global.communicator.readInts(writeInfo.startIndex+1, header.type.standardSize);
     processInformation(information[0], information[1]);
     //System.out.println("Process request response: " + location);
     return answered;

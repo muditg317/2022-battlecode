@@ -8,6 +8,7 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.communications.Communicator;
+import firstbot.communications.messages.EnemyFoundMessage;
 import firstbot.communications.messages.Message;
 import firstbot.communications.messages.RubbleAtLocationMessage;
 import firstbot.robots.buildings.Archon;
@@ -31,9 +32,11 @@ public abstract class Robot {
   protected final Communicator communicator;
   protected int pendingMessages;
 
-//  protected final StolenBFS2 stolenbfs;
   protected int turnCount;
   protected boolean dontYield;
+
+  protected MapLocation closestCommedEnemy;
+  protected int distToClosestCommedEnemy;
 
   /**
    * Create a Robot with the given controller
@@ -134,6 +137,10 @@ public abstract class Robot {
     }
     dontYield = false;
 
+    // PRE MESSAGE READING -----
+    closestCommedEnemy = null;
+    distToClosestCommedEnemy = 999999;
+
 //    //System.out.println("Update cache -- " + Clock.getBytecodeNum());
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
@@ -157,8 +164,10 @@ public abstract class Robot {
     }
     //      int b = Clock.getBytecodeNum();
     //      int updatedChunks =
-    updateVisibleChunks();
+//    updateVisibleChunks();
     //      //System.out.println("updateVisibleChunks(" + updatedChunks + ") cost: " + (Clock.getBytecodeNum() - b));
+    commNearbyEnemies();
+
 
     if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) { // took too much bytecode
       rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
@@ -182,8 +191,12 @@ public abstract class Robot {
    * @param message the message received
    */
   public void ackMessage(Message message) throws GameActionException {
-    if (message instanceof RubbleAtLocationMessage) {
-      ackRubbleAtLocationMessage((RubbleAtLocationMessage) message);
+    switch (message.header.type) {
+      case RUBBLE_AT_LOCATION:
+        ackRubbleAtLocationMessage((RubbleAtLocationMessage) message);
+        break;
+      case ENEMY_FOUND:
+        ackEnemyFound((EnemyFoundMessage) message);
     }
   }
 
@@ -295,6 +308,27 @@ public abstract class Robot {
   }
 
   /**
+   * check at the end of the turn if new enemies should be commed
+   * @throws GameActionException if sending the message fails
+   */
+  protected void commNearbyEnemies() throws GameActionException {
+    if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 0) {
+      RobotInfo enemy = Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS[0];
+      // no already seen enemy or closest seen is very far
+//      Utils.cleanPrint();
+//      Utils.print("closestCommedEnemy: " + closestCommedEnemy, "enemy: " + enemy);
+//      if (closestCommedEnemy != null) {
+//        Utils.print("dist: " + closestCommedEnemy.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION));
+//      }
+//      Utils.submitPrint();
+      if (closestCommedEnemy == null
+          || !closestCommedEnemy.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+        communicator.enqueueMessage(new EnemyFoundMessage(enemy));
+      }
+    }
+  }
+
+  /**
    * receive the rubble location of anoter robot
    *    check if that helps us determine symmetry
    * @param message the rubble/location message
@@ -325,6 +359,21 @@ public abstract class Robot {
   }
 
   /**
+   * acknowledge a message about a seen enemy
+   * @param message the message about the seen enemy
+   * @throws GameActionException if acking fails
+   */
+  private void ackEnemyFound(EnemyFoundMessage message) throws GameActionException {
+//    Utils.cleanPrint();
+//    Utils.print("ackEnemyFound: " + message.enemyLocation, "dist: " + message.enemyLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION));
+//    Utils.submitPrint();
+    if (message.enemyLocation.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, distToClosestCommedEnemy-1)) {
+      closestCommedEnemy = message.enemyLocation;
+      distToClosestCommedEnemy = message.enemyLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+    }
+  }
+
+  /**
    * Wrapper for move() of RobotController that ensures enough bytecodes
    * @param dir where to move
    * @return if the robot moved
@@ -339,6 +388,15 @@ public abstract class Robot {
       return true;
     }
     return false;
+  }
+
+  /**
+   *
+   * @param loc the location to test
+   * @return if the robot is closer to the enemy archon than ours
+   */
+  protected boolean onEnemySide(MapLocation loc) {
+    return true;
   }
 
   /**

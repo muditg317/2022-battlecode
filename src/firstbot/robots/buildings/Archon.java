@@ -14,7 +14,7 @@ import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -100;
+  public static final int SUICIDE_ROUND = -75;
 
   private int whichArchonAmI = 1;
   //  private List<MapLocation> archonLocs;
@@ -142,7 +142,7 @@ public class Archon extends Building {
         }
 //        Utils.submitPrint();
         if (canMove) {
-          startMoving();
+//          startMoving();
         }
       }
     }
@@ -151,7 +151,7 @@ public class Archon extends Building {
   private MapLocation closestEnemyArchon;
   private boolean shouldStop;
   /**
-   * run function for an archon when it is stationary (turret mode)
+   * run function for an archon when it is moving
    * @throws GameActionException if any action fails
    */
   private void runArchonMoving() throws GameActionException {
@@ -166,33 +166,42 @@ public class Archon extends Building {
             closestEnemyArchon = flipped;
           }
         case 3:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon4, communicator.metaInfo.knownSymmetry);
+          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon3, communicator.metaInfo.knownSymmetry);
           if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
             closestEnemyArchon = flipped;
           }
         case 2:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon4, communicator.metaInfo.knownSymmetry);
+          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon2, communicator.metaInfo.knownSymmetry);
           if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
             closestEnemyArchon = flipped;
           }
         case 1:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon4, communicator.metaInfo.knownSymmetry);
+          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon1, communicator.metaInfo.knownSymmetry);
           if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
             closestEnemyArchon = flipped;
           }
       }
     }
     if (rc.canTransform()) {
-      shouldStop |= Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 0;
+      boolean shouldStop = false;
+      for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+        if (ri.type.damage > 0) {
+          shouldStop = true;
+          break;
+        }
+      }
+
       if (!shouldStop) {
         for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-          if (friend.health < friend.type.health) {
+          if (friend.health < friend.type.health) { //todo: maybe consider changing to a threshold
             shouldStop = true;
             break;
           }
         }
       }
+
       if (!shouldStop) {
+        if (closestCommedEnemy != null) closestEnemyArchon = closestCommedEnemy;
         if (moveOptimalTowards(closestEnemyArchon)) {
           communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
         }
@@ -244,9 +253,12 @@ public class Archon extends Building {
   private boolean doFirstTurn() throws GameActionException {
 //    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
 
-    updateSymmetryComms();
-//    updateVisibleChunks();
     communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
+
+    if (whichArchonAmI == 1) {
+      communicator.metaInfo.initializeValidRegion();
+      communicator.metaInfo.encodeAndWrite();
+    }
 
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);

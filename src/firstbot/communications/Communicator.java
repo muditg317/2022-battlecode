@@ -365,11 +365,11 @@ public class Communicator {
     public static final int ENEMY_ARCHONS_12 = ARCHON_INTS_START+2;
     public static final int ENEMY_ARCHONS_34 = ARCHON_INTS_START+3;
     public static final int LEFT_ARCHON_LOC_MASK = 0b1111111 << 8;
-    public static final int LEFT_ARCHON_LOC_INVERTED_MASK = ~(0b1111111 << 8);
+    public static final int LEFT_ARCHON_LOC_INVERTED_MASK = ~(LEFT_ARCHON_LOC_MASK);
     public static final int LEFT_ARCHON_MOVING_MASK = 0b10000000 << 8;
     public static final int LEFT_ARCHON_NOT_MOVING_MASK = ~(LEFT_ARCHON_MOVING_MASK);
     public static final int RIGHT_ARCHON_LOC_MASK = 0b1111111;
-    public static final int RIGHT_ARCHON_LOC_INVERTED_MASK = ~(0b1111111);
+    public static final int RIGHT_ARCHON_LOC_INVERTED_MASK = ~(RIGHT_ARCHON_LOC_MASK);
     public static final int RIGHT_ARCHON_MOVING_MASK = 0b10000000;
     public static final int RIGHT_ARCHON_NOT_MOVING_MASK = ~(RIGHT_ARCHON_MOVING_MASK);
 //    public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
@@ -389,41 +389,52 @@ public class Communicator {
     }
 
     public void setOurArchonLoc(int whichArchon, MapLocation archonLoc) throws GameActionException {
+//      Utils.cleanPrint();
       switch (whichArchon) {
         case 1:
           ourArchon1 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_12, (Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_LOC_INVERTED_MASK) | (Utils.locationToChunkIndex(archonLoc) << 8));
+//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 2:
           ourArchon2 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_12, (Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_LOC_INVERTED_MASK) | Utils.locationToChunkIndex(archonLoc));
+//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 3:
           ourArchon3 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_34, (Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_LOC_INVERTED_MASK) | (Utils.locationToChunkIndex(archonLoc) << 8));
+//          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
         case 4:
           ourArchon4 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_34, (Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_LOC_INVERTED_MASK) | Utils.locationToChunkIndex(archonLoc));
           break;
       }
+//      Utils.submitPrint();
     }
 
     public void setMoving(int whichArchon) throws GameActionException {
+//      Utils.cleanPrint();
       switch (whichArchon) {
         case 1:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) | LEFT_ARCHON_MOVING_MASK);
+//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 2:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) | RIGHT_ARCHON_MOVING_MASK);
+//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 3:
           Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) | LEFT_ARCHON_MOVING_MASK);
+//          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
         case 4:
           Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) | RIGHT_ARCHON_MOVING_MASK);
+//          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
       }
+//      Utils.submitPrint();
     }
 
     public void setNotMoving(int whichArchon) throws GameActionException {
@@ -477,6 +488,7 @@ public class Communicator {
     public static final int VALID_REGION_IND = META_INT_START;
     private int validRegionStart; // 0-62    -- 6 bits [15,10]
     private int validRegionEnd;   // 0-62    -- 6 bits [9,4]
+    public static final int EMPTY_REGION_INDICATOR = 61;
 
     public static final int SYMMETRY_INFO_SIZE = 0;
     public static final int SYMMETRY_INFO_IND = VALID_REGION_IND - SYMMETRY_INFO_SIZE;
@@ -522,6 +534,11 @@ public class Communicator {
       dirty = false;
     }
 
+    public void initializeValidRegion() {
+      validRegionStart = validRegionEnd = EMPTY_REGION_INDICATOR;
+      dirty = true;
+    }
+
     /**
      * update validstart/validend from shared array
      * @throws GameActionException if reading fails
@@ -551,7 +568,7 @@ public class Communicator {
 
     @Override
     public String toString() {
-      return String.format("ValidComms[%d:%d]", validRegionStart, validRegionEnd);
+      return String.format("ValidComms[%d:%d)", validRegionStart, validRegionEnd);
     }
 
     /**
@@ -584,7 +601,7 @@ public class Communicator {
     }
   }
 
-  private static final int MIN_BYTECODES_TO_SEND_MESSAGE = 2000;
+  private static final int MIN_BYTECODES_TO_SEND_MESSAGE = 1000;
 
   private final RobotController rc;
 //  private final int[] sharedBuffer;
@@ -596,7 +613,7 @@ public class Communicator {
   private static final int NUM_MESSAGING_INTS = MetaInfo.META_INT_START;
   private final FastQueue<Message> messageQueue;
   private final List<Message> sentMessages;
-  private final List<Message> received;
+//  private final List<Message> received;
 
   public Communicator() {
     this.rc = Global.rc;
@@ -607,7 +624,7 @@ public class Communicator {
 
     messageQueue = new FastQueue<>(10);
     sentMessages = new ArrayList<>(5);
-    received = new ArrayList<>();
+//    received = new ArrayList<>();
   }
 
   /**
@@ -635,22 +652,22 @@ public class Communicator {
 //      if (rc.getRoundNum() == 1471) {
 //        //System.out.println("bounds before cleaning: " + metaInfo);
 //      }
-      Message message = sentMessages.get(0);
-      int origin = metaInfo.validRegionStart;
-      int ending = metaInfo.validRegionEnd;
-      if (ending < origin) {
-        ending += NUM_MESSAGING_INTS;
-      }
+//      Message message = sentMessages.get(0);
+//      int origin = metaInfo.validRegionStart;
+//      int ending = metaInfo.validRegionEnd;
+//      if (ending < origin) {
+//        ending += NUM_MESSAGING_INTS;
+//      }
 //      if (ending == origin) { // no messages to read
 //        return 0;
 //      }
-      for (; origin < ending; origin += Message.Header.fromReadInt(rc.readSharedArray(origin%NUM_MESSAGING_INTS)).numInformationInts+1) {
-        if (message.writeInfo.startIndex == origin) {
+//      for (; origin < ending; origin += Message.Header.fromReadInt(rc.readSharedArray(origin%NUM_MESSAGING_INTS)).type.standardSize+1) {
+//        if (message.writeInfo.startIndex == origin) {
 //          System.out.println("CLEAN " + message.header.type + ": " + origin);
           Message last = sentMessages.get(sentMessages.size() - 1);
           metaInfo.validRegionStart = (last.writeInfo.startIndex + last.size()) % NUM_MESSAGING_INTS;
-          if ((metaInfo.validRegionEnd + 1) % NUM_MESSAGING_INTS == metaInfo.validRegionStart) {
-            metaInfo.validRegionEnd = metaInfo.validRegionStart = 0;
+          if (metaInfo.validRegionEnd == metaInfo.validRegionStart) {
+            metaInfo.initializeValidRegion();
           }
           metaInfo.dirty = true;
           metaInfo.encodeAndWrite();
@@ -662,9 +679,9 @@ public class Communicator {
 //          }
 //          System.out.println("\ncleaned  - " + metaInfo);
           return true;
-        }
-      }
-      System.out.printf("FAILED TO CLEAN MESSAGES\n%s\n1st: %s", metaInfo, sentMessages.get(0).header);
+//        }
+//      }
+//      System.out.printf("FAILED TO CLEAN MESSAGES\n%s\n1st: %s @ %d\n", metaInfo, message.header, message.writeInfo.startIndex);
 //      sentMessages.clear();
     }
     return false;
@@ -695,7 +712,7 @@ public class Communicator {
     if (ending < origin) {
       ending += NUM_MESSAGING_INTS;
     }
-    if (ending == origin) { // no messages to read
+    if (ending == MetaInfo.EMPTY_REGION_INDICATOR) { // no messages to read
       return 0;
     }
 //    System.out.println("Reading messages: " + metaInfo);
@@ -712,22 +729,22 @@ public class Communicator {
     while (origin < ending) {
 //      System.out.println("\nBefore  read/ack message: " + Clock.getBytecodeNum());
       Message message = readMessageAt(origin % NUM_MESSAGING_INTS);
-      if (message == null) {
-        int tries = 1;
-        do {
-          message = readMessageAt(++origin % NUM_MESSAGING_INTS);
-        } while (--tries > 0 && message == null);
-      }
-      if (message != null) {
+//      if (message == null) {
+//        int tries = 1;
+//        do {
+//          message = readMessageAt(++origin % NUM_MESSAGING_INTS);
+//        } while (--tries > 0 && message == null);
+//      }
+//      if (message != null) {
         Global.robot.ackMessage(message);
         messages++;
         origin += message.size();
-//      System.out.println("\nCost to read/ack message: " + Clock.getBytecodeNum());
-      } else {
-        metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
-        metaInfo.encodeAndWrite();
-        break;
-      }
+////      System.out.println("\nCost to read/ack message: " + Clock.getBytecodeNum());
+//      } else {
+//        metaInfo.initializeValidRegion();
+//        metaInfo.encodeAndWrite();
+//        break;
+//      }
     }
     return messages;
   }
@@ -746,11 +763,11 @@ public class Communicator {
 //      int beforeReadHeader = Clock.getBytecodeNum();
       header = Message.Header.fromReadInt(headerInt);
 //      //System.out.println("Cost to read header: " + (Clock.getBytecodeNum() - beforeReadHeader));
-      header.validate();
+//      header.validate();
     } catch (Exception e) {
       System.out.println("Failed to parse header! at: " + messageOrigin);
       System.out.println("Reading bounds: " + metaInfo);
-      System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
+      System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
       System.out.println("Header int: " + headerInt);
       System.out.println("Header: " + header);
 //      e.printStackTrace();
@@ -762,9 +779,10 @@ public class Communicator {
       throw e;
     }
 
-    switch (header.numInformationInts) {
+    switch (header.type.standardSize) {
       case 0:
-        return Message.fromHeaderAndInfo0(header
+        return Message.fromHeaderAndInfo0(header,
+          headerInt
           ).setWriteInfo(new Message.WriteInfo(messageOrigin));
       case 1:
         return Message.fromHeaderAndInfo1(header,
@@ -803,6 +821,11 @@ public class Communicator {
    */
   public void enqueueMessage(Message message) {
     messageQueue.push(message);
+    if (rc.getID() == 10618) {
+      Utils.cleanPrint();
+      Utils.print("Enqueued message: " + messageQueue.size(), "header: " + message.header);
+      Utils.submitPrint();
+    }
   }
 
   /**
@@ -839,23 +862,24 @@ public class Communicator {
 //    System.out.println("pre-reload -- bc: " + Clock.getBytecodesLeft());
     metaInfo.reloadValidRegion();
 //    System.out.println("pre-sending -- bc: " + Clock.getBytecodesLeft());
-    if (((metaInfo.validRegionEnd-metaInfo.validRegionStart+NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS) + message.size() >= NUM_MESSAGING_INTS) { // will try to write more ints than available
+//    System.out.println("metaInfo: " + metaInfo);
+//    System.out.println("Current ints: " + ((metaInfo.validRegionEnd-metaInfo.validRegionStart+NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS) + "\nnew ints: " + message.size() + "\nlimit: " + NUM_MESSAGING_INTS);
+    if (metaInfo.validRegionEnd != MetaInfo.EMPTY_REGION_INDICATOR
+        && ((metaInfo.validRegionEnd-metaInfo.validRegionStart+NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS) + message.size() >= NUM_MESSAGING_INTS) { // will try to write more ints than available
       rescheduleMessage(message);
 //      System.out.println("reschedule for out of space - " + message.header);
 //      System.out.printf("---\nRESCHEDULE  %s:\n%d - %s\n", message.header.type, Clock.getBytecodesLeft(), Arrays.toString(message.toEncodedInts()));
       return false;
     }
-    boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
+    boolean updateStart = metaInfo.validRegionStart == MetaInfo.EMPTY_REGION_INDICATOR; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
-    int origin = metaInfo.validRegionEnd;
-    int messageOrigin = (origin + 1) % NUM_MESSAGING_INTS;
-//    System.out.printf("---\nSEND  %s:\n%d - %s\n%s\nbc: %d\n", message.header.type, messageOrigin, Arrays.toString(messageBits),metaInfo,Clock.getBytecodesLeft());
+    int origin = metaInfo.validRegionEnd % NUM_MESSAGING_INTS;
+    int messageOrigin = origin;
 //    System.out.printf("---\nSEND  %s:\n%d - %s\n%s\nbc: %d\n", message.header.type, messageOrigin, Arrays.toString(messageBits),metaInfo,Clock.getBytecodesLeft());
 //    Utils.print(String.format("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits)));
     rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,0,0);
 //    System.out.println(message.header);
     for (int messageChunk : messageBits) {
-      origin = (origin + 1) % NUM_MESSAGING_INTS;
 //      if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
 //        Message messageAt = readMessageAt(origin);
 //        metaInfo.validRegionStart += messageAt != null ? messageAt.size() : 1;
@@ -866,13 +890,14 @@ public class Communicator {
 //      }
 //      System.out.println("Write to shared " + origin + ": " + messageChunk);
       rc.writeSharedArray(origin, messageChunk);
+      origin = (origin + 1) % NUM_MESSAGING_INTS;
     }
     sentMessages.add(message);
     rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,255,0);
-    metaInfo.validRegionEnd = origin;
+    metaInfo.validRegionEnd = origin;//(origin+1) % NUM_MESSAGING_INTS;
     if (updateStart) { // first message!
-      metaInfo.validRegionStart = origin - message.header.numInformationInts;
-      if (metaInfo.validRegionStart < 0) metaInfo.validRegionStart += NUM_MESSAGING_INTS;
+      metaInfo.validRegionStart = messageOrigin;
+//      if (metaInfo.validRegionStart < 0) metaInfo.validRegionStart += NUM_MESSAGING_INTS;
 //      System.out.println("Move start: " + metaInfo);
     }
     message.setWriteInfo(new Message.WriteInfo(messageOrigin));

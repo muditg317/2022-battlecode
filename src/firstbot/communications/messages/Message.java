@@ -22,7 +22,8 @@ public abstract class Message {
     SAVE_ME(SaveMeMessage.MESSAGE_LENGTH),
     ARCHON_SAVED(ArchonSavedMessage.MESSAGE_LENGTH),
     RUBBLE_AT_LOCATION(RubbleAtLocationMessage.MESSAGE_LENGTH),
-    JOIN_THE_FIGHT(JoinTheFightMessage.MESSAGE_LENGTH);
+    JOIN_THE_FIGHT(JoinTheFightMessage.MESSAGE_LENGTH),
+    ENEMY_FOUND(EnemyFoundMessage.MESSAGE_LENGTH);
 
     public final int standardSize;
     public final int ordinal;
@@ -51,10 +52,10 @@ public abstract class Message {
     private static final int TYPE_MAX = (1 << TYPE_SIZE) - 1;
     public final MessageType type; // 0-7         -- 3 bits [13,11]
 
-    private static final int NUM_INTS_SIZE = 6;
+    private static final int NUM_INTS_SIZE = 0;
     private static final int NUM_INTS_START = TYPE_START - NUM_INTS_SIZE;
     private static final int NUM_INTS_MAX = (1 << NUM_INTS_SIZE) - 1;
-    public final int numInformationInts; // 0-63  -- 6 bits [10,5]
+//    public final int numInformationInts; // 0-63  -- 6 bits [10,5]
 
     private static final int ROUND_NUM_SIZE = 0;
     private static final int ROUND_NUM_START = NUM_INTS_START - ROUND_NUM_SIZE;
@@ -64,7 +65,7 @@ public abstract class Message {
 
     public Header(MessageType type, int numInformationInts) {
       this.type = type;
-      this.numInformationInts = numInformationInts;
+//      this.numInformationInts = numInformationInts;
     }
 
     public static Header fromReadInt(int readInt) {
@@ -77,18 +78,18 @@ public abstract class Message {
     public int toInt() {
       return
           type.ordinal << TYPE_START
-          | numInformationInts << NUM_INTS_START
+//          | numInformationInts << NUM_INTS_START
           ;
     }
     @Override
     public String toString() {
-      return String.format("MsgHdr{%s,len=%d}", type, numInformationInts);
+      return String.format("MsgHdr{%s}", type);
     }
 
     public void validate() {
-      if (type.standardSize != -1 && type.standardSize != numInformationInts) {
-        throw new RuntimeException("Invalid message header!");
-      }
+//      if (type.standardSize != -1 && type.standardSize != numInformationInts) {
+//        throw new RuntimeException("Invalid message header!");
+//      }
     }
   }
 
@@ -131,15 +132,15 @@ public abstract class Message {
     this(new Header(type, numInformationInts));
   }
 
-  public static Message fromHeaderAndInfo0(Header header) {
-//    return header.type.messageConstructor.newInstance(header, information);
+
+  public static Message fromHeaderAndInfo0(Header header, int headerInt) {
     switch (header.type) {
+      case ENEMY_FOUND: return new EnemyFoundMessage(header, headerInt);
       default: throw new RuntimeException("Provided message type has length != 0 : " + header.type);
     }
   }
 
   public static Message fromHeaderAndInfo1(Header header, int information) {
-//    return header.type.messageConstructor.newInstance(header, information);
     switch (header.type) {
       case ARCHON_HELLO: return new ArchonHelloMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
@@ -153,7 +154,6 @@ public abstract class Message {
   }
 
   public static Message fromHeaderAndInfo2(Header header, int information, int information2) {
-//    return header.type.messageConstructor.newInstance(header, information);
     switch (header.type) {
       case LEAD_REQUEST: return new LeadRequestMessage(header, information, information2);
       case RUBBLE_AT_LOCATION: return new RubbleAtLocationMessage(header, information, information2);
@@ -185,6 +185,6 @@ public abstract class Message {
 //  }
 
   public int size() {
-    return header.numInformationInts + 1;
+    return header.type.standardSize + 1;
   }
 }

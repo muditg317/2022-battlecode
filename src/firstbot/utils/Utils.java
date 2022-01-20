@@ -157,6 +157,9 @@ public class Utils {
   public static int encodeLocation(MapLocation location) {
     return (location.x << 10) | (location.y << 4);
   }
+  public static int encodeLocationLower(MapLocation location) {
+    return (location.x << 6) | (location.y);
+  }
 
   /**
    * decode a location from the provided integer (encoding described above)
@@ -165,6 +168,9 @@ public class Utils {
    */
   public static MapLocation decodeLocation(int encoded) {
     return new MapLocation((encoded >> 10) & 0x3f, (encoded >> 4) & 0x3f);
+  }
+  public static MapLocation decodeLocationLower(int encoded) {
+    return new MapLocation((encoded >> 6) & 0x3f, (encoded) & 0x3f);
   }
 
   /**
