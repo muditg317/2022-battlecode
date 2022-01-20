@@ -16,6 +16,8 @@ import firstbot.utils.Utils;
 public class Archon extends Building {
   public static final int SUICIDE_ROUND = -75;
 
+  public static final int MAX_RUBBLE_TO_STOP = 5;
+
   private int whichArchonAmI = 1;
   //  private List<MapLocation> archonLocs;
   private boolean hasMoved;
@@ -72,6 +74,10 @@ public class Archon extends Building {
       return;
     }
 
+    if (communicator.metaInfo.knownSymmetry != null && !communicator.archonInfo.mirrored) {
+      communicator.archonInfo.mirrorSelfToEnemies();
+    }
+
 //    drawChunkBounds();
     if (!moving) {
       runArchonStationaryMode();
@@ -123,26 +129,26 @@ public class Archon extends Building {
         switch (rc.getArchonCount()) {
           case 1:
             canMove = false;
-            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 2:
-            canMove = !communicator.archonInfo.isMoving(3 - whichArchonAmI);
-            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+            canMove = !communicator.archonInfo.ourArchonIsMoving(3 - whichArchonAmI);
+//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 3:
-            canMove = !communicator.archonInfo.isMoving(((whichArchonAmI)%3)+1)
-                    || !communicator.archonInfo.isMoving(((whichArchonAmI+1)%3)+1);
-            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+            canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%3)+1)
+                    || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%3)+1);
+//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 4:
-            canMove = !communicator.archonInfo.isMoving(((whichArchonAmI)%4)+1)
-                    || !communicator.archonInfo.isMoving(((whichArchonAmI+1)%4)+1)
-                    || !communicator.archonInfo.isMoving(((whichArchonAmI+2)%4)+1);
-            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+            canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%4)+1)
+                    || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%4)+1)
+                    || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+2)%4)+1);
+//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
         }
 //        Utils.submitPrint();
         if (canMove) {
-//          startMoving();
+          startMoving();
         }
       }
     }
@@ -156,29 +162,28 @@ public class Archon extends Building {
    */
   private void runArchonMoving() throws GameActionException {
     if (closestEnemyArchon == null) { // determine closest enemy archon to move towards
-      communicator.archonInfo.readArchonLocs();
-      int dToClsoest = 9999;
-      MapLocation flipped;
+      communicator.archonInfo.readEnemyArchonLocs();
+      int dToClosest = 9999;
       switch (rc.getArchonCount()) {
         case 4:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon4, communicator.metaInfo.knownSymmetry);
-          if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
-            closestEnemyArchon = flipped;
+          if (communicator.archonInfo.enemyArchon4.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestEnemyArchon = communicator.archonInfo.enemyArchon4;
+            dToClosest = communicator.archonInfo.enemyArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
           }
         case 3:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon3, communicator.metaInfo.knownSymmetry);
-          if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
-            closestEnemyArchon = flipped;
+          if (communicator.archonInfo.enemyArchon3.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestEnemyArchon = communicator.archonInfo.enemyArchon3;
+            dToClosest = communicator.archonInfo.enemyArchon3.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
           }
         case 2:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon2, communicator.metaInfo.knownSymmetry);
-          if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
-            closestEnemyArchon = flipped;
+          if (communicator.archonInfo.enemyArchon2.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestEnemyArchon = communicator.archonInfo.enemyArchon2;
+            dToClosest = communicator.archonInfo.enemyArchon2.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
           }
         case 1:
-          flipped = Utils.applySymmetry(communicator.archonInfo.ourArchon1, communicator.metaInfo.knownSymmetry);
-          if (flipped.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClsoest-1)) {
-            closestEnemyArchon = flipped;
+          if (communicator.archonInfo.enemyArchon1.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestEnemyArchon = communicator.archonInfo.enemyArchon1;
+//            dToClsoest = communicator.archonInfo.enemyArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
           }
       }
     }
@@ -201,19 +206,39 @@ public class Archon extends Building {
       }
 
       if (!shouldStop) {
-        if (closestCommedEnemy != null) closestEnemyArchon = closestCommedEnemy;
+//        if (closestCommedEnemy != null) closestEnemyArchon = closestCommedEnemy;
         if (moveOptimalTowards(closestEnemyArchon)) {
           communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
         }
       } else {
-        stopMoving();
+        if (rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < MAX_RUBBLE_TO_STOP) {
+          stopMoving();
+        } else {
+          MapLocation lowestRubbleLoc = null;
+          int lowestRubble = 9999;
+          int distToClosestCurr = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(closestEnemyArchon);
+          for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+            if (!loc.isWithinDistanceSquared(closestEnemyArchon, distToClosestCurr-1)) {
+              int rubble = rc.senseRubble(loc);
+              if (rubble < lowestRubble) {
+                lowestRubbleLoc = loc;
+                lowestRubble = rubble;
+              }
+            }
+          }
+          if (lowestRubbleLoc != null) {
+            moveOptimalTowards(lowestRubbleLoc);
+          } else {
+            moveOptimalAway(closestEnemyArchon);
+          }
+        }
       }
     }
   }
 
   private void startMoving() throws GameActionException {
     rc.transform();
-    communicator.archonInfo.setMoving(whichArchonAmI);
+    communicator.archonInfo.setOurArchonMoving(whichArchonAmI);
     moving = true;
     closestEnemyArchon = null;
     shouldStop = false;
@@ -221,7 +246,7 @@ public class Archon extends Building {
 
   private void stopMoving() throws GameActionException {
     rc.transform();
-    communicator.archonInfo.setNotMoving(whichArchonAmI);
+    communicator.archonInfo.setOurArchonNotMoving(whichArchonAmI);
     moving = false;
     hasMoved = true;
   }

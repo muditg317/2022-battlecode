@@ -363,20 +363,28 @@ public class Communicator {
   }
 
   public static class ArchonInfo {
-    public static final int NUM_ARCHON_INTS = 4;
+    public static final int NUM_ARCHON_INTS = 8;
     public static final int ARCHON_INTS_START = ChunkInfo.CHUNK_INTS_START - NUM_ARCHON_INTS;
-    public static final int OUR_ARCHONS_12 = ARCHON_INTS_START;
-    public static final int OUR_ARCHONS_34 = ARCHON_INTS_START+1;
-    public static final int ENEMY_ARCHONS_12 = ARCHON_INTS_START+2;
-    public static final int ENEMY_ARCHONS_34 = ARCHON_INTS_START+3;
-    public static final int LEFT_ARCHON_LOC_MASK = 0b1111111 << 8;
-    public static final int LEFT_ARCHON_LOC_INVERTED_MASK = ~(LEFT_ARCHON_LOC_MASK);
-    public static final int LEFT_ARCHON_MOVING_MASK = 0b10000000 << 8;
-    public static final int LEFT_ARCHON_NOT_MOVING_MASK = ~(LEFT_ARCHON_MOVING_MASK);
-    public static final int RIGHT_ARCHON_LOC_MASK = 0b1111111;
-    public static final int RIGHT_ARCHON_LOC_INVERTED_MASK = ~(RIGHT_ARCHON_LOC_MASK);
-    public static final int RIGHT_ARCHON_MOVING_MASK = 0b10000000;
-    public static final int RIGHT_ARCHON_NOT_MOVING_MASK = ~(RIGHT_ARCHON_MOVING_MASK);
+    public static final int OUR_ARCHONS_1 = ARCHON_INTS_START;
+    public static final int OUR_ARCHONS_2 = ARCHON_INTS_START+1;
+    public static final int OUR_ARCHONS_3 = ARCHON_INTS_START+2;
+    public static final int OUR_ARCHONS_4 = ARCHON_INTS_START+3;
+    public static final int ENEMY_ARCHONS_1 = ARCHON_INTS_START+4;
+    public static final int ENEMY_ARCHONS_2 = ARCHON_INTS_START+5;
+    public static final int ENEMY_ARCHONS_3 = ARCHON_INTS_START+6;
+    public static final int ENEMY_ARCHONS_4 = ARCHON_INTS_START+7;
+    public static final int ARCHON_LOC_MASK = 0b1111111111110000;
+    public static final int ARCHON_LOC_INVERTED_MASK = ~ARCHON_LOC_MASK;
+    public static final int ARCHON_MOVING_MASK = 0b1000;
+    public static final int ARCHON_NOT_MOVING_MASK = ~(ARCHON_MOVING_MASK);
+//    public static final int LEFT_ARCHON_LOC_MASK = 0b1111111 << 8;
+//    public static final int LEFT_ARCHON_LOC_INVERTED_MASK = ~(LEFT_ARCHON_LOC_MASK);
+//    public static final int LEFT_ARCHON_MOVING_MASK = 0b10000000 << 8;
+//    public static final int LEFT_ARCHON_NOT_MOVING_MASK = ~(LEFT_ARCHON_MOVING_MASK);
+//    public static final int RIGHT_ARCHON_LOC_MASK = 0b1111111;
+//    public static final int RIGHT_ARCHON_LOC_INVERTED_MASK = ~(RIGHT_ARCHON_LOC_MASK);
+//    public static final int RIGHT_ARCHON_MOVING_MASK = 0b10000000;
+//    public static final int RIGHT_ARCHON_NOT_MOVING_MASK = ~(RIGHT_ARCHON_MOVING_MASK);
 //    public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
 
     //    public static final int ARCHON_INFO_SIZE = 2;
@@ -386,11 +394,29 @@ public class Communicator {
     public MapLocation ourArchon3;
     public MapLocation ourArchon4;
 
-    public void readArchonLocs() throws GameActionException {
-      ourArchon1 = Utils.chunkIndexToLocation(Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_LOC_MASK);
-      ourArchon2 = Utils.chunkIndexToLocation((Global.rc.readSharedArray(OUR_ARCHONS_12) >>> 8) & RIGHT_ARCHON_LOC_MASK);
-      ourArchon3 = Utils.chunkIndexToLocation(Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_LOC_MASK);
-      ourArchon4 = Utils.chunkIndexToLocation((Global.rc.readSharedArray(OUR_ARCHONS_34) >>> 8) & RIGHT_ARCHON_LOC_MASK);
+    public MapLocation enemyArchon1;
+    public MapLocation enemyArchon2;
+    public MapLocation enemyArchon3;
+    public MapLocation enemyArchon4;
+
+    public void readOurArchonLocs() throws GameActionException {
+      ourArchon1 = Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_1));
+      ourArchon2 = Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_2));
+      ourArchon3 = Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_3));
+      ourArchon4 = Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_4));
+    }
+
+    public void readEnemyArchonLocs() throws GameActionException {
+      enemyArchon1 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_1));
+      enemyArchon2 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_2));
+      enemyArchon3 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_3));
+      enemyArchon4 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_4));
+      Utils.cleanPrint();
+      Utils.print("enemy 1: " + enemyArchon1);
+      Utils.print("enemy 2: " + enemyArchon2);
+      Utils.print("enemy 3: " + enemyArchon3);
+      Utils.print("enemy 4: " + enemyArchon4);
+      Utils.submitPrint();
     }
 
     public void setOurArchonLoc(int whichArchon, MapLocation archonLoc) throws GameActionException {
@@ -398,89 +424,92 @@ public class Communicator {
       switch (whichArchon) {
         case 1:
           ourArchon1 = archonLoc;
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, (Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_LOC_INVERTED_MASK) | (Utils.locationToChunkIndex(archonLoc) << 8));
+          Global.rc.writeSharedArray(OUR_ARCHONS_1, (Global.rc.readSharedArray(OUR_ARCHONS_1) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
 //          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 2:
           ourArchon2 = archonLoc;
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, (Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_LOC_INVERTED_MASK) | Utils.locationToChunkIndex(archonLoc));
+          Global.rc.writeSharedArray(OUR_ARCHONS_2, (Global.rc.readSharedArray(OUR_ARCHONS_2) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
 //          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 3:
           ourArchon3 = archonLoc;
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, (Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_LOC_INVERTED_MASK) | (Utils.locationToChunkIndex(archonLoc) << 8));
+          Global.rc.writeSharedArray(OUR_ARCHONS_3, (Global.rc.readSharedArray(OUR_ARCHONS_3) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
 //          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
         case 4:
           ourArchon4 = archonLoc;
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, (Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_LOC_INVERTED_MASK) | Utils.locationToChunkIndex(archonLoc));
+          Global.rc.writeSharedArray(OUR_ARCHONS_4, (Global.rc.readSharedArray(OUR_ARCHONS_4) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
           break;
       }
 //      Utils.submitPrint();
     }
 
-    public void setMoving(int whichArchon) throws GameActionException {
+    public boolean mirrored;
+    public void mirrorSelfToEnemies() throws GameActionException {
+      switch (Global.rc.getArchonCount()) {
+        case 4:
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_4, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_4)), Global.communicator.metaInfo.knownSymmetry)));
+        case 3:
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_3, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_3)), Global.communicator.metaInfo.knownSymmetry)));
+        case 2:
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_2, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_2)), Global.communicator.metaInfo.knownSymmetry)));
+        case 1:
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_1, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_1)), Global.communicator.metaInfo.knownSymmetry)));
+      }
+      mirrored = true;
+    }
+
+    public void setOurArchonMoving(int whichArchon) throws GameActionException {
 //      Utils.cleanPrint();
       switch (whichArchon) {
         case 1:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) | LEFT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_1, Global.rc.readSharedArray(OUR_ARCHONS_1) | ARCHON_MOVING_MASK);
 //          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 2:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) | RIGHT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_2, Global.rc.readSharedArray(OUR_ARCHONS_2) | ARCHON_MOVING_MASK);
 //          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 3:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) | LEFT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_3, Global.rc.readSharedArray(OUR_ARCHONS_3) | ARCHON_MOVING_MASK);
 //          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
         case 4:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) | RIGHT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_4, Global.rc.readSharedArray(OUR_ARCHONS_4) | ARCHON_MOVING_MASK);
 //          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
       }
 //      Utils.submitPrint();
     }
 
-    public void setNotMoving(int whichArchon) throws GameActionException {
+    public void setOurArchonNotMoving(int whichArchon) throws GameActionException {
       switch (whichArchon) {
         case 1:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_NOT_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_1, Global.rc.readSharedArray(OUR_ARCHONS_1) & ARCHON_NOT_MOVING_MASK);
           break;
         case 2:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_NOT_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_2, Global.rc.readSharedArray(OUR_ARCHONS_2) & ARCHON_NOT_MOVING_MASK);
           break;
         case 3:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_NOT_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_3, Global.rc.readSharedArray(OUR_ARCHONS_3) & ARCHON_NOT_MOVING_MASK);
           break;
         case 4:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_NOT_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_4, Global.rc.readSharedArray(OUR_ARCHONS_4) & ARCHON_NOT_MOVING_MASK);
           break;
       }
     }
 
-    public boolean isMoving(int whichArchon) throws GameActionException {
+    public boolean ourArchonIsMoving(int whichArchon) throws GameActionException {
       switch (whichArchon) {
         case 1:
-          if ((Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_MOVING_MASK) > 0) {
-            return true;
-          }
-          break;
+          return (Global.rc.readSharedArray(OUR_ARCHONS_1) & ARCHON_MOVING_MASK) > 0;
         case 2:
-          if ((Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_MOVING_MASK) > 0) {
-            return true;
-          }
-          break;
+          return (Global.rc.readSharedArray(OUR_ARCHONS_2) & ARCHON_MOVING_MASK) > 0;
         case 3:
-          if ((Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_MOVING_MASK) > 0) {
-            return true;
-          }
-          break;
+          return (Global.rc.readSharedArray(OUR_ARCHONS_3) & ARCHON_MOVING_MASK) > 0;
         case 4:
-          if ((Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_MOVING_MASK) > 0) {
-            return true;
-          }
-          break;
+          return (Global.rc.readSharedArray(OUR_ARCHONS_4) & ARCHON_MOVING_MASK) > 0;
       }
       return false;
     }
@@ -839,7 +868,9 @@ public class Communicator {
    * @param message the message to reschedule
    */
   public void rescheduleMessage(Message message) {
-    enqueueMessage(message);
+    if (message.header.type.shouldReschedule) {
+      enqueueMessage(message);
+    }
   }
 
   /**

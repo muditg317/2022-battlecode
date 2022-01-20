@@ -29,6 +29,7 @@ public abstract class Message {
     public final int ordinal;
 
     public static final MessageType[] values = MessageType.values();
+    public boolean shouldReschedule;
 
     MessageType(int standardSize) {
       this.standardSize = standardSize;

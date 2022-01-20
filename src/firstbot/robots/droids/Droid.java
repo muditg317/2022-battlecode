@@ -79,10 +79,10 @@ public abstract class Droid extends Robot {
       leaveArchon = false;
     }
 
-    Utils.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-    Utils.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
+//    Utils.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//    Utils.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
     runTurn();
-    Utils.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
+//    Utils.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
     if (needToRunHomeForSaving || needToRunHomeForSuicide) {
       runHome(Cache.Permanent.START_LOCATION);
     }
@@ -97,7 +97,7 @@ public abstract class Droid extends Robot {
    * @return true if moved
    */
   public boolean runHome(MapLocation archonLocation) throws GameActionException {
-    Utils.print("RUNNING runHome():", "archonLocation: " + archonLocation);
+//    Utils.print("RUNNING runHome():", "archonLocation: " + archonLocation);
     if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonLocation, Utils.DSQ_3by3plus)) {
       return moveOptimalTowards(archonLocation);
     } else {
@@ -222,7 +222,7 @@ public abstract class Droid extends Robot {
 
   protected void randomizeExplorationTarget(boolean forceNotSelf) throws GameActionException {
 //    int b = Clock.getBytecodeNum();
-    Utils.print("RUNNING randomizeExplorationTarget(): ");
+//    Utils.print("RUNNING randomizeExplorationTarget(): ");
 //    switch (Cache.Permanent.ROBOT_TYPE) {
 //      case MINER:
 //        explorationTarget = Utils.rng.nextInt(10) < 3 || explorationTarget == null // rng 30% of time
@@ -369,10 +369,10 @@ public abstract class Droid extends Robot {
     if (((this instanceof Soldier && rubbleThere >= 25 && rubbleThere > myRubble1p5)
             || (this instanceof Miner && rubbleThere >= 50 && rubbleThere > myRubble1p5)
     )) {
-      System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
-      System.out.println("Rubble: " + rubbleThere);
-      System.out.println("times tried already: " + timesTriedEnterHighRubble);
-      System.out.println("Just go through: " + justGoThrough);
+//      System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
+//      System.out.println("Rubble: " + rubbleThere);
+//      System.out.println("times tried already: " + timesTriedEnterHighRubble);
+//      System.out.println("Just go through: " + justGoThrough);
       timesTriedEnterHighRubble++;
       if (timesTriedEnterHighRubble < RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH) {
         randomizeExplorationTarget(true);
@@ -419,7 +419,7 @@ public abstract class Droid extends Robot {
    * @throws GameActionException if exploring/moving fails
    */
   protected boolean doExploration() throws GameActionException {
-    Utils.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
+//    Utils.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
     // if we are explorating smartly and the chunk has been explored already
 //    System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
 //    if (!exploringRandomly) {
@@ -439,7 +439,7 @@ public abstract class Droid extends Robot {
 //        rc.setIndicatorString("bad target... now go to - " + explorationTarget);
 //      }
 //    }
-    Utils.print("explorationTarget: " + explorationTarget);
+//    Utils.print("explorationTarget: " + explorationTarget);
     if (goToExplorationTarget()) {
       updateVisibleChunks();
       MapLocation oldTarget = explorationTarget;
