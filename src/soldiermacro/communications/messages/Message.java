@@ -1,4 +1,4 @@
-package firstbot.communications.messages;
+package soldiermacro.communications.messages;
 
 //import java.lang.reflect.Constructor;
 //import java.lang.reflect.InvocationTargetException;
@@ -29,7 +29,6 @@ public abstract class Message {
     public final int ordinal;
 
     public static final MessageType[] values = MessageType.values();
-    public boolean shouldReschedule;
 
     MessageType(int standardSize) {
       this.standardSize = standardSize;
