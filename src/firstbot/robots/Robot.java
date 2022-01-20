@@ -86,9 +86,9 @@ public abstract class Robot {
       // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
       try {
         this.runTurnWrapper();
-//        Utils.cleanPrint();
-        if (rc.getType() == RobotType.SOLDIER) {
-          Utils.submitPrint();
+        Utils.cleanPrint();
+        if (rc.getType() == RobotType.SOLDIER && Cache.PerTurn.print.toString().length() > 25) {
+          //System.out.println(Cache.PerTurn.print.toString());
         }
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
@@ -241,7 +241,6 @@ public abstract class Robot {
 //    Utils.cleanPrint();
     boolean dangerousEnemies = false;
     boolean passiveEnemies = false;
-//    int soldierCount = 0;
     for (RobotInfo robotInfo : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
       switch (robotInfo.type) {
         case ARCHON:
@@ -249,7 +248,6 @@ public abstract class Robot {
         case WATCHTOWER:
         case SOLDIER:
           dangerousEnemies = true;
-//          soldierCount++;
           break;
         case MINER:
         case BUILDER:
@@ -257,7 +255,6 @@ public abstract class Robot {
           passiveEnemies = true;
       }
     }
-//    if (soldierCount >= 2) dangerousEnemies = true;
 
     // if high lead, explored+high rss -- else, explored rss
     int leadInfo = (rc.senseNearbyLocationsWithLead(-1,2).length > 0 ? 0b10 : 0b01);

@@ -245,6 +245,7 @@ public abstract class Droid extends Robot {
         break;
       case SOLDIER:
       case SAGE:
+
         MapLocation oldExplorationTarget = explorationTarget;
         explorationTarget = null;
         exploringRandomly = false;
@@ -254,10 +255,14 @@ public abstract class Droid extends Robot {
             MapLocation chunkLocation = Utils.chunkIndexToLocation(i%Cache.Permanent.NUM_CHUNKS);
 //              Utils.print("chunkIsGoodForOffensiveUnits: " + chunkLocation, " dangerous: " + communicator.chunkInfo.chunkHasDanger(i));
             if (explorationTarget == null) explorationTarget = chunkLocation;
-            if (parentArchonLoc.distanceSquaredTo(explorationTarget) > parentArchonLoc.distanceSquaredTo(chunkLocation)) {
+            // go to closest enemy
+            if (Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(chunkLocation) < Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(explorationTarget)) {
               explorationTarget = chunkLocation;
-//                Utils.print("explorationTarget: " + i);
             }
+//            if (parentArchonLoc.distanceSquaredTo(explorationTarget) > parentArchonLoc.distanceSquaredTo(chunkLocation)) {
+//              explorationTarget = chunkLocation;
+////                Utils.print("explorationTarget: " + i);
+//            }
           }
         }
         Utils.print("explorationTarget: " + explorationTarget);
