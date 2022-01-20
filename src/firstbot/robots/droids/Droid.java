@@ -84,7 +84,33 @@ public abstract class Droid extends Robot {
     runTurn();
 //    Utils.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
     if (needToRunHomeForSaving || needToRunHomeForSuicide) {
-      runHome(Cache.Permanent.START_LOCATION);
+      communicator.archonInfo.readOurArchonLocs();
+      MapLocation closestFriendlyArchon = null;
+      int dToClosest = 9999;
+
+      switch (rc.getArchonCount()) {
+        case 4:
+          if (communicator.archonInfo.ourArchon4.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon4;
+            dToClosest = communicator.archonInfo.ourArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+        case 3:
+          if (communicator.archonInfo.ourArchon3.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon3;
+            dToClosest = communicator.archonInfo.ourArchon3.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+        case 2:
+          if (communicator.archonInfo.ourArchon2.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon2;
+            dToClosest = communicator.archonInfo.ourArchon2.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+        case 1:
+          if (communicator.archonInfo.ourArchon1.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon1;
+//            dToClosest = communicator.archonInfo.enemyArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+      }
+      runHome(closestFriendlyArchon);
     }
 
   }
@@ -102,7 +128,7 @@ public abstract class Droid extends Robot {
       return moveOptimalTowards(archonLocation);
     } else {
 
-      boolean shouldLeave = checkIfTooManySoldiers();
+      boolean shouldLeave = checkIfTooManySoldiers(archonLocation);
       if (shouldLeave) {
         leaveArchon = true;
         leaveArchonRound = Cache.PerTurn.ROUND_NUM;
@@ -118,18 +144,24 @@ public abstract class Droid extends Robot {
     }
   }
 
-  public boolean checkIfTooManySoldiers() throws GameActionException {
+  public boolean checkIfTooManySoldiers(MapLocation archonLocation) throws GameActionException {
     int myHealth = Cache.PerTurn.HEALTH;
     int soldierCount = 1;
     boolean highestHealthSoldier = true;
-    for (RobotInfo info : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-      if (info.type == RobotType.SOLDIER && info.health < info.type.getMaxHealth(info.level)) { //only count soldiers that are not at max health
+    if (rc.canSenseRobotAtLocation(archonLocation) && rc.senseRobotAtLocation(archonLocation).type != RobotType.ARCHON) {
+      System.out.println("ERROR: archonLocation is not an archon " + archonLocation);
+    }
+
+
+    for (RobotInfo info : rc.senseNearbyRobots(archonLocation, RobotType.ARCHON.visionRadiusSquared, Cache.Permanent.OUR_TEAM)) {
+      if (info.type == RobotType.SOLDIER && info.health < 49) { //only count soldiers that are not at max health - 1
         ++soldierCount;
         if (myHealth < info.health) { // if I am not the highest health soldier
           highestHealthSoldier = false;
         }
       }
     }
+
 
     switch (soldierCount) {
       case 1:

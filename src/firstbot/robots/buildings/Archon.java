@@ -123,8 +123,9 @@ public class Archon extends Building {
 //    Utils.cleanPrint();;
     if (communicator.metaInfo.knownSymmetry != null && rc.canTransform()) {
       // only move once / if we have more than 1 archon to keep spawning while we move
-      Utils.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
-      if (!hasMoved && rc.getArchonCount() > 1) {
+//      Utils.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
+      updateShouldStop();
+      if (!shouldStop && rc.getArchonCount() > 1) {
         boolean canMove = true;
         switch (rc.getArchonCount()) {
           case 1:
@@ -188,22 +189,7 @@ public class Archon extends Building {
       }
     }
     if (rc.canTransform()) {
-      boolean shouldStop = false;
-      for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-        if (ri.type.damage > 0) {
-          shouldStop = true;
-          break;
-        }
-      }
-
-      if (!shouldStop) {
-        for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-          if (friend.health < friend.type.health) { //todo: maybe consider changing to a threshold
-            shouldStop = true;
-            break;
-          }
-        }
-      }
+      updateShouldStop();
 
       if (!shouldStop) {
 //        if (closestCommedEnemy != null) closestEnemyArchon = closestCommedEnemy;
@@ -227,9 +213,13 @@ public class Archon extends Building {
             }
           }
           if (lowestRubbleLoc != null) {
-            moveOptimalTowards(lowestRubbleLoc);
+            if (moveOptimalTowards(lowestRubbleLoc)) {
+              communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
+            }
           } else {
-            moveOptimalAway(closestEnemyArchon);
+            if (moveOptimalAway(closestEnemyArchon)) {
+              communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
+            }
           }
         }
       }
@@ -242,6 +232,27 @@ public class Archon extends Building {
     moving = true;
     closestEnemyArchon = null;
     shouldStop = false;
+  }
+
+  public void updateShouldStop() {
+    // check if any enemy damaging units or any damaged friendly soldiers
+    shouldStop = false;
+    for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+      if (ri.type.damage > 0) {
+        shouldStop = true;
+        break;
+      }
+    }
+
+    if (!shouldStop) {
+      for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+        if (friend.type.damage > 0 && friend.health < friend.type.health - 15 && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(friend.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) { //todo: maybe consider changing to a threshold
+          shouldStop = true;
+          break;
+        }
+      }
+    }
+
   }
 
   private void stopMoving() throws GameActionException {
