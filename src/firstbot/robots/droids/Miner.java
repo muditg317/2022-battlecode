@@ -283,14 +283,14 @@ public class Miner extends Droid {
     MapLocation highLead = getOptimalLeadMiningPosition();
 //    System.out.println("Miner finish getBestLead(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 
-    if (Cache.PerTurn.ROUND_NUM <= 50 && highLead != null) {
-      int numMovesToLead = Utils.maxSingleAxisDist(Cache.Permanent.START_LOCATION, highLead);
-      int numMovesToCurrentLocation = Utils.maxSingleAxisDist(Cache.Permanent.START_LOCATION, Cache.PerTurn.CURRENT_LOCATION);
-      if (numMovesToCurrentLocation - numMovesToLead >= 2) { // 8 10, false.. 9 10 true 11 10 true
-        System.out.println("Moving too close to start loc, don't mine at " + highLead);
-        return false;
-      }
-    }
+//    if (Cache.PerTurn.ROUND_NUM <= 50 && highLead != null) {
+//      int numMovesToLead = Utils.maxSingleAxisDist(Cache.Permanent.START_LOCATION, highLead);
+//      int numMovesToCurrentLocation = Utils.maxSingleAxisDist(Cache.Permanent.START_LOCATION, Cache.PerTurn.CURRENT_LOCATION);
+//      if (numMovesToCurrentLocation - numMovesToLead >= 2) { // 8 10, false.. 9 10 true 11 10 true
+//        System.out.println("Moving too close to start loc, don't mine at " + highLead);
+//        return false;
+//      }
+//    }
 
     if (highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveOptimalTowards(highLead))) {
 //      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);

@@ -24,7 +24,7 @@ public class Communicator {
    *    lead presence, danger, etc
    */
   public static class ChunkInfo {
-    public static final int NUM_CHUNK_INTS = Utils.MAX_MAP_CHUNKS / Utils.CHUNK_INFOS_PER_INT;
+    public static final int NUM_CHUNK_INTS = 0;//Utils.MAX_MAP_CHUNKS / Utils.CHUNK_INFOS_PER_INT;
     public static final int CHUNK_INTS_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_CHUNK_INTS;
     public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
 
@@ -367,9 +367,11 @@ public class Communicator {
     public static final int LEFT_ARCHON_LOC_MASK = 0b1111111 << 8;
     public static final int LEFT_ARCHON_LOC_INVERTED_MASK = ~(0b1111111 << 8);
     public static final int LEFT_ARCHON_MOVING_MASK = 0b10000000 << 8;
+    public static final int LEFT_ARCHON_NOT_MOVING_MASK = ~(LEFT_ARCHON_MOVING_MASK);
     public static final int RIGHT_ARCHON_LOC_MASK = 0b1111111;
     public static final int RIGHT_ARCHON_LOC_INVERTED_MASK = ~(0b1111111);
     public static final int RIGHT_ARCHON_MOVING_MASK = 0b10000000;
+    public static final int RIGHT_ARCHON_NOT_MOVING_MASK = ~(RIGHT_ARCHON_MOVING_MASK);
 //    public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
 
 //    public static final int ARCHON_INFO_SIZE = 2;
@@ -427,16 +429,16 @@ public class Communicator {
     public void setNotMoving(int whichArchon) throws GameActionException {
       switch (whichArchon) {
         case 1:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_NOT_MOVING_MASK);
           break;
         case 2:
-          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_NOT_MOVING_MASK);
           break;
         case 3:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_NOT_MOVING_MASK);
           break;
         case 4:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_NOT_MOVING_MASK);
           break;
       }
     }
@@ -538,7 +540,7 @@ public class Communicator {
      */
     public boolean encodeAndWrite() throws GameActionException {
       if (!dirty) return false;
-//      System.out.println("Update " + this);
+//      System.out.printf("%s\n", this);
       Global.rc.writeSharedArray(VALID_REGION_IND,
             validRegionStart << 10
           | validRegionEnd << 4
@@ -633,9 +635,18 @@ public class Communicator {
 //      if (rc.getRoundNum() == 1471) {
 //        System.out.println("bounds before cleaning: " + metaInfo);
 //      }
-      for (Message message : sentMessages) {
-        if (message.writeInfo.startIndex == metaInfo.validRegionStart) {
-//          System.out.println("CLEAN " + message.header.type + ": " + metaInfo.validRegionStart);
+      Message message = sentMessages.get(0);
+      int origin = metaInfo.validRegionStart;
+      int ending = metaInfo.validRegionEnd;
+      if (ending < origin) {
+        ending += NUM_MESSAGING_INTS;
+      }
+//      if (ending == origin) { // no messages to read
+//        return 0;
+//      }
+      for (; origin < ending; origin += Message.Header.fromReadInt(rc.readSharedArray(origin%NUM_MESSAGING_INTS)).numInformationInts+1) {
+        if (message.writeInfo.startIndex == origin) {
+//          System.out.println("CLEAN " + message.header.type + ": " + origin);
           Message last = sentMessages.get(sentMessages.size() - 1);
           metaInfo.validRegionStart = (last.writeInfo.startIndex + last.size()) % NUM_MESSAGING_INTS;
           if ((metaInfo.validRegionEnd + 1) % NUM_MESSAGING_INTS == metaInfo.validRegionStart) {
@@ -653,6 +664,7 @@ public class Communicator {
           return true;
         }
       }
+      System.out.printf("FAILED TO CLEAN MESSAGES\n%s\n1st: %s", metaInfo, sentMessages.get(0).header);
 //      sentMessages.clear();
     }
     return false;
@@ -741,12 +753,13 @@ public class Communicator {
       System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + 1 + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
       System.out.println("Header int: " + headerInt);
       System.out.println("Header: " + header);
+//      e.printStackTrace();
 //      metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
-      return null;
+//      return null;
 //      if (messageOrigin < metaInfo.validRegionEnd || (metaInfo.validRegionStart < metaInfo.validRegionEnd && messageOrigin < NUM_MESSAGING_INTS)) {
 //        return readMessageAt((messageOrigin+1) % NUM_MESSAGING_INTS);
 //      }
-//      throw e;
+      throw e;
     }
 
     switch (header.numInformationInts) {
@@ -817,27 +830,40 @@ public class Communicator {
    * @throws GameActionException thrown if writing to array fails
    */
   private boolean sendMessage(Message message) throws GameActionException {
-    metaInfo.reloadValidRegion();
-    if (Clock.getBytecodesLeft() < MIN_BYTECODES_TO_SEND_MESSAGE
-        || ((metaInfo.validRegionEnd-metaInfo.validRegionStart+NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS) + message.size() > NUM_MESSAGING_INTS) { // will try to write more ints than available
+    if (Clock.getBytecodesLeft() < MIN_BYTECODES_TO_SEND_MESSAGE) {
       rescheduleMessage(message);
+//      System.out.println("reschedule for bc - " + message.header);
+//      System.out.printf("---\nRESCHEDULE  %s:\n%d - %s\n", message.header.type, Clock.getBytecodesLeft(), Arrays.toString(message.toEncodedInts()));
+      return false;
+    }
+//    System.out.println("pre-reload -- bc: " + Clock.getBytecodesLeft());
+    metaInfo.reloadValidRegion();
+//    System.out.println("pre-sending -- bc: " + Clock.getBytecodesLeft());
+    if (((metaInfo.validRegionEnd-metaInfo.validRegionStart+NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS) + message.size() >= NUM_MESSAGING_INTS) { // will try to write more ints than available
+      rescheduleMessage(message);
+//      System.out.println("reschedule for out of space - " + message.header);
+//      System.out.printf("---\nRESCHEDULE  %s:\n%d - %s\n", message.header.type, Clock.getBytecodesLeft(), Arrays.toString(message.toEncodedInts()));
       return false;
     }
     boolean updateStart = metaInfo.validRegionStart == metaInfo.validRegionEnd; // no valid messages currently
     int[] messageBits = message.toEncodedInts();
     int origin = metaInfo.validRegionEnd;
     int messageOrigin = (origin + 1) % NUM_MESSAGING_INTS;
-    System.out.printf("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
+//    System.out.printf("---\nSEND  %s:\n%d - %s\n%s\nbc: %d\n", message.header.type, messageOrigin, Arrays.toString(messageBits),metaInfo,Clock.getBytecodesLeft());
+//    System.out.printf("---\nSEND  %s:\n%d - %s\n%s\nbc: %d\n", message.header.type, messageOrigin, Arrays.toString(messageBits),metaInfo,Clock.getBytecodesLeft());
 //    Utils.print(String.format("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits)));
     rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,0,0);
 //    System.out.println(message.header);
     for (int messageChunk : messageBits) {
       origin = (origin + 1) % NUM_MESSAGING_INTS;
-      if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
-        Message messageAt = readMessageAt(origin);
-        metaInfo.validRegionStart += messageAt != null ? messageAt.size() : 1;
-        metaInfo.validRegionStart %= NUM_MESSAGING_INTS;
-      }
+//      if (origin == metaInfo.validRegionStart) { // about to overwrite the start!
+//        Message messageAt = readMessageAt(origin);
+//        metaInfo.validRegionStart += messageAt != null ? messageAt.size() : 1;
+//        metaInfo.validRegionStart %= NUM_MESSAGING_INTS;
+//        System.out.println("OVERWROTE STALE MESSAGE");
+//        System.out.println(messageAt.header);
+//        throw new RuntimeException("Shouldn't overwrite message buffer");
+//      }
 //      System.out.println("Write to shared " + origin + ": " + messageChunk);
       rc.writeSharedArray(origin, messageChunk);
     }

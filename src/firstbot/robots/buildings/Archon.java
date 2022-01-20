@@ -14,7 +14,7 @@ import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -1;
+  public static final int SUICIDE_ROUND = -100;
 
   private int whichArchonAmI = 1;
 //  private List<MapLocation> archonLocs;
@@ -203,8 +203,8 @@ public class Archon extends Building {
 
   private void stopMoving() throws GameActionException {
     rc.transform();
+    communicator.archonInfo.setNotMoving(whichArchonAmI);
     moving = false;
-//    communicator.archonInfo.setNotMoving(whichArchonAmI);
   }
 
   /**

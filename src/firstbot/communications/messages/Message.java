@@ -23,24 +23,14 @@ public abstract class Message {
     ARCHON_SAVED(ArchonSavedMessage.MESSAGE_LENGTH),
     RUBBLE_AT_LOCATION(RubbleAtLocationMessage.MESSAGE_LENGTH),
     JOIN_THE_FIGHT(JoinTheFightMessage.MESSAGE_LENGTH);
-//    public final Class<? extends Message> messageClass;
+
     public final int standardSize;
-//    public final Constructor<? extends Message> messageConstructor;
     public final int ordinal;
 
     public static final MessageType[] values = MessageType.values();
 
     MessageType(int standardSize) {
       this.standardSize = standardSize;
-//      this.messageClass = messageClass;
-//      Constructor<? extends Message> messageConstructorTemp;
-//      try {
-//        messageConstructorTemp = messageClass.getConstructor(Header.class, int[].class);
-//      } catch (NoSuchMethodException e) {
-//        messageConstructorTemp = null;
-//        e.printStackTrace();
-//      }
-//      this.messageConstructor = messageConstructorTemp;
       this.ordinal = ordinal();
     }
   }
@@ -73,73 +63,27 @@ public abstract class Message {
 //    public int cyclicRoundNum; // 0-31            -- 5 bits [4,0]
 
     public Header(MessageType type, int numInformationInts) {
-//      this.priority = priority;
       this.type = type;
       this.numInformationInts = numInformationInts;
-//      this.cyclicRoundNum = roundNum % ROUND_NUM_CYCLE_SIZE;
     }
 
     public static Header fromReadInt(int readInt) {
-//      System.out.println("pre arr " + Clock.getBytecodeNum());
-//      MessageType t = MessageType.values[(readInt >>> TYPE_START) & TYPE_MAX];
-//      System.out.println("\tpost arr" + Clock.getBytecodeNum());
-//      switch ((readInt >>> TYPE_START) & TYPE_MAX) {
-//        case 0: return new Header(MessageType.ARCHON_HELLO, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 1: return new Header(MessageType.LEAD_FOUND, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 2: return new Header(MessageType.LEAD_REQUEST, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 3: return new Header(MessageType.START_RAID, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 4: return new Header(MessageType.END_RAID, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 5: return new Header(MessageType.SAVE_ME, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 6: return new Header(MessageType.ARCHON_SAVED, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        case 7: return new Header(MessageType.RUBBLE_AT_LOCATION, (readInt >>> NUM_INTS_START) & NUM_INTS_MAX);
-//        default: throw new RuntimeException("Cannot read message with invalid type! " + readInt);
-//      }
       return new Header(
-//          (readInt >>> PRIORITY_START) & PRIORITY_MAX,
           MessageType.values[(readInt >>> TYPE_START) & TYPE_MAX],
           (readInt >>> NUM_INTS_START) & NUM_INTS_MAX
-//          (readInt >>> ROUND_NUM_START) & ROUND_NUM_MAX
           );
     }
 
-//    public static int toCyclicRound(int roundNum) {
-//      return roundNum % ROUND_NUM_CYCLE_SIZE;
-//    }
-
     public int toInt() {
       return
-//            priority << PRIORITY_START
           type.ordinal << TYPE_START
           | numInformationInts << NUM_INTS_START
-//          | cyclicRoundNum << ROUND_NUM_START
           ;
     }
-
-//    public void rescheduleBy(int roundsToDelay) {
-////      cyclicRoundNum = (cyclicRoundNum + roundsToDelay) % ROUND_NUM_CYCLE_SIZE;
-//    }
-
-//    public boolean fromRound(int roundNum) {
-//      return cyclicRoundNum == roundNum % (ROUND_NUM_MAX+1);
-//    }
-
     @Override
     public String toString() {
-      return String.format("MessHdr{%s,len=%d", type, numInformationInts);
+      return String.format("MsgHdr{%s,len=%d}", type, numInformationInts);
     }
-
-//    /**
-//     * checks if the header was sent from a round in (lastAck, maxRound]
-//     * @param lastAckdRound last round already ackd
-//     * @param maxRoundNum usually current round
-//     * @return if within bounds
-//     */
-//    public boolean withinCyclic(int lastAckdRound, int maxRoundNum) {
-//      return lastAckdRound < cyclicRoundNum && cyclicRoundNum <= maxRoundNum;
-//    }
-//    public boolean withinRounds(int lastAckdRound, int maxRoundNum) {
-//      return toCyclicRound(lastAckdRound) < cyclicRoundNum && cyclicRoundNum <= toCyclicRound(maxRoundNum);
-//    }
 
     public void validate() {
       if (type.standardSize != -1 && type.standardSize != numInformationInts) {

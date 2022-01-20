@@ -22,8 +22,8 @@ import firstbot.utils.Global;
 import firstbot.utils.Utils;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
 
   private static final int MAX_TURNS_FIGURE_SYMMETRY = 200;
 
@@ -234,6 +234,7 @@ public abstract class Robot {
    * @throws GameActionException if sensing or writingToShared fails
    */
   protected int updateVisibleChunks() throws GameActionException {
+    if (true) return 0;
     int myChunk = Utils.locationToChunkIndex(Cache.PerTurn.CURRENT_LOCATION);
     if (myChunk == lastChunkUpdate && rc.getType() != RobotType.SOLDIER) return 0; // don't run this if we have't changed chunks
     rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
