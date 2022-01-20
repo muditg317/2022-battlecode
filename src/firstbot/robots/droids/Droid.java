@@ -269,7 +269,7 @@ public abstract class Droid extends Robot {
 //          Utils.submitPrint();
         if (explorationTarget == null) {
           explorationTarget = Utils.chunkIndexToLocation(Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS));
-          if (oldExplorationTarget != null && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(oldExplorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
+          if (oldExplorationTarget != null && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(oldExplorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
             explorationTarget = oldExplorationTarget;
             Utils.print("keeping previous exploration" + explorationTarget);
           } else {
@@ -336,15 +336,15 @@ public abstract class Droid extends Robot {
       rc.setIndicatorString("Approaching explorationTarget" + explorationTarget);
 //    moveInDirLoose(goal);
 //      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 10, 10);
-      rc.setIndicatorDot(explorationTarget, 0, 255, 0);
-      if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
-        if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
-          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
-        } else if (communicator.chunkInfo.chunkIsUnexplored(Utils.locationToChunkIndex(explorationTarget))) {
-          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
-        } else {
-          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
-        }
+    }
+    rc.setIndicatorDot(explorationTarget, 0, 255, 0);
+    if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
+      if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
+        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+      } else if (communicator.chunkInfo.chunkHasPassiveUnits(Utils.locationToChunkIndex(explorationTarget))) {
+        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+      } else {
+        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
       }
     }
     return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!

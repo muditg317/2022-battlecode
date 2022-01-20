@@ -73,6 +73,10 @@ public class Communicator {
 //      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
       return ((Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & DANGEROUS_UNIT_MASK) > 0;
     }
+    public boolean chunkHasPassiveUnits(int chunkIndex) throws GameActionException {
+//      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
+      return ((Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & PASSIVE_UNIT_MASK) > 0;
+    }
     public int chunkInfoBits(int chunkIndex) throws GameActionException {
 //      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
 //      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
@@ -105,7 +109,7 @@ public class Communicator {
 //      Utils.print("chunkIndex: " + chunkIndex, "dangerous: " + ((chunkInfoInt & DANGEROUS_UNIT_MASK) > 0), "not explored and RSS: " + ((chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0));
 //      if ( ((chunkInfoInt & DANGEROUS_UNIT_MASK) > 0)) Global.rc.setIndicatorDot(Utils.chunkIndexToLocation(chunkIndex), 255, 0, 0);
 //      if ( (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0) Global.rc.setIndicatorDot(Utils.chunkIndexToLocation(chunkIndex).add(Direction.SOUTH), 0, 255, 0);
-      return (chunkInfoInt & DANGEROUS_UNIT_MASK) > 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
+      return (chunkInfoInt & DANGEROUS_UNIT_MASK) > 0 || (chunkInfoInt & PASSIVE_UNIT_MASK) == 0;
     }
 
 
@@ -420,7 +424,46 @@ public class Communicator {
       }
     }
 
+    public void setNotMoving(int whichArchon) throws GameActionException {
+      switch (whichArchon) {
+        case 1:
+          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_MOVING_MASK);
+          break;
+        case 2:
+          Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_MOVING_MASK);
+          break;
+        case 3:
+          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_MOVING_MASK);
+          break;
+        case 4:
+          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_MOVING_MASK);
+          break;
+      }
+    }
+
     public boolean isMoving(int whichArchon) throws GameActionException {
+      switch (whichArchon) {
+        case 1:
+          if ((Global.rc.readSharedArray(OUR_ARCHONS_12) & LEFT_ARCHON_MOVING_MASK) > 0) {
+            return true;
+          }
+          break;
+        case 2:
+          if ((Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_MOVING_MASK) > 0) {
+            return true;
+          }
+          break;
+        case 3:
+          if ((Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_MOVING_MASK) > 0) {
+            return true;
+          }
+          break;
+        case 4:
+          if ((Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_MOVING_MASK) > 0) {
+            return true;
+          }
+          break;
+      }
       return false;
     }
   }

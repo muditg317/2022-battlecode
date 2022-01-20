@@ -132,7 +132,7 @@ public class Miner extends Droid {
     message.respond(responseLocation);
     rc.setIndicatorString("Respond to lead request! " + responseLocation);
     rc.setIndicatorDot(responseLocation, 0,255,0);
-    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, responseLocation, 0,255,0);
+//    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, responseLocation, 0,255,0);
   }
 
 
@@ -218,8 +218,8 @@ public class Miner extends Droid {
       runAwayTarget = new MapLocation((myLoc.x << 1) - enemies.x, (myLoc.y << 1) - enemies.y);
       Direction backToSelf = runAwayTarget.directionTo(myLoc);
 //      while (!rc.canSenseLocation(runAwayTarget)) runAwayTarget = runAwayTarget.add(backToSelf);
-      rc.setIndicatorDot(enemies, 255,255,0);
-      rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
+//      rc.setIndicatorDot(enemies, 255,255,0);
+//      rc.setIndicatorLine(enemies, runAwayTarget, 255, 255, 0);
       rc.setIndicatorString("Enemies at " + enemies);
     } else {
       runAwayTarget = null;
@@ -233,7 +233,7 @@ public class Miner extends Droid {
   private boolean runAway() throws GameActionException {
     if (moveOptimalTowards(runAwayTarget) || runHome(parentArchonLoc)) {
       rc.setIndicatorString("run away! " + runAwayTarget);
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, runAwayTarget, 0,255,0);
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, runAwayTarget, 0,255,0);
       return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(runAwayTarget, Cache.Permanent.ACTION_RADIUS_SQUARED);
     }
     return false;
@@ -293,7 +293,7 @@ public class Miner extends Droid {
     }
 
     if (highLead != null && (highLead.equals(Cache.PerTurn.CURRENT_LOCATION) || moveOptimalTowards(highLead))) {
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, highLead, 0, 0, 255);
       rc.setIndicatorString("lead: " + highLead + " - ac: " + rc.getActionCooldownTurns() + " mc: " + rc.getMovementCooldownTurns());
       return true;
     }

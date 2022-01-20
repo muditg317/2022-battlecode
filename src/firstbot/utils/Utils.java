@@ -255,6 +255,25 @@ public class Utils {
     return new MapLocation(Cache.Permanent.MAP_WIDTH - 1 - toRot.x, Cache.Permanent.MAP_HEIGHT - 1 - toRot.y);
   }
 
+  /**
+   * invert the given maploc based on the provided symmetry
+   * @param location the coordinates to invert
+   * @param symmetry how to invert the coordinates
+   * @return the inverted location
+   */
+  public static MapLocation applySymmetry(MapLocation location, MapSymmetry symmetry) {
+    switch (symmetry) {
+      case HORIZONTAL:
+        return flipLocationX(location);
+      case VERTICAL:
+        return flipLocationY(location);
+      case ROTATIONAL:
+        return rotateLocation180(location);
+      default:
+        throw new RuntimeException("Cannot apply unknown symmetry to map location: " + symmetry);
+    }
+  }
+
   public static double turnsTillNextCooldown(int c, int r) {
     int cooldownAfterMove = (int) Math.floor((1 + r/10.0) * c); //35
     //20 => 2

@@ -113,10 +113,10 @@ public class Soldier extends Droid {
       }
     }
 
-    if (robotToChase != null) {
-      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, robotToChase.location, 0, 0, 255);
-      rc.setIndicatorDot(robotToChase.location, 0, 255, 0);
-    }
+//    if (robotToChase != null) {
+//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, robotToChase.location, 0, 0, 255);
+//      rc.setIndicatorDot(robotToChase.location, 0, 255, 0);
+//    }
 
     //TODO: should technically check cases again if I just moved and have action cooldown, but this is fine for now!!
 
@@ -821,7 +821,7 @@ public class Soldier extends Droid {
    * @throws GameActionException if moving fails
    */
   private boolean moveForRaid() throws GameActionException {
-    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
+//    rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, raidTarget, 0,0,255);
 //    return moveInDirLoose(Cache.PerTurn.CURRENT_LOCATION.directionTo(raidTarget))
     return moveOptimalTowards(raidTarget)
         && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(raidTarget) <= Cache.Permanent.VISION_RADIUS_SQUARED;
