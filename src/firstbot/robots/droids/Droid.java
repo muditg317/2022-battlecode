@@ -8,9 +8,9 @@ import firstbot.utils.Utils;
 public abstract class Droid extends Robot {
 
   private static final double DISTANCE_FACTOR_TO_RUN_HOME = 1;
-  private static final double HEALTH_FACTOR_TO_RUN_HOME = 0.4;
+  private static final double HEALTH_FACTOR_TO_RUN_HOME = 0.3;
   private static final double HEALTH_FACTOR_TO_GO_BACK_OUT = 0.75;
-  private static final double HEALTH_FACTOR_TO_SUICIDE_SOLDIER = 0.15;
+  private static final double HEALTH_FACTOR_TO_SUICIDE_SOLDIER = 0.07;
   private static final double HEALTH_FACTOR_TO_SUICIDE_OTHER = 0.2;
   private static final double HEALTH_FACTOR_TO_CANCEL_SUICIDE = 0.4;
 
@@ -313,14 +313,25 @@ public abstract class Droid extends Robot {
    * @throws GameActionException if movement or line indication fails
    */
   protected boolean goToExplorationTarget() throws GameActionException {
-    if (!rc.isMovementReady()) return false;
+    if (!rc.isMovementReady()) {
+      if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
+        if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
+          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+        } else if (communicator.chunkInfo.chunkHasPassiveUnits(Utils.locationToChunkIndex(explorationTarget))) {
+          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+        } else {
+          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+        }
+      }
+      return false;
+    }
     turnsExploring++;
 //    Direction goal = Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget);
     Direction desired = getOptimalDirectionTowards(explorationTarget);
     if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
     if (desired == null) {
       rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
-//      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
+//      //System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
       return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
     }
     boolean changed = checkTooMuchRubbleOnPathToExploration(desired);
@@ -329,7 +340,7 @@ public abstract class Droid extends Robot {
       if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
       if (desired == null) {
         rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
-//      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
+//      //System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
         return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
       }
     }
@@ -358,10 +369,10 @@ public abstract class Droid extends Robot {
     if (((this instanceof Soldier && rubbleThere >= 25 && rubbleThere > myRubble1p5)
             || (this instanceof Miner && rubbleThere >= 50 && rubbleThere > myRubble1p5)
     )) {
-      System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
-      System.out.println("Rubble: " + rubbleThere);
-      System.out.println("times tried already: " + timesTriedEnterHighRubble);
-      System.out.println("Just go through: " + justGoThrough);
+      //System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
+      //System.out.println("Rubble: " + rubbleThere);
+      //System.out.println("times tried already: " + timesTriedEnterHighRubble);
+      //System.out.println("Just go through: " + justGoThrough);
       timesTriedEnterHighRubble++;
       if (timesTriedEnterHighRubble < RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH) {
         randomizeExplorationTarget(true);

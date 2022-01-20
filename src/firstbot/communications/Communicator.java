@@ -99,7 +99,7 @@ public class Communicator {
 //      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
 //      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
 //      // danger / lead depleted -- OR -- unexplored
-////      System.out.println("");
+////      //System.out.println("");
 //      return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
 //    }
     public boolean chunkIsGoodForOffensiveUnits(int chunkIndex) throws GameActionException {
@@ -109,7 +109,7 @@ public class Communicator {
 //      Utils.print("chunkIndex: " + chunkIndex, "dangerous: " + ((chunkInfoInt & DANGEROUS_UNIT_MASK) > 0), "not explored and RSS: " + ((chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0));
 //      if ( ((chunkInfoInt & DANGEROUS_UNIT_MASK) > 0)) Global.rc.setIndicatorDot(Utils.chunkIndexToLocation(chunkIndex), 255, 0, 0);
 //      if ( (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0) Global.rc.setIndicatorDot(Utils.chunkIndexToLocation(chunkIndex).add(Direction.SOUTH), 0, 255, 0);
-      return (chunkInfoInt & DANGEROUS_UNIT_MASK) > 0 || (chunkInfoInt & PASSIVE_UNIT_MASK) == 0;
+      return (chunkInfoInt & DANGEROUS_UNIT_MASK) > 0 || (chunkInfoInt & PASSIVE_UNIT_MASK) > 0;
     }
 
 
@@ -122,7 +122,7 @@ public class Communicator {
     public MapLocation centerOfClosestOptimalChunkForMiners(MapLocation source, boolean forceNotSource) throws GameActionException {
       int myChunk = Utils.locationToChunkIndex(source);
       if (!forceNotSource && chunkIsGoodForMinerExploration(myChunk)) {
-        System.out.println("closest optimal is self! " + source);
+        //System.out.println("closest optimal is self! " + source);
         return Utils.chunkIndexToLocation(myChunk);
       }
 //      int leadFullChunk = -1;
@@ -140,7 +140,7 @@ public class Communicator {
             return Utils.chunkIndexToLocation(chunkToTest);
           case 0b00: // unexplored
           case 0b1000:
-//            System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
+//            //System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
             if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
         }
       }
@@ -199,7 +199,7 @@ public class Communicator {
     public MapLocation centerOfClosestOptimalChunkForOffensiveUnits(MapLocation source, boolean forceNotSource) throws GameActionException {
       int myChunk = Utils.locationToChunkIndex(source);
       if (!forceNotSource && chunkIsGoodForMinerExploration(myChunk)) {
-        System.out.println("closest optimal is self! " + source);
+        //System.out.println("closest optimal is self! " + source);
         return Utils.chunkIndexToLocation(myChunk);
       }
 //      int leadFullChunk = -1;
@@ -230,7 +230,7 @@ public class Communicator {
           case 0b1111:
             return Utils.chunkIndexToLocation(chunkToTest);
           case 0b00: // unexplored
-//            System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
+//            //System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
             if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
         }
       }
@@ -334,20 +334,20 @@ public class Communicator {
 
     public void markExplored(MapLocation location, boolean dangerous, boolean passiveEnemies, int explorationBits) throws GameActionException {
       if (dangerous) {
-        System.out.printf("DANGEROUS CHUNK!\n\tbot        :%s\n\tchunk      :%s\n\tdanger     :%s\n\texploration:%d\n",Cache.PerTurn.CURRENT_LOCATION,location,dangerous,explorationBits);
+        //System.out.printf("DANGEROUS CHUNK!\n\tbot        :%s\n\tchunk      :%s\n\tdanger     :%s\n\texploration:%d\n",Cache.PerTurn.CURRENT_LOCATION,location,dangerous,explorationBits);
       }
       int chunkToMark = Utils.locationToChunkIndex(location);
       int sharedArrIndex = chunkToMark / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
       int existingChunkSetInfo = Global.rc.readSharedArray(sharedArrIndex);
       int shiftAmt = (chunkToMark % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS;
-//      System.out.println("chunk idx: " + chunkToMark);
-//      System.out.println("shared indices: [" + (sharedArrIndex-CHUNK_INTS_START) + "," + shiftAmt + "]");
-//      System.out.println("Current bits: " + Integer.toBinaryString(existingChunkSetInfo));
+//      //System.out.println("chunk idx: " + chunkToMark);
+//      //System.out.println("shared indices: [" + (sharedArrIndex-CHUNK_INTS_START) + "," + shiftAmt + "]");
+//      //System.out.println("Current bits: " + Integer.toBinaryString(existingChunkSetInfo));
 //      int currentChunkInfo = (existingChunkSetInfo >> shiftAmt) & 0b1111;
-//      System.out.println("Chunk before: " + Integer.toBinaryString(currentChunkInfo));
+//      //System.out.println("Chunk before: " + Integer.toBinaryString(currentChunkInfo));
 //      int data = (dangerous ? DANGEROUS_UNIT_MASK : 0) | explorationBits;
-//      System.out.println("data: " + Integer.toBinaryString(data));
-//      System.out.println("new value: " + Integer.toBinaryString(existingChunkSetInfo | (data << shiftAmt)));
+//      //System.out.println("data: " + Integer.toBinaryString(data));
+//      //System.out.println("new value: " + Integer.toBinaryString(existingChunkSetInfo | (data << shiftAmt)));
 //      Global.rc.writeSharedArray(sharedArrIndex, existingChunkSetInfo | (data << shiftAmt));
       int newChunkSetInfo = ((dangerous ? DANGEROUS_UNIT_MASK : 0) | (passiveEnemies ? PASSIVE_UNIT_MASK : 0) | explorationBits) << shiftAmt;
       newChunkSetInfo = newChunkSetInfo | (existingChunkSetInfo & ~(0b1111 << shiftAmt));
@@ -374,7 +374,7 @@ public class Communicator {
     public static final int RIGHT_ARCHON_NOT_MOVING_MASK = ~(RIGHT_ARCHON_MOVING_MASK);
 //    public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
 
-//    public static final int ARCHON_INFO_SIZE = 2;
+    //    public static final int ARCHON_INFO_SIZE = 2;
 //    public static final int ARCHON_INTS_START = SYMMETRY_INFO_IND - ARCHON_INFO_SIZE;
     public MapLocation ourArchon1;
     public MapLocation ourArchon2;
@@ -418,10 +418,10 @@ public class Communicator {
           Global.rc.writeSharedArray(OUR_ARCHONS_12, Global.rc.readSharedArray(OUR_ARCHONS_12) & RIGHT_ARCHON_MOVING_MASK);
           break;
         case 3:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & LEFT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) | LEFT_ARCHON_MOVING_MASK);
           break;
         case 4:
-          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) & RIGHT_ARCHON_MOVING_MASK);
+          Global.rc.writeSharedArray(OUR_ARCHONS_34, Global.rc.readSharedArray(OUR_ARCHONS_34) | RIGHT_ARCHON_MOVING_MASK);
           break;
       }
     }
@@ -573,12 +573,12 @@ public class Communicator {
           notRotational = true;
           break;
       }
-//      System.out.println("Bot at " + Cache.PerTurn.CURRENT_LOCATION + " realized sym can't be " + blockedSymmetry);
+//      //System.out.println("Bot at " + Cache.PerTurn.CURRENT_LOCATION + " realized sym can't be " + blockedSymmetry);
       int index = ((notHorizontal ? NOT_HORIZ_MASK : 0) | (notVertical ? NOT_VERT_MASK : 0) | (notRotational ? NOT_ROT_MASK : 0)) >> 1;
       knownSymmetry = Utils.commsSymmetryMap[index];
       guessedSymmetry = Utils.commsSymmetryGuessMap[index];
-//      System.out.println("symIndex: " + index + " known: " + knownSymmetry + " -- guess: " + guessedSymmetry);
-      System.out.printf("NEW SYMMETRY KNOWLEDGE\n\tnot:%s\n\tknown:%s\n\tguess:%s\n", blockedSymmetry, knownSymmetry, guessedSymmetry);
+//      //System.out.println("symIndex: " + index + " known: " + knownSymmetry + " -- guess: " + guessedSymmetry);
+      //System.out.printf("NEW SYMMETRY KNOWLEDGE\n\tnot:%s\n\tknown:%s\n\tguess:%s\n", blockedSymmetry, knownSymmetry, guessedSymmetry);
       dirty = true;
       encodeAndWrite();
     }
@@ -633,7 +633,7 @@ public class Communicator {
   public boolean cleanStaleMessages() throws GameActionException {
     if (!sentMessages.isEmpty()) {
 //      if (rc.getRoundNum() == 1471) {
-//        System.out.println("bounds before cleaning: " + metaInfo);
+//        //System.out.println("bounds before cleaning: " + metaInfo);
 //      }
       Message message = sentMessages.get(0);
       int origin = metaInfo.validRegionStart;
@@ -745,7 +745,7 @@ public class Communicator {
     try {
 //      int beforeReadHeader = Clock.getBytecodeNum();
       header = Message.Header.fromReadInt(headerInt);
-//      System.out.println("Cost to read header: " + (Clock.getBytecodeNum() - beforeReadHeader));
+//      //System.out.println("Cost to read header: " + (Clock.getBytecodeNum() - beforeReadHeader));
       header.validate();
     } catch (Exception e) {
       System.out.println("Failed to parse header! at: " + messageOrigin);

@@ -63,7 +63,7 @@ public class Soldier extends Droid {
 
   @Override
   protected void runTurn() throws GameActionException {
-//    System.out.println();
+//    //System.out.println();
 
     // miner-like random exploration (random target and go to it)
 
@@ -251,7 +251,7 @@ public class Soldier extends Droid {
       boolean needToGoInToAttack = rc.isActionReady() && !closestEnemySoldier.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED);
 
       double score = 1.01 * averageFriendlyDamagePerRound - averageEnemyDamagePerRound;
-//      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound + "\nscore: " + score);
+//      //System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound + "\nscore: " + score);
       if (rc.isMovementReady() && closestEnemySoldier != null) {
         int dist = closestEnemySoldier.distanceSquaredTo(candidate);
         if (rc.isActionReady()) {
@@ -672,10 +672,10 @@ public class Soldier extends Droid {
     // the robotToChase is set to the miner with the least health irregardless of distance
     for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
       int candidateDistance = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(enemy.location);
-//        System.out.println("enemy: " + enemy.location + " " + enemy.health + " " + candidateDistance + " minHealth: " + minHealth + " minDistance: " + minDistance);
+//        //System.out.println("enemy: " + enemy.location + " " + enemy.health + " " + candidateDistance + " minHealth: " + minHealth + " minDistance: " + minDistance);
       if (enemy.type == preferredType && (enemy.health < minHealth || (enemy.health == minHealth && candidateDistance < minDistance))) {
         bestTarget = enemy;
-//        System.out.println(bestToTarget);
+//        //System.out.println(bestToTarget);
         if (canMove || candidateDistance <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
           minHealth = enemy.health;
           enemyLocation = enemy.location;
@@ -707,7 +707,7 @@ public class Soldier extends Droid {
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {
-//      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
+//      //System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
       dirToMove = Direction.CENTER;
     }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
@@ -984,7 +984,7 @@ public class Soldier extends Droid {
    */
   private void ackStartRaidMessage(StartRaidMessage message) throws GameActionException {
     // TODO: if not ready for raid (maybe not in center yet or something), ignore
-//    System.out.println("Got start raid" + message.location);
+//    //System.out.println("Got start raid" + message.location);
 //    if (raidValidated) {
 //      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //        if (enemy.type == RobotType.ARCHON && raidTarget.equals(enemy.location)) { // already raiding a different archon
@@ -1008,7 +1008,7 @@ public class Soldier extends Droid {
 //    if (raidTarget != null && raidTarget.equals(message.location)) {
 //      raidTarget = null;
 //      raidValidated = false;
-////      System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
+////      //System.out.println("Got end raid on " + message.location + " - from rnd: " + message.header.cyclicRoundNum + "/" + Message.Header.toCyclicRound(rc.getRoundNum()));
 //    }
 //    if (message.location.equals(myPotentialTarget)) {
 //      canStartRaid = false;

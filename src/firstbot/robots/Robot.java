@@ -50,7 +50,7 @@ public abstract class Robot {
 
 //    this.stolenbfs = new StolenBFS2(rc);
     // Print spawn message
-//    System.out.println(this.creationStats);
+//    //System.out.println(this.creationStats);
     // Set indicator message
     rc.setIndicatorString("Just spawned!");
     turnCount = -1;
@@ -88,18 +88,18 @@ public abstract class Robot {
         this.runTurnWrapper();
         Utils.cleanPrint();
         if (rc.getType() == RobotType.SOLDIER && Cache.PerTurn.print.toString().length() > 25) {
-          //System.out.println(Cache.PerTurn.print.toString());
+          ////System.out.println(Cache.PerTurn.print.toString());
         }
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
-        System.out.println(rc.getType() + " GameActionException");
+        //System.out.println(rc.getType() + " GameActionException");
         Utils.submitPrint();
         e.printStackTrace();
         rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
-        System.out.println(rc.getType() + " Exception");
+        //System.out.println(rc.getType() + " Exception");
         Utils.submitPrint();
         e.printStackTrace();
         rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
@@ -112,7 +112,7 @@ public abstract class Robot {
             dontYield = false;
             Clock.yield();
           } else {
-            System.out.println("Skipping turn yeild!!");
+            //System.out.println("Skipping turn yeild!!");
           }
         }
       }
@@ -124,8 +124,8 @@ public abstract class Robot {
    * wrap intern run turn method with generic actions for all robots
    */
   private void runTurnWrapper() throws GameActionException {
-//    System.out.println("\nvery start - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
-//      System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
+//    //System.out.println("\nvery start - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
+//      //System.out.println("Age: " + turnCount + "; Location: " + Cache.PerTurn.CURRENT_LOCATION);
 //    stolenbfs.initTurn();
 
     Cache.updateOnTurn();
@@ -134,20 +134,20 @@ public abstract class Robot {
     }
     dontYield = false;
 
-//    System.out.println("Update cache -- " + Clock.getBytecodeNum());
+//    //System.out.println("Update cache -- " + Clock.getBytecodeNum());
 //    communicator.cleanStaleMessages();
     Utils.startByteCodeCounting("reading");
     pendingMessages = communicator.readAndAckAllMessages();
-//    System.out.println("# messages: " + pendingMessages + " -- " + Clock.getBytecodeNum());
+//    //System.out.println("# messages: " + pendingMessages + " -- " + Clock.getBytecodeNum());
 //    while (pendingMessages > 0) {
 //      Message message = communicator.getNthLastReceivedMessage(pendingMessages);
 //      ackMessage(message);
 //      pendingMessages--;
 //    }
     Utils.finishByteCodeCounting("reading");
-//    if (pendingMessages > 0) System.out.println("Got " + pendingMessages + " messages!");
+//    if (pendingMessages > 0) //System.out.println("Got " + pendingMessages + " messages!");
 
-//    System.out.println("After acking: " + Clock.getBytecodeNum());
+//    //System.out.println("After acking: " + Clock.getBytecodeNum());
     MapLocation initial = Cache.PerTurn.CURRENT_LOCATION;
     runTurnTypeWrapper();
 
@@ -155,6 +155,10 @@ public abstract class Robot {
     if (!initial.equals(Cache.PerTurn.CURRENT_LOCATION)) {
       afterTurnWhenMoved();
     }
+    //      int b = Clock.getBytecodeNum();
+    //      int updatedChunks =
+    updateVisibleChunks();
+    //      //System.out.println("updateVisibleChunks(" + updatedChunks + ") cost: " + (Clock.getBytecodeNum() - b));
 
     if (++turnCount != rc.getRoundNum() - Cache.Permanent.ROUND_SPAWNED) { // took too much bytecode
       rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,0,255); // MAGENTA IF RAN OUT OF BYTECODE
@@ -163,14 +167,14 @@ public abstract class Robot {
     } else { // still on our turn logic
 //    if (Clock.getBytecodesLeft() >= MIN_BYTECODES_TO_SEND) {
       Utils.startByteCodeCounting("sending");
-//      System.out.println("Bytecodes before send all messages: " + (Clock.getBytecodeNum()));
+//      //System.out.println("Bytecodes before send all messages: " + (Clock.getBytecodeNum()));
       communicator.sendQueuedMessages();
 //      communicator.updateMetaIntsIfNeeded();
-//      System.out.println("Bytecodes after send all messages: " + (Clock.getBytecodeNum()));
+//      //System.out.println("Bytecodes after send all messages: " + (Clock.getBytecodeNum()));
       Utils.finishByteCodeCounting("sending");
 //    }
     }
-//    System.out.println("\nvery end - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
+//    //System.out.println("\nvery end - " + rc.readSharedArray(Communicator.MetaInfo.META_INT_START));
   }
 
   /**
@@ -206,10 +210,7 @@ public abstract class Robot {
    */
   protected void afterTurnWhenMoved() throws GameActionException {
     updateSymmetryComms();
-//      int b = Clock.getBytecodeNum();
-//      int updatedChunks =
-      updateVisibleChunks();
-//      System.out.println("updateVisibleChunks(" + updatedChunks + ") cost: " + (Clock.getBytecodeNum() - b));
+
   }
 
   /**
@@ -236,10 +237,8 @@ public abstract class Robot {
   protected int updateVisibleChunks() throws GameActionException {
     if (true) return 0;
     int myChunk = Utils.locationToChunkIndex(Cache.PerTurn.CURRENT_LOCATION);
-    if (myChunk == lastChunkUpdate && rc.getType() != RobotType.SOLDIER) return 0; // don't run this if we have't changed chunks
     rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
-//    if (rc.senseNearbyLocationsWithLead().length == 0 || )
-//    Utils.cleanPrint();
+
     boolean dangerousEnemies = false;
     boolean passiveEnemies = false;
     for (RobotInfo robotInfo : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
@@ -262,7 +261,9 @@ public abstract class Robot {
     if (leadInfo == 1 && rc.senseNearbyLocationsWithLead().length > 0) {  // not high, check depleted
       leadInfo = 0b11;
     }
-//    Utils.print("dangerous: " + dangerous, "leadInfo: " + leadInfo);
+//    Utils.cleanPrint();
+//    Utils.print("dangerous: " + dangerousEnemies, "passive: " + passiveEnemies, "leadInfo: " + leadInfo);
+//    Utils.submitPrint();
 
     int chunksUpdated = 0;
     for (Direction dir : Utils.directionsNine) {
@@ -272,19 +273,22 @@ public abstract class Robot {
       if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
       int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
       MapLocation chunkCenter = Utils.chunkIndexToLocation(chunkToTest);
-//      System.out.println(Cache.PerTurn.CURRENT_LOCATION + " -- upVisChunks\nchunkToTest: " + chunkToTest + " chunkCenter: " + chunkCenter + " dir: " + dir);
+//      //System.out.println(Cache.PerTurn.CURRENT_LOCATION + " -- upVisChunks\nchunkToTest: " + chunkToTest + " chunkCenter: " + chunkCenter + " dir: " + dir);
 
       if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(chunkCenter, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
-//        System.out.println("EXPLORED! dangerous: " + dangerous + " leadInfo: " + leadInfo);
+//        //System.out.println("EXPLORED! dangerous: " + dangerous + " leadInfo: " + leadInfo);
         rc.setIndicatorDot(chunkCenter, 0, 255, 255);
-        if (dangerousEnemies) Utils.print("chunkCenter: " + chunkCenter, "dangerous: " + dangerousEnemies, "leadInfo: " + leadInfo);
+//        Utils.cleanPrint();
+//        if (dangerousEnemies) Utils.print("chunkCenter: " + chunkCenter, "dangerous: " + dangerousEnemies, "leadInfo: " + leadInfo);
+//        if (passiveEnemies) Utils.print("chunkCenter: " + chunkCenter, "passive: " + passiveEnemies, "leadInfo: " + leadInfo);
+//        Utils.submitPrint();
         communicator.chunkInfo.markExplored(chunkCenter, dangerousEnemies, passiveEnemies, leadInfo);
         chunksUpdated++;
       }
     }
 //    Utils.submitPrint();
     if (chunksUpdated > 0) {
-//      System.out.println("Update " + chunksUpdated + " chunks! -- from " + Cache.PerTurn.CURRENT_LOCATION);
+//      //System.out.println("Update " + chunksUpdated + " chunks! -- from " + Cache.PerTurn.CURRENT_LOCATION);
       lastChunkUpdate = myChunk;
     }
     return chunksUpdated;
@@ -395,7 +399,7 @@ public abstract class Robot {
     if (costB <= costC && rc.canMove(goalDir.rotateRight())) return goalDir.rotateRight();
     if (rc.canMove(goalDir.rotateLeft())) return goalDir.rotateLeft();
 //    if (rc.getRoundNum() == 28 && rc.getID() == 13009) {
-//      System.out.printf("Least rubble dir failed from %s\n\t%s:%d\n\t%s:%d\n\t%s:%d\n",Cache.PerTurn.CURRENT_LOCATION,goalDir,costA,goalDir.rotateRight(),costB,goalDir.rotateLeft(),costC);
+//      //System.out.printf("Least rubble dir failed from %s\n\t%s:%d\n\t%s:%d\n\t%s:%d\n",Cache.PerTurn.CURRENT_LOCATION,goalDir,costA,goalDir.rotateRight(),costB,goalDir.rotateLeft(),costC);
 //    }
     return null;
   }

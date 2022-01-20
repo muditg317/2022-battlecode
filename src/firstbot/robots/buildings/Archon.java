@@ -17,7 +17,7 @@ public class Archon extends Building {
   public static final int SUICIDE_ROUND = -100;
 
   private int whichArchonAmI = 1;
-//  private List<MapLocation> archonLocs;
+  //  private List<MapLocation> archonLocs;
   private boolean hasMoved;
   public boolean moving;
 
@@ -114,26 +114,33 @@ public class Archon extends Building {
     }
 
     // only allow movement if we know symmetry
+//    Utils.cleanPrint();;
     if (communicator.metaInfo.knownSymmetry != null && rc.canTransform()) {
       // only move once / if we have more than 1 archon to keep spawning while we move
+      Utils.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
       if (!hasMoved && rc.getArchonCount() > 1) {
         boolean canMove = true;
         switch (rc.getArchonCount()) {
           case 1:
             canMove = false;
+            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 2:
             canMove = !communicator.archonInfo.isMoving(3 - whichArchonAmI);
+            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 3:
             canMove = !communicator.archonInfo.isMoving(((whichArchonAmI)%3)+1)
                     || !communicator.archonInfo.isMoving(((whichArchonAmI+1)%3)+1);
+            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 4:
             canMove = !communicator.archonInfo.isMoving(((whichArchonAmI)%4)+1)
                     || !communicator.archonInfo.isMoving(((whichArchonAmI+1)%4)+1)
                     || !communicator.archonInfo.isMoving(((whichArchonAmI+2)%4)+1);
+            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
         }
+//        Utils.submitPrint();
         if (canMove) {
           startMoving();
         }
@@ -186,7 +193,9 @@ public class Archon extends Building {
         }
       }
       if (!shouldStop) {
-        moveOptimalTowards(closestEnemyArchon);
+        if (moveOptimalTowards(closestEnemyArchon)) {
+          communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
+        }
       } else {
         stopMoving();
       }
@@ -205,6 +214,7 @@ public class Archon extends Building {
     rc.transform();
     communicator.archonInfo.setNotMoving(whichArchonAmI);
     moving = false;
+    hasMoved = true;
   }
 
   /**
@@ -330,7 +340,10 @@ public class Archon extends Building {
    * @param message the hello
    */
   public void ackArchonHello(ArchonHelloMessage message) {
-    whichArchonAmI++;
+    if (Cache.PerTurn.ROUND_NUM == 1) {
+      whichArchonAmI++;
+    }
+
 //    archonLocs.add(message.location);
   }
 
@@ -424,7 +437,7 @@ public class Archon extends Building {
     // TODO: something based on lead income
 
     return minersSpawned < initialMinersToSpawn
-        || (minersSpawned < soldiersSpawned / 2.0 && minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 100);
+            || (minersSpawned < soldiersSpawned / 2.0 && minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 100);
 //    return rc.getTeamLeadAmount(rc.getTeam()) < 500 && ( // if we have > 2000Pb, just skip miners
 ////        movingAvgIncome < 10
 //        (rc.getRoundNum() < 100 && localLead > 15 && movingAvgIncome < rc.getRoundNum()*1.5)
