@@ -58,10 +58,10 @@ public class LeadRequestMessage extends Message {
    */
   public boolean readSharedResponse() throws GameActionException {
     if (!Global.communicator.headerMatches(writeInfo.startIndex, header)) return false; // return false if the message is no longer valid
-    //System.out.println("Read response at " + (writeInfo.startIndex+1));
+    System.out.println("Read response at " + (writeInfo.startIndex+1));
     int[] information = Global.communicator.readInts(writeInfo.startIndex+1, header.numInformationInts);
     processInformation(information[0], information[1]);
-    //System.out.println("Process request response: " + location);
+    System.out.println("Process request response: " + location);
     return answered;
   }
 
@@ -71,7 +71,7 @@ public class LeadRequestMessage extends Message {
    * @throws GameActionException if writing fails
    */
   public void respond(MapLocation leadTarget) throws GameActionException {
-    //System.out.println("Respond to request! " + writeInfo.startIndex + ": " + leadTarget + " - " + encodeResponse(leadTarget));
+    System.out.println("Respond to request! " + writeInfo.startIndex + ": " + leadTarget + " - " + encodeResponse(leadTarget));
     Global.communicator.writeInts(writeInfo.startIndex + 2, new int[]{encodeResponse(leadTarget)});
   }
 }

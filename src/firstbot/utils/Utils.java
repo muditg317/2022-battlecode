@@ -322,7 +322,7 @@ public class Utils {
 
   public static void submitPrint() {
     if (Cache.PerTurn.print.toString().length() > 25) {
-      System.out.println(Cache.PerTurn.print.toString());
+      System.out.println(Cache.PerTurn.print);
     }
     cleanPrint();
   }
@@ -334,7 +334,7 @@ public class Utils {
   private static Map<String, Integer> byteCodeMap = new HashMap<>();
   public static void startByteCodeCounting(String reason) {
     if (byteCodeMap.putIfAbsent(reason, Clock.getBytecodeNum()) != null) { // we're already counting!
-      //System.out.printf("Already counting for %s!!\n", reason);
+      System.out.printf("Already counting for %s!!\n", reason);
     }
   }
 
@@ -342,10 +342,10 @@ public class Utils {
     int end = Clock.getBytecodeNum();
     Integer start = byteCodeMap.getOrDefault(reason, -1);
     if (start == -1) {
-      //System.out.printf("Not counting bytecodes for %s!!!\n", reason);
+      System.out.printf("Not counting bytecodes for %s!!!\n", reason);
       return;
     }
-    //System.out.printf("%4d BC: %s\n", end-start, reason);
+    System.out.printf("%4d BC: %s\n", end-start, reason);
     byteCodeMap.remove(reason);
   }
 
