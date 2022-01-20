@@ -8,11 +8,11 @@ import firstbot.utils.Utils;
 public abstract class Droid extends Robot {
 
   private static final double DISTANCE_FACTOR_TO_RUN_HOME = 1;
-  private static final double HEALTH_FACTOR_TO_RUN_HOME = 0.3;
-  private static final double HEALTH_FACTOR_TO_GO_BACK_OUT = 0.75;
+  private static final double HEALTH_FACTOR_TO_RUN_HOME = 0.4;
+  private static double HEALTH_FACTOR_TO_GO_BACK_OUT = 0.95;
   private static final double HEALTH_FACTOR_TO_SUICIDE_SOLDIER = 0.07;
-  private static final double HEALTH_FACTOR_TO_SUICIDE_OTHER = 0.2;
-  private static final double HEALTH_FACTOR_TO_CANCEL_SUICIDE = 0.4;
+  private static final double HEALTH_FACTOR_TO_SUICIDE_OTHER = 0.1;
+  private static final double HEALTH_FACTOR_TO_CANCEL_SUICIDE = 0.2;
 
   protected MapLocation parentArchonLoc;
 
@@ -120,14 +120,32 @@ public abstract class Droid extends Robot {
 
   public boolean checkIfTooManySoldiers() throws GameActionException {
     int myHealth = Cache.PerTurn.HEALTH;
-    int soldierCount = 0;
+    int soldierCount = 1;
+    boolean highestHealthSoldier = true;
     for (RobotInfo info : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-      if (info.type == RobotType.SOLDIER) {
+      if (info.type == RobotType.SOLDIER && info.health < info.type.getMaxHealth(info.level)) { //only count soldiers that are not at max health
         ++soldierCount;
-        if (myHealth < info.type.health) return false;
+        if (myHealth < info.health) { // if I am not the highest health soldier
+          highestHealthSoldier = false;
+        }
       }
     }
-    return soldierCount >= 10;
+
+    switch (soldierCount) {
+      case 1:
+      case 2:
+        HEALTH_FACTOR_TO_GO_BACK_OUT = 0.95;
+        break;
+      case 3:
+      case 4:
+      case 5:
+        HEALTH_FACTOR_TO_GO_BACK_OUT = 0.85;
+        break;
+      default:
+        HEALTH_FACTOR_TO_GO_BACK_OUT = 0.75;
+    }
+
+    return soldierCount >= 10 && highestHealthSoldier;
   }
 
   /* Behavior =>

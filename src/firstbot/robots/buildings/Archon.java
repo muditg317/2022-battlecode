@@ -474,32 +474,65 @@ public class Archon extends Building {
 
   private int lastHealedID = -1;
   private void healNearbyDroids() throws GameActionException {
-    if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) < 60 - movingAvgIncome) {
-      if (lastHealedID != -1) {
-        if (rc.canSenseRobot(lastHealedID)) {
-          RobotInfo friendToHeal = rc.senseRobot(lastHealedID);
-          if (friendToHeal.health < friendToHeal.type.health && friendToHeal.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
-            rc.repair(friendToHeal.location);
-            return;
+    // find lowest health soldier <20 health, and heal it
+    // if does not exist, find highest health soldier < 49 and heal it
+    // if does not exist, heal something
+    RobotInfo lowestHealthFriend = null;
+    RobotInfo highestHealthFriend = null;
+    RobotInfo lowestOtherHealthFriend = null;
+    RobotInfo higherOtherHealthFriend = null;
+
+    for (RobotInfo info : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+      if (RobotType.ARCHON.canRepair(info.type) && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(info.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        if (info.type == RobotType.SOLDIER) {
+          if ((lowestHealthFriend == null || info.health < lowestHealthFriend.health) && info.health < 20) {
+            lowestHealthFriend = info;
+          }
+          if ((highestHealthFriend == null || info.health > highestHealthFriend.health) && info.health < 49) {
+            highestHealthFriend = info;
+          }
+        } else {
+          if ((lowestOtherHealthFriend == null || info.health < lowestOtherHealthFriend.health) && info.health < info.type.getMaxHealth(info.level)) {
+            lowestOtherHealthFriend = info;
           }
         }
-      }
-      lastHealedID = -1;
-      RobotInfo lowestHealthFriend = null;
-      int lowestHealth = 9999;
-      for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
-        if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < lowestHealth && info.health < info.type.health) { // we see a damaged friendly
-          lowestHealth = info.health;
-          lowestHealthFriend = info;
+        if ((higherOtherHealthFriend == null || higherOtherHealthFriend.health < info.health) && info.health < info.type.getMaxHealth(info.level)) {
+          higherOtherHealthFriend = info;
         }
       }
-      if (lowestHealthFriend != null) {
-        rc.repair(lowestHealthFriend.location);
-        lastHealedID = lowestHealthFriend.ID;
-      }
-    } else {
-      rc.setIndicatorString("No repair, save lead: " + rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) + " / " + (60 - movingAvgIncome));
     }
+
+    if (lowestHealthFriend != null) rc.repair(lowestHealthFriend.location);
+    else if (highestHealthFriend != null) rc.repair(highestHealthFriend.location);
+    else if (lowestOtherHealthFriend != null) rc.repair(lowestOtherHealthFriend.location);
+    else if (higherOtherHealthFriend != null) rc.repair(higherOtherHealthFriend.location);
+//    System.out.println("movingAvgIncome: " + movingAvgIncome);
+//    if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) < 60 - movingAvgIncome) {
+//    if (lastHealedID != -1) {
+//      if (rc.canSenseRobot(lastHealedID)) {
+//        RobotInfo friendToHeal = rc.senseRobot(lastHealedID);
+//        if (friendToHeal.health < friendToHeal.type.health && friendToHeal.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+//          rc.repair(friendToHeal.location);
+//          return;
+//        }
+//      }
+//    }
+//    lastHealedID = -1;
+//    RobotInfo lowestHealthFriend = null;
+//    int lowestHealth = 9999;
+//    for (RobotInfo info : rc.senseNearbyRobots(Cache.Permanent.ACTION_RADIUS_SQUARED, Cache.Permanent.OUR_TEAM)) {
+//      if (Cache.Permanent.ROBOT_TYPE.canRepair(info.type) && info.health < lowestHealth && info.health < info.type.health) { // we see a damaged friendly
+//        lowestHealth = info.health;
+//        lowestHealthFriend = info;
+//      }
+//    }
+//    if (lowestHealthFriend != null) {
+//      rc.repair(lowestHealthFriend.location);
+//      lastHealedID = lowestHealthFriend.ID;
+//    }
+//    } else {
+//      rc.setIndicatorString("No repair, save lead: " + rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) + " / " + (60 - movingAvgIncome));
+//    }
   }
 
   private void sendLeadRefreshMessages() {
