@@ -74,14 +74,14 @@ public class Soldier extends Droid {
 //    }
     if (closestCommedEnemy != null) {
       explorationTarget = closestCommedEnemy;
-//      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
-//      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
-//      Direction backHome = enemy.directionTo(friendly);
-//      int tries = 10;
-//      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
-//        explorationTarget = explorationTarget.add(backHome);
-//      }
-//      chasingCommedEnemy = true;
+      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
+      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
+      Direction backHome = enemy.directionTo(friendly);
+      int tries = 20;
+      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
+        explorationTarget = explorationTarget.add(backHome);
+      }
+      chasingCommedEnemy = true;
     }
 
     if (archonToSave != null && !needToRunHomeForSaving && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
@@ -170,7 +170,13 @@ public class Soldier extends Droid {
     MicroInfo best = null;
     for (Direction dir : Utils.directionsNine) {
       if (dir != Direction.CENTER && (needToRunHomeForSaving || !rc.canMove(dir))) continue;
-      MicroInfo curr = new MicroInfo(Cache.PerTurn.CURRENT_LOCATION.add(dir));
+      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
+      if (dir != Direction.CENTER && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION)))) {
+        if (!newLoc.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(newLoc), newLoc.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(newLoc)))) {
+          continue;
+        }
+      }
+      MicroInfo curr = new MicroInfo(newLoc);
       for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
         curr.update(enemy);
       }
@@ -739,6 +745,11 @@ public class Soldier extends Droid {
       dirToMove = Direction.CENTER;
     }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
+    if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION)))) {
+      if (!newLoc.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(newLoc), newLoc.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(newLoc)))) {
+        dirToMove = Direction.CENTER;
+      }
+    }
     // only try to attack early if rubble is better
 //    if (rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < rc.senseRubble(newLoc)) attacked |= attackTarget(whereToAttack);
     // TODO: why is above making things worse?????

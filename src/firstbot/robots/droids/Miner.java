@@ -174,7 +174,17 @@ public class Miner extends Droid {
   private void mineSurroundingLead() throws GameActionException {
     if (!rc.isActionReady()) return;
     // Try to mine on squares around us.
-    int leadToLeave = offensiveEnemiesNearby() ? 0 : 1;
+    // known symmetry:
+    int leadToLeave = 1;
+    if (communicator.metaInfo.knownSymmetry != null) {
+      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION);
+      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION);
+      leadToLeave = friendly.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) <= enemy.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) ? 1 : 0;
+    } else {
+      leadToLeave = offensiveEnemiesNearby() ? 0 : 1;
+    }
+
+//    int leadToLeave = offensiveEnemiesNearby() ? 0 : 1;
     MapLocation[] locs = rc.senseNearbyLocationsWithLead(Cache.Permanent.ACTION_RADIUS_SQUARED, leadToLeave + 1);
     if (locs.length == 0) return;
     boolean mined = true;

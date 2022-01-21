@@ -14,7 +14,7 @@ import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -30;
+  public static final int SUICIDE_ROUND = -500;
 
   public static final int MAX_RUBBLE_TO_STOP = 5;
 

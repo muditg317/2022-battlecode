@@ -248,12 +248,14 @@ public abstract class Droid extends Robot {
 //    int b = Clock.getBytecodeNum();
 //    Utils.print("RUNNING randomizeExplorationTarget(): ");
     explorationTarget = Utils.randomMapLocation();
-    MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
-    MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
-    Direction backHome = enemy.directionTo(friendly);
-    int tries = 10;
-    while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
-      explorationTarget = explorationTarget.add(backHome);
+    if (this instanceof Soldier) {
+      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
+      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
+      Direction backHome = enemy.directionTo(friendly);
+      int tries = 20;
+      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
+        explorationTarget = explorationTarget.add(backHome);
+      }
     }
   }
 
