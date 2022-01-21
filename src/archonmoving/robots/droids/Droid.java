@@ -1,9 +1,9 @@
-package firstbot.robots.droids;
+package archonmoving.robots.droids;
 
 import battlecode.common.*;
-import firstbot.robots.Robot;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import archonmoving.robots.Robot;
+import archonmoving.utils.Cache;
+import archonmoving.utils.Utils;
 
 public abstract class Droid extends Robot {
 
@@ -44,7 +44,7 @@ public abstract class Droid extends Robot {
     int distance = Utils.maxSingleAxisDist(Cache.PerTurn.CURRENT_LOCATION, parentArchonLoc);
 
     if (this instanceof Soldier) {
-//      rc.setIndicatorString(Cache.PerTurn.HEALTH + "/" + Cache.Permanent.MAX_HEALTH);
+//      //rc.setIndicatorString(Cache.PerTurn.HEALTH + "/" + Cache.Permanent.MAX_HEALTH);
 
       // go back if health is less than half, unless you are closer to the archon already (then its equal to distance from archon?)
       if (Cache.PerTurn.HEALTH < Math.min(4 + distance * DISTANCE_FACTOR_TO_RUN_HOME, Cache.Permanent.MAX_HEALTH * HEALTH_FACTOR_TO_RUN_HOME)) {
@@ -79,12 +79,38 @@ public abstract class Droid extends Robot {
       leaveArchon = false;
     }
 
-//    Utils.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-//    Utils.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
+//    //Utils.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//    //Utils.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
     runTurn();
-//    Utils.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
+//    //Utils.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
     if (needToRunHomeForSaving || needToRunHomeForSuicide) {
-      runHome(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION));
+      communicator.archonInfo.readOurArchonLocs();
+      MapLocation closestFriendlyArchon = null;
+      int dToClosest = 9999;
+
+      switch (rc.getArchonCount()) {
+        case 4:
+          if (communicator.archonInfo.ourArchon4.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon4;
+            dToClosest = communicator.archonInfo.ourArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+        case 3:
+          if (communicator.archonInfo.ourArchon3.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon3;
+            dToClosest = communicator.archonInfo.ourArchon3.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+        case 2:
+          if (communicator.archonInfo.ourArchon2.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon2;
+            dToClosest = communicator.archonInfo.ourArchon2.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+        case 1:
+          if (communicator.archonInfo.ourArchon1.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
+            closestFriendlyArchon = communicator.archonInfo.ourArchon1;
+//            dToClosest = communicator.archonInfo.enemyArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
+          }
+      }
+      runHome(closestFriendlyArchon);
     }
 
   }
@@ -97,7 +123,7 @@ public abstract class Droid extends Robot {
    * @return true if moved
    */
   public boolean runHome(MapLocation archonLocation) throws GameActionException {
-//    Utils.print("RUNNING runHome():", "archonLocation: " + archonLocation);
+//    //Utils.print("RUNNING runHome():", "archonLocation: " + archonLocation);
     if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonLocation, Utils.DSQ_3by3plus)) {
       return moveOptimalTowards(archonLocation);
     } else {
@@ -123,7 +149,7 @@ public abstract class Droid extends Robot {
     int soldierCount = 1;
     boolean highestHealthSoldier = true;
     if (rc.canSenseRobotAtLocation(archonLocation) && rc.senseRobotAtLocation(archonLocation).type != RobotType.ARCHON) {
-      System.out.println("ERROR: archonLocation is not an archon " + archonLocation);
+      //System.out.println("ERROR: archonLocation is not an archon " + archonLocation);
     }
 
 
@@ -246,23 +272,86 @@ public abstract class Droid extends Robot {
 
   protected void randomizeExplorationTarget(boolean forceNotSelf) throws GameActionException {
 //    int b = Clock.getBytecodeNum();
-//    Utils.print("RUNNING randomizeExplorationTarget(): ");
+//    //Utils.print("RUNNING randomizeExplorationTarget(): ");
+//    switch (Cache.Permanent.ROBOT_TYPE) {
+//      case MINER:
+//        explorationTarget = Utils.rng.nextInt(10) < 3 || explorationTarget == null // rng 30% of time
+//                ? null
+//                : communicator.chunkInfo.centerOfClosestOptimalChunkForMiners(Cache.PerTurn.CURRENT_LOCATION, forceNotSelf);
+//        exploringRandomly = false;
+////    //System.out.println("new target - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
+//        if (explorationTarget == null) {
+//          int attempts = 10;
+////      //rc.setIndicatorString("no unexplored local chunks");
+//          int chunkToTry = -1;
+//          do {
+//            chunkToTry = Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS);
+//          } while (--attempts >= 0 && !communicator.chunkInfo.chunkIsGoodForMinerExploration(chunkToTry));
+//          explorationTarget = Utils.chunkIndexToLocation(chunkToTry);
+//          if (attempts == -1) {
+//            exploringRandomly = true;
+//          }
+//        }
+//        break;
+//      case SOLDIER:
+//      case SAGE:
+//
+//        MapLocation oldExplorationTarget = explorationTarget;
+//        explorationTarget = null;
+//        exploringRandomly = false;
+////    //System.out.println("new target - " + explorationTarget + " - " + (Clock.getBytecodeNum() - b));
+//        for (int i = Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS/5), max=Cache.Permanent.NUM_CHUNKS*(Utils.rng.nextInt(6)+1); i < max; i+=11) {
+//          if (communicator.chunkInfo.chunkIsGoodForOffensiveUnits(i%Cache.Permanent.NUM_CHUNKS)) {
+//            MapLocation chunkLocation = Utils.chunkIndexToLocation(i%Cache.Permanent.NUM_CHUNKS);
+////              //Utils.print("chunkIsGoodForOffensiveUnits: " + chunkLocation, " dangerous: " + communicator.chunkInfo.chunkHasDanger(i));
+//            if (explorationTarget == null) explorationTarget = chunkLocation;
+//            // go to closest enemy
+//            if (Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(chunkLocation) < Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(explorationTarget)) {
+//              explorationTarget = chunkLocation;
+//            }
+////            if (parentArchonLoc.distanceSquaredTo(explorationTarget) > parentArchonLoc.distanceSquaredTo(chunkLocation)) {
+////              explorationTarget = chunkLocation;
+//////                //Utils.print("explorationTarget: " + i);
+////            }
+//          }
+//        }
+//        //Utils.print("explorationTarget: " + explorationTarget);
+////          Utils.submitPrint();
+//        if (explorationTarget == null) {
+//          explorationTarget = Utils.chunkIndexToLocation(Utils.rng.nextInt(Cache.Permanent.NUM_CHUNKS));
+//          if (oldExplorationTarget != null && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(oldExplorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
+//            explorationTarget = oldExplorationTarget;
+//            //Utils.print("keeping previous exploration" + explorationTarget);
+//          } else {
+//            //Utils.print("forced to do random exploration" + explorationTarget);
+//          }
+////          //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+//          exploringRandomly = true;
+//        } else {
+////          int chunkIndex = Utils.locationToChunkIndex(explorationTarget);
+////          if (communicator.chunkInfo.chunkHasDanger(chunkIndex)) {
+////            //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+////          } else if (communicator.chunkInfo.chunkIsUnexplored(chunkIndex)) {
+////            //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+////          }
+//        }
+//
+//        break;
+//      case BUILDER:
+//        explorationTarget = Utils.randomMapLocation();
+//    }
+//    //rc.setIndicatorDot(explorationTarget, 255, 255, 0);
+//    if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
+//      if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
+//        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+//      } else if (communicator.chunkInfo.chunkIsUnexplored(Utils.locationToChunkIndex(explorationTarget))) {
+//        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+//      } else {
+//        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+//      }
+//    }
+//    Utils.submitPrint();
     explorationTarget = Utils.randomMapLocation();
-    if (this instanceof Soldier) {
-      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
-      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
-      Direction backHome = enemy.directionTo(friendly);
-      int tries = 20;
-      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
-        explorationTarget = explorationTarget.add(backHome);
-      }
-//      if (tries < 19) return;
-      tries = 20;
-      backHome = backHome.opposite();
-      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) < enemy.distanceSquaredTo(explorationTarget)) {
-        explorationTarget = explorationTarget.add(backHome);
-      }
-    }
   }
 
   private static final int RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH = 5;
@@ -277,11 +366,11 @@ public abstract class Droid extends Robot {
     if (!rc.isMovementReady()) {
       if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
 //        if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
-          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+          //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
 //        } else if (communicator.chunkInfo.chunkHasPassiveUnits(Utils.locationToChunkIndex(explorationTarget))) {
-//          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+//          //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
 //        } else {
-//          rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+//          //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
 //        }
       }
 //      return false;
@@ -291,8 +380,8 @@ public abstract class Droid extends Robot {
     Direction desired = getOptimalDirectionTowards(explorationTarget);
     if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
     if (desired == null) {
-      rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
-//      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
+      //rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
+//      //System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
       return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
     }
     boolean changed = checkTooMuchRubbleOnPathToExploration(desired);
@@ -300,24 +389,24 @@ public abstract class Droid extends Robot {
       desired = getOptimalDirectionTowards(explorationTarget);
       if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
       if (desired == null) {
-        rc.setIndicatorString("Cannot reach new (changed for lead) exploreTarget: " + explorationTarget);
-//      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
+        //rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
+//      //System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
         return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
       }
     }
     if (move(desired)) {
-      rc.setIndicatorString("Approaching explorationTarget" + explorationTarget);
+      //rc.setIndicatorString("Approaching explorationTarget" + explorationTarget);
 //    moveInDirLoose(goal);
-//      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 10, 10);
+//      //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 10, 10);
     }
-    if (explorationTarget != null) {
-      rc.setIndicatorDot(explorationTarget, 0, 255, 0);
+    if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
+      //rc.setIndicatorDot(explorationTarget, 0, 255, 0);
 //      if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {
-        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
+        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 255, 0, 0);
 //      } else if (communicator.chunkInfo.chunkHasPassiveUnits(Utils.locationToChunkIndex(explorationTarget))) {
-//        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
+//        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 255, 0);
 //      } else {
-//        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
+//        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, explorationTarget, 0, 0, 255);
 //      }
     }
     return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
@@ -330,10 +419,10 @@ public abstract class Droid extends Robot {
     if (((this instanceof Soldier && rubbleThere >= 25 && rubbleThere > myRubble1p5)
             || (this instanceof Miner && rubbleThere >= 50 && rubbleThere > myRubble1p5)
     )) {
-//      System.out.println("Rubble too high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
-//      System.out.println("Rubble: " + rubbleThere);
-//      System.out.println("times tried already: " + timesTriedEnterHighRubble);
-//      System.out.println("Just go through: " + justGoThrough);
+//      //System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
+//      //System.out.println("Rubble: " + rubbleThere);
+//      //System.out.println("times tried already: " + timesTriedEnterHighRubble);
+//      //System.out.println("Just go through: " + justGoThrough);
       timesTriedEnterHighRubble++;
       if (timesTriedEnterHighRubble < RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH) {
         randomizeExplorationTarget(true);
@@ -355,10 +444,10 @@ public abstract class Droid extends Robot {
 //      ) && ((this instanceof Soldier && rubbleDesired >= 25 && rubbleDesired > myRubble1p5)
 //              || (this instanceof Miner && rubbleDesired >= 50 && rubbleDesired > myRubble1p5)
 //      )) {
-//        System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
-//        System.out.println("Rubble: " + rubbleThere);
-//        System.out.println("times tried: " + timesTriedEnterHighRubble);
-//        System.out.println("Just go through: " + justGoThrough);
+//        //System.out.println("Rubble to high to enter " + explorationTarget + " from " + Cache.PerTurn.CURRENT_LOCATION + " via " + newLoc);
+//        //System.out.println("Rubble: " + rubbleThere);
+//        //System.out.println("times tried: " + timesTriedEnterHighRubble);
+//        //System.out.println("Just go through: " + justGoThrough);
 //        timesTriedEnterHighRubble++;
 //        if (timesTriedEnterHighRubble < RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH) {
 //          randomizeExplorationTarget(true);
@@ -380,9 +469,9 @@ public abstract class Droid extends Robot {
    * @throws GameActionException if exploring/moving fails
    */
   protected boolean doExploration() throws GameActionException {
-//    Utils.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
+//    //Utils.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
     // if we are explorating smartly and the chunk has been explored already
-//    System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
+//    //System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
 //    if (!exploringRandomly) {
 //      boolean needToChange = false;
 //      switch (Cache.Permanent.ROBOT_TYPE) {
@@ -394,17 +483,17 @@ public abstract class Droid extends Robot {
 //          needToChange = !communicator.chunkInfo.chunkIsGoodForOffensiveUnits(Utils.locationToChunkIndex(explorationTarget));
 //      }
 //      if (needToChange || rc.getType() == RobotType.SOLDIER || rc.getType() == RobotType.SAGE) {
-////      System.out.printf("TARGET IS BAD\n\tmyLoc:%s\n\ttarget:%s\n\texplRndm:%s\n\tbits:%d\n",Cache.PerTurn.CURRENT_LOCATION,explorationTarget,exploringRandomly,communicator.chunkInfo.chunkInfoBits(Utils.locationToChunkIndex(explorationTarget)));
+////      //System.out.printf("TARGET IS BAD\n\tmyLoc:%s\n\ttarget:%s\n\texplRndm:%s\n\tbits:%d\n",Cache.PerTurn.CURRENT_LOCATION,explorationTarget,exploringRandomly,communicator.chunkInfo.chunkInfoBits(Utils.locationToChunkIndex(explorationTarget)));
 //        randomizeExplorationTarget(true);
-////      System.out.println("Reset to " + explorationTarget);
-//        rc.setIndicatorString("bad target... now go to - " + explorationTarget);
+////      //System.out.println("Reset to " + explorationTarget);
+//        //rc.setIndicatorString("bad target... now go to - " + explorationTarget);
 //      }
 //    }
-//    Utils.print("explorationTarget: " + explorationTarget);
+//    //Utils.print("explorationTarget: " + explorationTarget);
     if (goToExplorationTarget()) {
       MapLocation oldTarget = explorationTarget;
       randomizeExplorationTarget(true);
-      rc.setIndicatorString("explored " + oldTarget + " -- now: " + explorationTarget);
+      //rc.setIndicatorString("explored " + oldTarget + " -- now: " + explorationTarget);
       timesTriedEnterHighRubble = 0;
       justGoThrough = false;
       return true;
