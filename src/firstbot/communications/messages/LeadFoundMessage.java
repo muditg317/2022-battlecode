@@ -12,7 +12,7 @@ public class LeadFoundMessage extends Message {
   public MapLocation location;
 
   public LeadFoundMessage(MapLocation location) {
-    super(TYPE, MESSAGE_LENGTH);
+    super(TYPE);
     this.location = location;
   }
 

@@ -90,9 +90,7 @@ public abstract class Robot {
       try {
         this.runTurnWrapper();
 //        Utils.cleanPrint();
-        if (Cache.PerTurn.print.toString().length() > 25) {
-          System.out.println(Cache.PerTurn.print);
-        }
+        Utils.submitPrint();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
@@ -241,72 +239,6 @@ public abstract class Robot {
     }
   }
 
-  private int lastChunkUpdate = -1;
-  /**
-   * checks if the chunkCenter is visible and updates the stored ChunkInfo for that chunk
-   * @return number of chunks that were visible and updated
-   * @throws GameActionException if sensing or writingToShared fails
-   */
-  protected int updateVisibleChunks() throws GameActionException {
-    if (true) return 0;
-    int myChunk = Utils.locationToChunkIndex(Cache.PerTurn.CURRENT_LOCATION);
-    rc.setIndicatorDot(Utils.chunkIndexToLocation(myChunk), 0, 255, 255);
-
-    boolean dangerousEnemies = false;
-    boolean passiveEnemies = false;
-    for (RobotInfo robotInfo : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-      switch (robotInfo.type) {
-        case ARCHON:
-        case SAGE:
-        case WATCHTOWER:
-        case SOLDIER:
-          dangerousEnemies = true;
-          break;
-        case MINER:
-        case BUILDER:
-        case LABORATORY:
-          passiveEnemies = true;
-      }
-    }
-
-    // if high lead, explored+high rss -- else, explored rss
-    int leadInfo = (rc.senseNearbyLocationsWithLead(-1,2).length > 0 ? 0b10 : 0b01);
-    if (leadInfo == 1 && rc.senseNearbyLocationsWithLead().length > 0) {  // not high, check depleted
-      leadInfo = 0b11;
-    }
-//    Utils.cleanPrint();
-//    Utils.print("dangerous: " + dangerousEnemies, "passive: " + passiveEnemies, "leadInfo: " + leadInfo);
-//    Utils.submitPrint();
-
-    int chunksUpdated = 0;
-    for (Direction dir : Utils.directionsNine) {
-      if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
-      if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
-      if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
-      if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
-      int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-      MapLocation chunkCenter = Utils.chunkIndexToLocation(chunkToTest);
-//      System.out.println(Cache.PerTurn.CURRENT_LOCATION + " -- upVisChunks\nchunkToTest: " + chunkToTest + " chunkCenter: " + chunkCenter + " dir: " + dir);
-
-      if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(chunkCenter, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED)) {
-//        System.out.println("EXPLORED! dangerous: " + dangerous + " leadInfo: " + leadInfo);
-        rc.setIndicatorDot(chunkCenter, 0, 255, 255);
-//        Utils.cleanPrint();
-//        if (dangerousEnemies) Utils.print("chunkCenter: " + chunkCenter, "dangerous: " + dangerousEnemies, "leadInfo: " + leadInfo);
-//        if (passiveEnemies) Utils.print("chunkCenter: " + chunkCenter, "passive: " + passiveEnemies, "leadInfo: " + leadInfo);
-//        Utils.submitPrint();
-        communicator.chunkInfo.markExplored(chunkCenter, dangerousEnemies, passiveEnemies, leadInfo);
-        chunksUpdated++;
-      }
-    }
-//    Utils.submitPrint();
-    if (chunksUpdated > 0) {
-//      System.out.println("Update " + chunksUpdated + " chunks! -- from " + Cache.PerTurn.CURRENT_LOCATION);
-      lastChunkUpdate = myChunk;
-    }
-    return chunksUpdated;
-  }
-
   /**
    * check at the end of the turn if new enemies should be commed
    * @throws GameActionException if sending the message fails
@@ -314,6 +246,26 @@ public abstract class Robot {
   protected void commNearbyEnemies() throws GameActionException {
     if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 0) {
       RobotInfo enemy = Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS[0];
+      for (RobotInfo enemyInfo : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) { // look for archons
+        if (enemyInfo.type == RobotType.ARCHON) {
+          enemy = enemyInfo;
+          communicator.archonInfo.setEnemyArchonLoc(communicator.archonInfo.getNearestEnemyArchonIndex(enemyInfo.location), enemyInfo.location);
+          System.out.println("Update enemy archon locs!");
+          communicator.archonInfo.readEnemyArchonLocs();
+          Utils.cleanPrint();
+          Utils.print("Set enemy mirror");
+          Utils.print("our 1: " + communicator.archonInfo.ourArchon1);
+          Utils.print("our 2: " + communicator.archonInfo.ourArchon2);
+          Utils.print("our 3: " + communicator.archonInfo.ourArchon3);
+          Utils.print("our 4: " + communicator.archonInfo.ourArchon4);
+          Utils.print("enemy 1: " + communicator.archonInfo.enemyArchon1);
+          Utils.print("enemy 2: " + communicator.archonInfo.enemyArchon2);
+          Utils.print("enemy 3: " + communicator.archonInfo.enemyArchon3);
+          Utils.print("enemy 4: " + communicator.archonInfo.enemyArchon4);
+          Utils.submitPrint();
+          break;
+        }
+      }
       // no already seen enemy or closest seen is very far
 //      Utils.cleanPrint();
 //      Utils.print("closestCommedEnemy: " + closestCommedEnemy, "enemy: " + enemy);

@@ -12,7 +12,7 @@ public class ArchonSavedMessage extends Message {
   public MapLocation location;
 
   public ArchonSavedMessage(MapLocation location) {
-    super(TYPE, MESSAGE_LENGTH);
+    super(TYPE);
     this.location = location;
   }
 

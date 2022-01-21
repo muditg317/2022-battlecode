@@ -10,7 +10,7 @@ public class EnemyFoundMessage extends Message {
     public MapLocation enemyLocation;
 
     public EnemyFoundMessage(RobotInfo enemy) {
-        super(TYPE, MESSAGE_LENGTH);
+        super(TYPE);
         this.enemyLocation = enemy.location;
     }
 

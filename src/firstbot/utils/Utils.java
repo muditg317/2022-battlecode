@@ -346,7 +346,7 @@ public class Utils {
   }
 
   public static void submitPrint() {
-    if (Cache.PerTurn.print.toString().length() > 25) {
+    if (Cache.PerTurn.print.length() > 25) {
       System.out.println(Cache.PerTurn.print);
     }
     cleanPrint();

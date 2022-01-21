@@ -12,7 +12,7 @@ public class SaveMeMessage extends Message {
   public MapLocation location;
 
   public SaveMeMessage(MapLocation location) {
-    super(TYPE, MESSAGE_LENGTH);
+    super(TYPE);
     this.location = location;
   }
 

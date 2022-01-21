@@ -21,7 +21,7 @@ public class ArchonHelloMessage extends Message {
   public boolean notRotSym;
 
   public ArchonHelloMessage(MapLocation location, boolean notHorizSym, boolean notVertSym, boolean notRotSym) {
-    super(TYPE, MESSAGE_LENGTH);
+    super(TYPE);
     this.location = location;
     this.notHorizSym =  notHorizSym;
     this.notVertSym = notVertSym;

@@ -64,15 +64,14 @@ public abstract class Message {
     public static final int ROUND_NUM_CYCLE_SIZE = ROUND_NUM_MAX + 1;
 //    public int cyclicRoundNum; // 0-31            -- 5 bits [4,0]
 
-    public Header(MessageType type, int numInformationInts) {
+    public Header(MessageType type) {
       this.type = type;
 //      this.numInformationInts = numInformationInts;
     }
 
     public static Header fromReadInt(int readInt) {
       return new Header(
-          MessageType.values[(readInt >>> TYPE_START) & TYPE_MAX],
-          (readInt >>> NUM_INTS_START) & NUM_INTS_MAX
+          MessageType.values[(readInt >>> TYPE_START) & TYPE_MAX]
           );
     }
 
@@ -127,10 +126,9 @@ public abstract class Message {
   /**
    * create a message with the given meta-information
    * @param type message type (from the MessageType enum)
-   * @param numInformationInts how many ints of information are needed for this message
    */
-  public Message(MessageType type, int numInformationInts) {
-    this(new Header(type, numInformationInts));
+  public Message(MessageType type) {
+    this(new Header(type));
   }
 
 

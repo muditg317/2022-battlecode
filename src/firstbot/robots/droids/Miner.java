@@ -200,7 +200,7 @@ public class Miner extends Droid {
     if (leadTarget == null && leadRequest != null) {
       rc.setIndicatorString("Checking request response!");
       if (leadRequest.readSharedResponse()) {
-        System.out.println("Got request response!!" + leadRequest.location);
+//        System.out.println("Got request response!!" + leadRequest.location);
         registerLeadTarget(leadRequest.location);
       }
       leadRequest = null;

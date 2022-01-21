@@ -15,7 +15,7 @@ public class RubbleAtLocationMessage extends Message {
   public int rubble;
 
   public RubbleAtLocationMessage(MapLocation location, int rubble) {
-    super(TYPE, MESSAGE_LENGTH);
+    super(TYPE);
     this.location = location;
     this.rubble = rubble;
   }

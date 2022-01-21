@@ -12,7 +12,7 @@ public class StartRaidMessage extends Message {
   public MapLocation location;
 
   public StartRaidMessage(MapLocation locationNum) {
-    super(TYPE, MESSAGE_LENGTH);
+    super(TYPE);
     this.location = location;
   }
 

@@ -14,7 +14,7 @@ import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
 public class Archon extends Building {
-  public static final int SUICIDE_ROUND = -75;
+  public static final int SUICIDE_ROUND = -30;
 
   public static final int MAX_RUBBLE_TO_STOP = 5;
 
@@ -74,9 +74,9 @@ public class Archon extends Building {
       return;
     }
 
-    if (communicator.metaInfo.knownSymmetry != null && !communicator.archonInfo.mirrored) {
-      communicator.archonInfo.mirrorSelfToEnemies();
-    }
+//    if (communicator.metaInfo.knownSymmetry != null && !communicator.archonInfo.mirrored) {
+//      communicator.archonInfo.mirrorSelfToEnemies();
+//    }
 
 //    drawChunkBounds();
     if (!moving) {
@@ -163,30 +163,7 @@ public class Archon extends Building {
    */
   private void runArchonMoving() throws GameActionException {
     if (closestEnemyArchon == null) { // determine closest enemy archon to move towards
-      communicator.archonInfo.readEnemyArchonLocs();
-      int dToClosest = 9999;
-      switch (rc.getArchonCount()) {
-        case 4:
-          if (communicator.archonInfo.enemyArchon4.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
-            closestEnemyArchon = communicator.archonInfo.enemyArchon4;
-            dToClosest = communicator.archonInfo.enemyArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
-          }
-        case 3:
-          if (communicator.archonInfo.enemyArchon3.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
-            closestEnemyArchon = communicator.archonInfo.enemyArchon3;
-            dToClosest = communicator.archonInfo.enemyArchon3.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
-          }
-        case 2:
-          if (communicator.archonInfo.enemyArchon2.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
-            closestEnemyArchon = communicator.archonInfo.enemyArchon2;
-            dToClosest = communicator.archonInfo.enemyArchon2.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
-          }
-        case 1:
-          if (communicator.archonInfo.enemyArchon1.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, dToClosest-1)) {
-            closestEnemyArchon = communicator.archonInfo.enemyArchon1;
-//            dToClsoest = communicator.archonInfo.enemyArchon4.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
-          }
-      }
+      closestEnemyArchon = communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION);
     }
     if (rc.canTransform()) {
       updateShouldStop();
@@ -237,21 +214,27 @@ public class Archon extends Building {
   public void updateShouldStop() {
     // check if any enemy damaging units or any damaged friendly soldiers
     shouldStop = false;
+
+    if (closestEnemyArchon != null && closestEnemyArchon.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+      shouldStop = true;
+      return;
+    }
+
     for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
       if (ri.type.damage > 0) {
         shouldStop = true;
-        break;
+        return;
       }
     }
 
-    if (!shouldStop) {
-      for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-        if (friend.type.damage > 0 && friend.health < friend.type.health - 15 && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(friend.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) { //todo: maybe consider changing to a threshold
-          shouldStop = true;
-          break;
-        }
+//    if (!shouldStop) {
+    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+      if (friend.type.damage > 0 && friend.health < friend.type.health - 15 && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(friend.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) { //todo: maybe consider changing to a threshold
+        shouldStop = true;
+        return;
       }
     }
+//    }
 
   }
 
@@ -293,7 +276,6 @@ public class Archon extends Building {
 
     if (whichArchonAmI == 1) {
       communicator.metaInfo.initializeValidRegion();
-      communicator.metaInfo.encodeAndWrite();
     }
 
     ArchonHelloMessage helloMessage = generateArchonHello();

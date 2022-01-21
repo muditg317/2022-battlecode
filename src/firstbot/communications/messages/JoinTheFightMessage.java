@@ -12,7 +12,7 @@ public class JoinTheFightMessage extends Message {
     public MapLocation location;
 
     public JoinTheFightMessage(MapLocation location) {
-        super(TYPE, MESSAGE_LENGTH);
+        super(TYPE);
         this.location = location;
     }
 

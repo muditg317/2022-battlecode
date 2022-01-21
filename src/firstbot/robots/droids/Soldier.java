@@ -74,7 +74,14 @@ public class Soldier extends Droid {
 //    }
     if (closestCommedEnemy != null) {
       explorationTarget = closestCommedEnemy;
-      chasingCommedEnemy = true;
+//      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
+//      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
+//      Direction backHome = enemy.directionTo(friendly);
+//      int tries = 10;
+//      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
+//        explorationTarget = explorationTarget.add(backHome);
+//      }
+//      chasingCommedEnemy = true;
     }
 
     if (archonToSave != null && !needToRunHomeForSaving && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
@@ -89,6 +96,25 @@ public class Soldier extends Droid {
     }
 
     {
+//      if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 0) {
+//        attackEnemies();
+//      } else if (!needToRunHomeForSaving) {
+//        if (robotToChase != null) {
+////        Utils.print("robotToChase: " + robotToChase);
+//          attackAtAndMoveTo(robotToChase.location, robotToChase.location, true);
+//          if (robotToChase.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+//            robotToChase = null;
+//          }
+//        }
+//
+//        if (robotToChase == null) {
+//          if (closestCommedEnemy == null && chasingCommedEnemy) {
+//            randomizeExplorationTarget(true);
+//            chasingCommedEnemy = false;
+//          }
+//          doExploration();
+//        }
+//      }
       // if we cannot move, attack is ready, and there is an enemy in action --> ATTACK!
       if (!rc.isMovementReady() && rc.isActionReady() && processEnemiesInAction()) {
           attackPriority(enemySoldierExistsInAction, enemyMinerExistsInAction, enemyBuilderExistsInAction, enemyArchonExistsInAction, enemySageExistsInAction);
@@ -139,32 +165,8 @@ public class Soldier extends Droid {
     fightToJoin = null;
   }
 
-//  private FastQueue<MicroInfo> movementMicroOptions = new FastQueue<>(9);
-  private boolean attackEnemySoldier() throws GameActionException {
-//    Utils.cleanPrint();
-//    movementMicroOptions.clear();
-//    movementMicroOptions.push(new MicroInfo(Cache.PerTurn.CURRENT_LOCATION));
-//    if (!needToRunHomeForSaving) {
-//      for (Direction dir : Utils.directions) {
-//        if (rc.canMove(dir)) movementMicroOptions.push(new MicroInfo(Cache.PerTurn.CURRENT_LOCATION.add(dir)));
-//      }
-//    }
-//
-//    for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-//      for (int i = movementMicroOptions.startIter(); --i >= 0;) {
-//        movementMicroOptions.next().update(enemy);
-//      }
-//    }
-//
-//    MicroInfo best = movementMicroOptions.popFront().finalizeInfo();
-//    MicroInfo curr;
-//    while (!movementMicroOptions.isEmpty()) {
-//      if ((curr = movementMicroOptions.popFront()).finalizeInfo().isBetterThan(best)) {
-//        Utils.print("best: " + best,  "curr: " + curr);
-//        best = curr;
-//      }
-//    }
 
+  private boolean attackEnemySoldier() throws GameActionException {
     MicroInfo best = null;
     for (Direction dir : Utils.directionsNine) {
       if (dir != Direction.CENTER && (needToRunHomeForSaving || !rc.canMove(dir))) continue;
@@ -182,142 +184,25 @@ public class Soldier extends Droid {
     return best != null && best.execute();
   }
 
-  private boolean attackEnemySoldierOld() throws GameActionException {
-
-//    Utils.print("RUNNING attackEnemySoldier()");
-
-    double bestScore = Double.NEGATIVE_INFINITY;
-    MapLocation bestLocation = null;
-    MapLocation bestEnemySoldier = null;
-    int bestDistance = -1;
-
-    boolean hasHugeAdvantage = false;
-    boolean cannotAttackSoMoveAway = false;
-    boolean canAttackSoMoveIn = false;
-
-
-    // my location and all adjacent locations
+  private boolean attackEnemies() throws GameActionException {
+    MicroInfo best = null;
     for (Direction dir : Utils.directionsNine) {
       if (dir != Direction.CENTER && (needToRunHomeForSaving || !rc.canMove(dir))) continue;
-      MapLocation candidate = Cache.PerTurn.CURRENT_LOCATION.add(dir);
-
-      int numEnemySoldiers = 0;
-      double averageEnemyDamagePerRound = 0;
-      int minDistance = Integer.MAX_VALUE;
-      MapLocation closestEnemySoldier = null; // can only be null iff averageEnemyDamagePerRound == 0 and averageEnemyDamagePerRound == 0, score=0
-
-      // use vision radius to count enemies (assume they can all attack and will move into action radius if needed), and calculate DPS
-      for (RobotInfo enemy : rc.senseNearbyRobots(candidate, Cache.Permanent.VISION_RADIUS_SQUARED, Cache.Permanent.OPPONENT_TEAM)) {
-        if (enemy.type == RobotType.SOLDIER) {
-          numEnemySoldiers++;
-          // determine how quickly enemy can attack
-          double turnsTillNextCooldown = Utils.turnsTillNextCooldown(10, rc.senseRubble(enemy.location));
-          averageEnemyDamagePerRound += (3 / turnsTillNextCooldown);
-
-          // store closest enemy soldier to candidate location
-          int candidateDistance = candidate.distanceSquaredTo(enemy.location);
-          if (candidateDistance < minDistance) {
-            minDistance = candidateDistance;
-            closestEnemySoldier = enemy.location;
-          }
-        }
+      MicroInfo curr = new MicroInfo(Cache.PerTurn.CURRENT_LOCATION.add(dir));
+      for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+        curr.update(enemy);
       }
-
-      // use vision radius centered on closest enemy to count friends (assume friends can all attack and will move into action radius if needed), and calculate DPS
-      int numFriendlySoldiers = 0;
-      double averageFriendlyDamagePerRound = 0;
-      if (closestEnemySoldier != null) {
-        if (closestEnemySoldier.distanceSquaredTo(candidate) <= Cache.Permanent.ACTION_RADIUS_SQUARED) {// && rc.isActionReady()) {
-          numFriendlySoldiers++;
-          double turnsTillNextCooldown = Utils.turnsTillNextCooldown(10, rc.senseRubble(candidate));
-          averageFriendlyDamagePerRound += (3 / turnsTillNextCooldown);
-        }
-        for (RobotInfo friendly : rc.senseNearbyRobots(
-            closestEnemySoldier,
-            Cache.Permanent.VISION_RADIUS_SQUARED,
-            Cache.Permanent.OUR_TEAM)) {
-          if (friendly.type == RobotType.SOLDIER) {
-            numFriendlySoldiers++;
-            double turnsTillNextCooldown = Utils.turnsTillNextCooldown(10, rc.senseRubble(friendly.location));
-            averageFriendlyDamagePerRound += (3 / turnsTillNextCooldown);
-          }
-        }
-      }
-      if (closestEnemySoldier == null) continue;
-
-      double scoreDiff = averageFriendlyDamagePerRound - averageEnemyDamagePerRound;
-      double scoreRatio = averageFriendlyDamagePerRound / averageEnemyDamagePerRound;
-
-      // closestEnemySoldier guaranteed not null bc otherwise friendly and enemy would both be 0
-      if (scoreRatio >= 2 || scoreDiff >= 5) { // huge advantage
-        // "go in"
-        hasHugeAdvantage = true;
-      }
-
-      boolean needToGoInToAttack = rc.isActionReady() && !closestEnemySoldier.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED);
-
-      double score = 1.01 * averageFriendlyDamagePerRound - averageEnemyDamagePerRound;
-//      System.out.println("candLoc: " + candidate + " --\nnumEnemySoldiers: " + numEnemySoldiers + "\nenemyDmgPerRound: " + averageEnemyDamagePerRound + "\nclosestEnemySoldier: " + closestEnemySoldier + " --\nnumFriendlySoldiers: " + numFriendlySoldiers + "\nFriendlyDmgPerRound: " + averageFriendlyDamagePerRound + "\nscore: " + score);
-      if (rc.isMovementReady() && closestEnemySoldier != null) {
-        int dist = closestEnemySoldier.distanceSquaredTo(candidate);
-        if (rc.isActionReady()) {
-          // stay inside action radius
-          if (dist <= Cache.Permanent.ACTION_RADIUS_SQUARED) {
-            score += dist * 0.005;
-          }
-        } else {
-          if (dist > Cache.Permanent.ACTION_RADIUS_SQUARED) {
-            score += dist * 0.005;
-          }
-        }
-      }
-      boolean isBetter = score > bestScore;
-
-      // if the score is negative:
-        // break ties by picking the movement between candidate and bestLocationFoundSoFar where distance is the furthest from enemy (GTFO -- miner code?)
-      if (bestScore == score && score < 0) { // bestScore and score can only be negative if a closestEnemySoldier exists for each I think
-        assert closestEnemySoldier != null;
-        assert bestDistance != -1;
-        int candidateDistance = candidate.distanceSquaredTo(closestEnemySoldier); // get distance between candidate and closest enemy to candidate
-        // bestDistance is the distance between the bestLocation found so far and closest enemy to bestLocation
-        if (candidateDistance > bestDistance) {
-          bestLocation = candidate;
-          bestDistance = candidateDistance;
-        }
-      }
-
-
-
-      if (isBetter) {
-        bestScore = score;
-        bestLocation = candidate;
-        bestEnemySoldier = closestEnemySoldier;
-        if (closestEnemySoldier != null) bestDistance = candidate.distanceSquaredTo(closestEnemySoldier);
+      curr.finalizeInfo();
+      if (best == null || curr.isBetterThan(best)) {
+//        Utils.print("best: " + best,  "curr: " + curr);
+        best = curr;
       }
     }
 
-
-    setIndicatorString(String.format("atkSldr(%4.2f)", bestScore), bestLocation);
-
-    // if we are in a negative trade that we don't know how to escape
-    if (bestScore <= 0 && rc.isMovementReady() && bestLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) {
-      Direction toEscape = getOptimalDirectionAway(offensiveEnemyCentroid());
-      if (toEscape != null) {
-        bestLocation = Cache.PerTurn.CURRENT_LOCATION.add(toEscape);
-      }
-    }
-
-
-    if (bestEnemySoldier != null) {
-      lastSoldierAttack = bestEnemySoldier;
-      lastSoldierTradeScore = bestScore;
-    }
-
-    return attackAtAndMoveTo(bestEnemySoldier, bestLocation, false);
-
+    return best != null && best.execute();
   }
 
-//  private int timesGoneIn = 0;
+  private int timesGoneIn = 0;
   private class MicroInfo {
 
     private MapLocation myLocation;
@@ -590,6 +475,143 @@ public class Soldier extends Droid {
       move(Cache.PerTurn.CURRENT_LOCATION.directionTo(myLocation));
       return attacked;
     }
+  }
+
+  private static int getPriority(RobotType type) {
+    switch (type) {
+      case SAGE:
+        return 9;
+      case SOLDIER:
+        return 8;
+      case WATCHTOWER:
+        return 7;
+      case MINER:
+        return 6;
+      case ARCHON:
+        return 5;
+      case BUILDER:
+        return 4;
+      case LABORATORY:
+        return 3;
+    }
+    return 0;
+  }
+
+  private class MicroInfoGeneric {
+    MapLocation location;
+    int rubble;
+
+    int numOffensiveEnemies;
+
+    RobotInfo bestTarget;
+    int distToBest;
+    boolean hasTarget;
+    int targetPriority;
+
+    int distanceToFriendlyArchon;
+    int distanceToEnemyArchon;
+    boolean tooCloseToEnemy;
+
+    public MicroInfoGeneric(MapLocation location) throws GameActionException {
+      this.location = location;
+      this.rubble = rc.senseRubble(location);
+      this.distanceToFriendlyArchon = communicator.archonInfo.getNearestFriendlyArchon(location).distanceSquaredTo(location);
+      this.distanceToEnemyArchon = communicator.archonInfo.getNearestEnemyArchon(location).distanceSquaredTo(location);
+      this.tooCloseToEnemy = this.distanceToEnemyArchon <= this.distanceToFriendlyArchon;
+//      Utils.print("Moving to " + location, "distToFriendArchon " + distanceToFriendlyArchon, "distToEnemyArchon " + distanceToEnemyArchon, "tooClose: " + tooCloseToEnemy);
+    }
+
+    public void update(RobotInfo nextEnemy) {
+      if (nextEnemy.type.damage > 0 && location.isWithinDistanceSquared(nextEnemy.location, nextEnemy.type.actionRadiusSquared)) {
+        numOffensiveEnemies++;
+      }
+      if (!nextEnemy.location.isWithinDistanceSquared(location, Cache.Permanent.ACTION_RADIUS_SQUARED) && !nextEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        return;
+      }
+      if (bestTarget == null) {
+        bestTarget = nextEnemy;
+        distToBest = nextEnemy.location.distanceSquaredTo(location);
+        return;
+      }
+      if (getPriority(nextEnemy.type) > getPriority(bestTarget.type)) {
+        bestTarget = nextEnemy;
+        distToBest = nextEnemy.location.distanceSquaredTo(location);
+        return;
+      }
+      if (nextEnemy.health < bestTarget.health) {
+        bestTarget = nextEnemy;
+        distToBest = nextEnemy.location.distanceSquaredTo(location);
+        return;
+      }
+      if (nextEnemy.location.isWithinDistanceSquared(location, distToBest-1)) {
+        bestTarget = nextEnemy;
+        distToBest = nextEnemy.location.distanceSquaredTo(location);
+        return;
+      }
+    }
+
+    public void finalizeInfo() {
+      hasTarget = rc.isActionReady() && this.bestTarget != null;
+      if (hasTarget) {
+        targetPriority = getPriority(bestTarget.type);
+      }
+    }
+
+    public boolean isBetterThan(MicroInfoGeneric other) throws GameActionException {
+      if (this.rubble >= 25 && this.rubble >= other.rubble * 1.5) return false;
+      if (other.rubble >= 25 && other.rubble >= this.rubble * 1.5) return true;
+
+      if (this.numOffensiveEnemies != other.numOffensiveEnemies) { // always prefer less offensive units
+        if (this.numOffensiveEnemies == 1 && other.numOffensiveEnemies == 0) return rc.isActionReady();
+        if (this.numOffensiveEnemies == 0 && other.numOffensiveEnemies == 1) return !rc.isActionReady();
+        return this.numOffensiveEnemies < other.numOffensiveEnemies;
+      }
+      if (this.hasTarget != other.hasTarget) { // one or the other has a target
+        // return the one with the target if it's a nonOffensive target
+        if (this.tooCloseToEnemy == other.tooCloseToEnemy) {
+          if (this.tooCloseToEnemy) {
+            if (this.hasTarget) return this.bestTarget.type.damage <= 0;
+            else return other.bestTarget.type.damage <= 0;
+          } else {
+            if (this.hasTarget) return this.bestTarget.type.damage > 0;
+            else return other.bestTarget.type.damage > 0;
+          }
+        } else {
+//          if (this.hasTarget) {
+//            return this.tooCloseToEnemy;
+//          } else {
+//            return !this.tooCloseToEnemy;
+//          }
+          return this.tooCloseToEnemy;
+        }
+      }
+      if (!this.hasTarget) { // both have no target
+        if (this.rubble != other.rubble) return this.rubble < other.rubble;
+        if (this.distanceToFriendlyArchon != other.distanceToFriendlyArchon) return this.distanceToFriendlyArchon < other.distanceToFriendlyArchon;
+        if (this.distanceToEnemyArchon != other.distanceToEnemyArchon) return this.distanceToEnemyArchon > other.distanceToEnemyArchon;
+        return false;
+      }
+      // assume both have target now
+      if (this.targetPriority != other.targetPriority) return this.targetPriority > other.targetPriority;
+      if (this.bestTarget.health != other.bestTarget.health) return this.bestTarget.health < other.bestTarget.health;
+      if (this.rubble != other.rubble) return this.rubble < other.rubble;
+      if (this.distanceToFriendlyArchon != other.distanceToFriendlyArchon) return this.distanceToFriendlyArchon < other.distanceToFriendlyArchon;
+      if (this.distanceToEnemyArchon != other.distanceToEnemyArchon) return this.distanceToEnemyArchon > other.distanceToEnemyArchon;
+      return false;
+    }
+
+    public boolean execute() throws GameActionException {
+      boolean attacked = false;
+      if (this.hasTarget && this.bestTarget.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED) && this.rubble < rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION)) {
+        attacked = attackTarget(bestTarget.location);
+      }
+      move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
+      if (this.hasTarget && !attacked) {
+        attacked = attackTarget(bestTarget.location);
+      }
+      return attacked;
+    }
+
   }
 
   /**

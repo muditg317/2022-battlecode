@@ -1,7 +1,6 @@
 package firstbot.communications;
 
 import battlecode.common.Clock;
-import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
@@ -12,10 +11,6 @@ import firstbot.utils.Cache;
 import firstbot.utils.Global;
 import firstbot.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 /**
  * This class will have a variety of methods related to communications between robots
  * There should be a generic interface for sending messages and reading them
@@ -24,347 +19,9 @@ import java.util.List;
  */
 public class Communicator {
 
-  /**
-   * information about a subchunk of the map
-   *    lead presence, danger, etc
-   */
-  public static class ChunkInfo {
-    public static final int NUM_CHUNK_INTS = 0;//Utils.MAX_MAP_CHUNKS / Utils.CHUNK_INFOS_PER_INT;
-    public static final int CHUNK_INTS_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_CHUNK_INTS;
-    public static final int SHIFT_PER_CHUNK_MOD_INTS = 16 / Utils.CHUNK_INFOS_PER_INT;
-
-    public static final int CHUNK_INFO_MASK = 0b1111;
-
-    /**
-     * next three encoded into 2 bits
-     * 00 - unexplored              0
-     * 01 - explored, no rss        1
-     * 10 - explored, rss exist     2
-     * 11 - explored, rss depleted  3
-     */
-//    boolean explored;
-//    boolean hasResources;
-//    boolean resourcesDepleted;
-    public static final int EXPLORATION_AND_LEAD_MASK = 0b0011;
-    public static final int EXPLORED_NO_RSS_MASK = 0b0001;
-    public static final int EXPLORED_W_RSS_MASK = 0b0010;
-    public static final int EXPLORED_RSS_DEPLETED_MASK = 0b0011;
-
-    /**
-     * indicates presence of dangerous enemies
-     *    soldier, sage,
-     *    watch tower,
-     *    archon
-     */
-//    boolean hasDangerousUnits;
-    public static final int DANGEROUS_UNIT_MASK = 0b1000;
-
-    /**
-     * indicates presence of non-dangerous enemies
-     *    miner, builder
-     */
-//    boolean hasNonOffensiveUnits;
-    public static final int PASSIVE_UNIT_MASK = 0b0100;
-
-    public static final int BAD_FOR_MINERS = DANGEROUS_UNIT_MASK | 0b1; // danger or no rss
-
-    /**
-     * checks if the chunk at a given index has dangerous units
-     * @param chunkIndex the chunk to check
-     * @return whether the chunk has dangerous units
-     * @throws GameActionException if reading fails
-     */
-    public boolean chunkHasDanger(int chunkIndex) throws GameActionException {
-//      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-      return ((Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & DANGEROUS_UNIT_MASK) > 0;
-    }
-    public boolean chunkHasPassiveUnits(int chunkIndex) throws GameActionException {
-//      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-      return ((Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & PASSIVE_UNIT_MASK) > 0;
-    }
-    public int chunkInfoBits(int chunkIndex) throws GameActionException {
-//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-//      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-//      return chunkInfoInt & ChunkInfo.EXPLORATION_AND_LEAD_MASK;
-      return (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & ChunkInfo.CHUNK_INFO_MASK;
-    }
-    public boolean chunkIsUnexplored(int chunkIndex) throws GameActionException {
-//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-//      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-      return ((Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & EXPLORATION_AND_LEAD_MASK) <= 0;
-    }
-    public boolean chunkIsGoodForMinerExploration(int chunkIndex) throws GameActionException {
-//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-      // danger / lead depleted -- OR -- unexplored
-      return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
-    }
-//    public boolean chunkIsGoodForMinerExploration(MapLocation mapLoc) throws GameActionException {
-//      int chunkIndex = Utils.locationToChunkIndex(mapLoc);
-//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-//      int chunkInfoInt = (Global.rc.readSharedArray(sharedArrIndex) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-//      // danger / lead depleted -- OR -- unexplored
-////      System.out.println("");
-//      return (chunkInfoInt & BAD_FOR_MINERS) == 0 || (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0;
-//    }
-    public boolean chunkIsGoodForOffensiveUnits(int chunkIndex) throws GameActionException {
-//      int sharedArrIndex = chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int chunkInfoInt = (Global.rc.readSharedArray(chunkIndex / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START) >> ((chunkIndex % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS)) & 0b1111;
-      // danger / lead depleted -- OR -- unexplored
-//      Utils.print("chunkIndex: " + chunkIndex, "dangerous: " + ((chunkInfoInt & DANGEROUS_UNIT_MASK) > 0), "not explored and RSS: " + ((chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0));
-//      if ( ((chunkInfoInt & DANGEROUS_UNIT_MASK) > 0)) Global.rc.setIndicatorDot(Utils.chunkIndexToLocation(chunkIndex), 255, 0, 0);
-//      if ( (chunkInfoInt & EXPLORATION_AND_LEAD_MASK) == 0) Global.rc.setIndicatorDot(Utils.chunkIndexToLocation(chunkIndex).add(Direction.SOUTH), 0, 255, 0);
-      return (chunkInfoInt & DANGEROUS_UNIT_MASK) > 0 || (chunkInfoInt & PASSIVE_UNIT_MASK) > 0;
-    }
-
-
-    /**
-     * gets the current chunk and returns the center of the closest optimal chunk for miner to go to
-     *    checks for explored+rss or unexplored
-     * @return the center of the optimal mining chunk
-     * @throws GameActionException if reading fails
-     */
-    public MapLocation centerOfClosestOptimalChunkForMiners(MapLocation source, boolean forceNotSource) throws GameActionException {
-      int myChunk = Utils.locationToChunkIndex(source);
-      if (!forceNotSource && chunkIsGoodForMinerExploration(myChunk)) {
-        System.out.println("closest optimal is self! " + source);
-        return Utils.chunkIndexToLocation(myChunk);
-      }
-//      int leadFullChunk = -1;
-      int unexplored = -1;
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b10: // explored+rss
-          case 0b1010:
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-          case 0b1000:
-//            System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-      if (unexplored != -1) return Utils.chunkIndexToLocation(unexplored);
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (dir.dx == 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx*2 + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b10: // explored+rss
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-//      if (unexplored != -1) return Utils.decodeChunkIndexToLocation(unexplored);
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (dir.dy == 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b10: // explored+rss
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-//      if (unexplored != -1) return Utils.decodeChunkIndexToLocation(unexplored);
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (dir.dx == 0) continue;
-        if (dir.dy == 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dx < 0) continue;
-        if (myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2 && dir.dx > 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1 && dir.dy < 0) continue;
-        if (myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b10: // explored+rss
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-      if (unexplored != -1) return Utils.chunkIndexToLocation(unexplored);
-      return null;
-    }
-    public MapLocation centerOfClosestOptimalChunkForOffensiveUnits(MapLocation source, boolean forceNotSource) throws GameActionException {
-      int myChunk = Utils.locationToChunkIndex(source);
-      if (!forceNotSource && chunkIsGoodForMinerExploration(myChunk)) {
-        System.out.println("closest optimal is self! " + source);
-        return Utils.chunkIndexToLocation(myChunk);
-      }
-//      int leadFullChunk = -1;
-      int unexplored = -1;
-      boolean chunkLowX0 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0;
-      boolean chunkHighX0 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 1;
-      boolean chunkLowY0 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == 0;
-      boolean chunkHighY0 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS == Cache.Permanent.NUM_VERTICAL_CHUNKS - 1;
-      boolean chunkLowX1 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1;
-      boolean chunkHighX1 = myChunk % Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_HORIZONTAL_CHUNKS - 2;
-      boolean chunkLowY1 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS <= 1;
-      boolean chunkHighY1 = myChunk / Cache.Permanent.NUM_HORIZONTAL_CHUNKS >= Cache.Permanent.NUM_VERTICAL_CHUNKS - 2;
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (chunkLowX0 && dir.dx < 0) continue;
-        if (chunkHighX0 && dir.dx > 0) continue;
-        if (chunkLowY0 && dir.dy < 0) continue;
-        if (chunkHighY0 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b1000: // danger
-          case 0b1001:
-          case 0b1010:
-          case 0b1011:
-          case 0b1100:
-          case 0b1101:
-          case 0b1110:
-          case 0b1111:
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-//            System.out.println(Utils.chunkIndexToLocation(chunkToTest) + " - unexplored!");
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-      if (unexplored != -1) return Utils.chunkIndexToLocation(unexplored);
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (dir.dx == 0) continue;
-        if (chunkLowX1 && dir.dx < 0) continue;
-        if (chunkHighX1 && dir.dx > 0) continue;
-        if (chunkLowY0 && dir.dy < 0) continue;
-        if (chunkHighY0 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx*2 + dir.dy * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b1000: // danger
-          case 0b1001:
-          case 0b1010:
-          case 0b1011:
-          case 0b1100:
-          case 0b1101:
-          case 0b1110:
-          case 0b1111:
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-//      if (unexplored != -1) return Utils.decodeChunkIndexToLocation(unexplored);
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (dir.dy == 0) continue;
-        if (chunkLowX0 && dir.dx < 0) continue;
-        if (chunkHighX0 && dir.dx > 0) continue;
-        if (chunkLowY1 && dir.dy < 0) continue;
-        if (chunkHighY1 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b1000: // danger
-          case 0b1001:
-          case 0b1010:
-          case 0b1011:
-          case 0b1100:
-          case 0b1101:
-          case 0b1110:
-          case 0b1111:
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-//      if (unexplored != -1) return Utils.decodeChunkIndexToLocation(unexplored);
-      for (Direction dir : Utils.directions) {
-//        if (Utils.rng.nextInt(3) == 0) continue;
-        if (dir.dx == 0) continue;
-        if (dir.dy == 0) continue;
-        if (chunkLowX1 && dir.dx < 0) continue;
-        if (chunkHighX1 && dir.dx > 0) continue;
-        if (chunkLowY1 && dir.dy < 0) continue;
-        if (chunkHighY1 && dir.dy > 0) continue;
-        int chunkToTest = myChunk + dir.dx*2 + dir.dy*2 * Cache.Permanent.NUM_HORIZONTAL_CHUNKS;
-        switch (chunkInfoBits(chunkToTest)) {
-          case 0b1000: // danger
-          case 0b1001:
-          case 0b1010:
-          case 0b1011:
-          case 0b1100:
-          case 0b1101:
-          case 0b1110:
-          case 0b1111:
-            return Utils.chunkIndexToLocation(chunkToTest);
-          case 0b00: // unexplored
-            if (unexplored == -1 || Utils.rng.nextInt(3) == 0) unexplored = chunkToTest;
-        }
-      }
-      if (unexplored != -1) return Utils.chunkIndexToLocation(unexplored);
-      return null;
-    }
-
-    /**
-     * gets the current chunk and returns the center of the closest unexplored chunk
-     * @return the center of an unexplored chunk
-     * @throws GameActionException if reading fails
-     */
-    public MapLocation centerOfClosestUnexploredChunk(MapLocation source) throws GameActionException {
-      int myChunk = Utils.locationToChunkIndex(source);
-      if (chunkIsUnexplored(myChunk)) return Utils.chunkIndexToLocation(myChunk);
-
-      MapLocation closestUnexploredChunk = null;
-      int closestUnexploredChunkDist = Integer.MAX_VALUE;
-
-      for (int chunkToTest = 0; chunkToTest < 100; ++chunkToTest) {
-        if (chunkIsUnexplored(chunkToTest)) {
-          MapLocation chunkCenter = Utils.chunkIndexToLocation(chunkToTest);
-          if (closestUnexploredChunk == null || source.isWithinDistanceSquared(chunkCenter, closestUnexploredChunkDist)) {
-            closestUnexploredChunk = chunkCenter;
-            closestUnexploredChunkDist = source.distanceSquaredTo(chunkCenter);
-          }
-        }
-      }
-      return closestUnexploredChunk;
-    }
-
-    public void markExplored(MapLocation location, boolean dangerous, boolean passiveEnemies, int explorationBits) throws GameActionException {
-      if (dangerous) {
-        System.out.printf("DANGEROUS CHUNK!\n\tbot        :%s\n\tchunk      :%s\n\tdanger     :%s\n\texploration:%d\n",Cache.PerTurn.CURRENT_LOCATION,location,dangerous,explorationBits);
-      }
-      int chunkToMark = Utils.locationToChunkIndex(location);
-      int sharedArrIndex = chunkToMark / Utils.CHUNK_INFOS_PER_INT + CHUNK_INTS_START;
-      int existingChunkSetInfo = Global.rc.readSharedArray(sharedArrIndex);
-      int shiftAmt = (chunkToMark % Utils.CHUNK_INFOS_PER_INT) * SHIFT_PER_CHUNK_MOD_INTS;
-//      System.out.println("chunk idx: " + chunkToMark);
-//      System.out.println("shared indices: [" + (sharedArrIndex-CHUNK_INTS_START) + "," + shiftAmt + "]");
-//      System.out.println("Current bits: " + Integer.toBinaryString(existingChunkSetInfo));
-//      int currentChunkInfo = (existingChunkSetInfo >> shiftAmt) & 0b1111;
-//      System.out.println("Chunk before: " + Integer.toBinaryString(currentChunkInfo));
-//      int data = (dangerous ? DANGEROUS_UNIT_MASK : 0) | explorationBits;
-//      System.out.println("data: " + Integer.toBinaryString(data));
-//      System.out.println("new value: " + Integer.toBinaryString(existingChunkSetInfo | (data << shiftAmt)));
-//      Global.rc.writeSharedArray(sharedArrIndex, existingChunkSetInfo | (data << shiftAmt));
-      int newChunkSetInfo = ((dangerous ? DANGEROUS_UNIT_MASK : 0) | (passiveEnemies ? PASSIVE_UNIT_MASK : 0) | explorationBits) << shiftAmt;
-      newChunkSetInfo = newChunkSetInfo | (existingChunkSetInfo & ~(0b1111 << shiftAmt));
-      if (existingChunkSetInfo != newChunkSetInfo) {
-        Global.rc.writeSharedArray(sharedArrIndex, newChunkSetInfo);
-      }
-    }
-  }
-
   public static class ArchonInfo {
     public static final int NUM_ARCHON_INTS = 8;
-    public static final int ARCHON_INTS_START = ChunkInfo.CHUNK_INTS_START - NUM_ARCHON_INTS;
+    public static final int ARCHON_INTS_START = GameConstants.SHARED_ARRAY_LENGTH - NUM_ARCHON_INTS;
     public static final int OUR_ARCHONS_1 = ARCHON_INTS_START;
     public static final int OUR_ARCHONS_2 = ARCHON_INTS_START+1;
     public static final int OUR_ARCHONS_3 = ARCHON_INTS_START+2;
@@ -411,12 +68,6 @@ public class Communicator {
       enemyArchon2 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_2));
       enemyArchon3 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_3));
       enemyArchon4 = Utils.decodeLocation(Global.rc.readSharedArray(ENEMY_ARCHONS_4));
-      Utils.cleanPrint();
-      Utils.print("enemy 1: " + enemyArchon1);
-      Utils.print("enemy 2: " + enemyArchon2);
-      Utils.print("enemy 3: " + enemyArchon3);
-      Utils.print("enemy 4: " + enemyArchon4);
-      Utils.submitPrint();
     }
 
     public void setOurArchonLoc(int whichArchon, MapLocation archonLoc) throws GameActionException {
@@ -425,17 +76,17 @@ public class Communicator {
         case 1:
           ourArchon1 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_1, (Global.rc.readSharedArray(OUR_ARCHONS_1) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
+//          Utils.print("OUR_ARCHONS_1: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_1)));
           break;
         case 2:
           ourArchon2 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_2, (Global.rc.readSharedArray(OUR_ARCHONS_2) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
+//          Utils.print("OUR_ARCHONS_2: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_2)));
           break;
         case 3:
           ourArchon3 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_3, (Global.rc.readSharedArray(OUR_ARCHONS_3) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
+//          Utils.print("OUR_ARCHONS_3: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_3)));
           break;
         case 4:
           ourArchon4 = archonLoc;
@@ -445,19 +96,57 @@ public class Communicator {
 //      Utils.submitPrint();
     }
 
-    public boolean mirrored;
+    public void setEnemyArchonLoc(int whichArchon, MapLocation archonLoc) throws GameActionException {
+//      Utils.cleanPrint();
+      switch (whichArchon) {
+        case 1:
+          ourArchon1 = archonLoc;
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_1, (Global.rc.readSharedArray(ENEMY_ARCHONS_1) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
+//          Utils.print("ENEMY_ARCHONS_1: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_1)));
+          break;
+        case 2:
+          ourArchon2 = archonLoc;
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_2, (Global.rc.readSharedArray(ENEMY_ARCHONS_2) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
+//          Utils.print("ENEMY_ARCHONS_2: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_2)));
+          break;
+        case 3:
+          ourArchon3 = archonLoc;
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_3, (Global.rc.readSharedArray(ENEMY_ARCHONS_3) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
+//          Utils.print("ENEMY_ARCHONS_3: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_3)));
+          break;
+        case 4:
+          ourArchon4 = archonLoc;
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_4, (Global.rc.readSharedArray(ENEMY_ARCHONS_4) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
+          break;
+      }
+//      Utils.submitPrint();
+    }
+
+//    public boolean mirrored;
     public void mirrorSelfToEnemies() throws GameActionException {
       switch (Global.rc.getArchonCount()) {
         case 4:
-          Global.rc.writeSharedArray(ENEMY_ARCHONS_4, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_4)), Global.communicator.metaInfo.knownSymmetry)));
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_4, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_4)), Global.communicator.metaInfo.guessedSymmetry)));
         case 3:
-          Global.rc.writeSharedArray(ENEMY_ARCHONS_3, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_3)), Global.communicator.metaInfo.knownSymmetry)));
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_3, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_3)), Global.communicator.metaInfo.guessedSymmetry)));
         case 2:
-          Global.rc.writeSharedArray(ENEMY_ARCHONS_2, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_2)), Global.communicator.metaInfo.knownSymmetry)));
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_2, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_2)), Global.communicator.metaInfo.guessedSymmetry)));
         case 1:
-          Global.rc.writeSharedArray(ENEMY_ARCHONS_1, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_1)), Global.communicator.metaInfo.knownSymmetry)));
+          Global.rc.writeSharedArray(ENEMY_ARCHONS_1, Utils.encodeLocation(Utils.applySymmetry(Utils.decodeLocation(Global.rc.readSharedArray(OUR_ARCHONS_1)), Global.communicator.metaInfo.guessedSymmetry)));
       }
-      mirrored = true;
+//      mirrored = true;
+//      readEnemyArchonLocs();
+//      Utils.cleanPrint();
+//      Utils.print("Set enemy mirror");
+//      Utils.print("our 1: " + ourArchon1);
+//      Utils.print("our 2: " + ourArchon2);
+//      Utils.print("our 3: " + ourArchon3);
+//      Utils.print("our 4: " + ourArchon4);
+//      Utils.print("enemy 1: " + enemyArchon1);
+//      Utils.print("enemy 2: " + enemyArchon2);
+//      Utils.print("enemy 3: " + enemyArchon3);
+//      Utils.print("enemy 4: " + enemyArchon4);
+//      Utils.submitPrint();
     }
 
     public void setOurArchonMoving(int whichArchon) throws GameActionException {
@@ -513,9 +202,96 @@ public class Communicator {
       }
       return false;
     }
+
+    public MapLocation getNearestEnemyArchon(MapLocation from) throws GameActionException {
+      MapLocation closestEnemyArchon = null;
+      readEnemyArchonLocs();
+      int dToClosest = 9999;
+      switch (Global.rc.getArchonCount()) {
+        case 4:
+          if (enemyArchon4.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = enemyArchon4;
+            dToClosest = enemyArchon4.distanceSquaredTo(from);
+          }
+        case 3:
+          if (enemyArchon3.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = enemyArchon3;
+            dToClosest = enemyArchon3.distanceSquaredTo(from);
+          }
+        case 2:
+          if (enemyArchon2.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = enemyArchon2;
+            dToClosest = enemyArchon2.distanceSquaredTo(from);
+          }
+        case 1:
+          if (enemyArchon1.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = enemyArchon1;
+//            dToClsoest = enemyArchon4.distanceSquaredTo(from);
+          }
+      }
+      return closestEnemyArchon;
+    }
+
+    public int getNearestEnemyArchonIndex(MapLocation from) throws GameActionException {
+      int closestEnemyArchon = -1;
+      readEnemyArchonLocs();
+      int dToClosest = 9999;
+      switch (Global.rc.getArchonCount()) {
+        case 4:
+          if (enemyArchon4.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = 4;
+            dToClosest = enemyArchon4.distanceSquaredTo(from);
+          }
+        case 3:
+          if (enemyArchon3.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = 3;
+            dToClosest = enemyArchon3.distanceSquaredTo(from);
+          }
+        case 2:
+          if (enemyArchon2.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = 2;
+            dToClosest = enemyArchon2.distanceSquaredTo(from);
+          }
+        case 1:
+          if (enemyArchon1.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestEnemyArchon = 1;
+//            dToClsoest = enemyArchon4.distanceSquaredTo(from);
+          }
+      }
+      return closestEnemyArchon;
+    }
+
+    public MapLocation getNearestFriendlyArchon(MapLocation from) throws GameActionException {
+      readOurArchonLocs();
+      MapLocation closestFriendlyArchon = null;
+      int dToClosest = 9999;
+      switch (Global.rc.getArchonCount()) {
+        case 4:
+          if (ourArchon4.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestFriendlyArchon = ourArchon4;
+            dToClosest = ourArchon4.distanceSquaredTo(from);
+          }
+        case 3:
+          if (ourArchon3.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestFriendlyArchon = ourArchon3;
+            dToClosest = ourArchon3.distanceSquaredTo(from);
+          }
+        case 2:
+          if (ourArchon2.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestFriendlyArchon = ourArchon2;
+            dToClosest = ourArchon2.distanceSquaredTo(from);
+          }
+        case 1:
+          if (ourArchon1.isWithinDistanceSquared(from, dToClosest-1)) {
+            closestFriendlyArchon = ourArchon1;
+//            dToClosest = enemyArchon4.distanceSquaredTo(from);
+          }
+      }
+      return closestFriendlyArchon;
+    }
   }
 
-  public static class MetaInfo {
+  public class MetaInfo {
     public static final int NUM_META_INTS = 1;
     public static final int META_INT_START = ArchonInfo.ARCHON_INTS_START - NUM_META_INTS;
 
@@ -535,8 +311,9 @@ public class Communicator {
     private static final int NOT_ROT_MASK = 0b10;
     public boolean notRotational;     // 0-1               -- 1 bit  [1]
     private static final int ALL_SYM_INFO_MASK = NOT_HORIZ_MASK|NOT_VERT_MASK|NOT_ROT_MASK;
+    private static final int SYM_INFO_INVERTED_MASK = ~ALL_SYM_INFO_MASK;
 
-    public boolean dirty;
+//    public boolean dirty;
 
 
     public MetaInfo() {
@@ -565,12 +342,13 @@ public class Communicator {
       notRotational = (symmetryInfo & NOT_ROT_MASK) > 0;
       guessedSymmetry = knownSymmetry != null ? knownSymmetry : Utils.commsSymmetryGuessMap[(symmetryInfo & ALL_SYM_INFO_MASK) >> 1];
 
-      dirty = false;
+//      dirty = false;
     }
 
-    public void initializeValidRegion() {
+    public void initializeValidRegion() throws GameActionException {
       validRegionStart = validRegionEnd = EMPTY_REGION_INDICATOR;
-      dirty = true;
+//      dirty = true;
+      writeValidRegion();
     }
 
     /**
@@ -589,15 +367,21 @@ public class Communicator {
      * @return true if updated
      * @throws GameActionException if writing fails
      */
-    public boolean encodeAndWrite() throws GameActionException {
-      if (!dirty) return false;
+    public boolean writeValidRegion() throws GameActionException {
+//      if (!dirty) return false;
 //      System.out.printf("%s\n", this);
       Global.rc.writeSharedArray(VALID_REGION_IND,
             validRegionStart << 10
           | validRegionEnd << 4
           | ((notHorizontal ? NOT_HORIZ_MASK : 0) | (notVertical ? NOT_VERT_MASK : 0) | (notRotational ? NOT_ROT_MASK : 0)));
-      dirty = false;
+//      dirty = false;
       return true;
+    }
+
+    public void writeSymmetry() throws GameActionException {
+      Global.rc.writeSharedArray(VALID_REGION_IND,
+          (Global.rc.readSharedArray(VALID_REGION_IND) & SYM_INFO_INVERTED_MASK)
+              | ((notHorizontal ? NOT_HORIZ_MASK : 0) | (notVertical ? NOT_VERT_MASK : 0) | (notRotational ? NOT_ROT_MASK : 0)));
     }
 
     @Override
@@ -630,8 +414,9 @@ public class Communicator {
       guessedSymmetry = Utils.commsSymmetryGuessMap[index];
 //      System.out.println("symIndex: " + index + " known: " + knownSymmetry + " -- guess: " + guessedSymmetry);
       System.out.printf("NEW SYMMETRY KNOWLEDGE\n\tnot:%s\n\tknown:%s\n\tguess:%s\n", blockedSymmetry, knownSymmetry, guessedSymmetry);
-      dirty = true;
-      encodeAndWrite();
+//      dirty = true;
+      writeSymmetry();
+      archonInfo.mirrorSelfToEnemies();
     }
   }
 
@@ -641,23 +426,24 @@ public class Communicator {
 //  private final int[] sharedBuffer;
 
   public final MetaInfo metaInfo;
-  public final ChunkInfo chunkInfo;
+//  public final ChunkInfo chunkInfo;
   public final ArchonInfo archonInfo;
 
   private static final int NUM_MESSAGING_INTS = MetaInfo.META_INT_START;
   private final FastQueue<Message> messageQueue;
-  private final List<Message> sentMessages;
+//  private final List<Message> sentMessages;
 //  private final List<Message> received;
+  private Message lastSentMessage;
 
   public Communicator() {
     this.rc = Global.rc;
 //    sharedBuffer = new int[NUM_MESSAGING_INTS];
     metaInfo = new MetaInfo();
-    chunkInfo = new ChunkInfo();
+//    chunkInfo = new ChunkInfo();
     archonInfo = new ArchonInfo();
 
     messageQueue = new FastQueue<>(10);
-    sentMessages = new ArrayList<>(5);
+//    sentMessages = new ArrayList<>(5);
 //    received = new ArrayList<>();
   }
 
@@ -682,7 +468,7 @@ public class Communicator {
    * @throws GameActionException if writing fails
    */
   public boolean cleanStaleMessages() throws GameActionException {
-    if (!sentMessages.isEmpty()) {
+    if (lastSentMessage != null) {
 //      if (rc.getRoundNum() == 1471) {
 //        System.out.println("bounds before cleaning: " + metaInfo);
 //      }
@@ -698,13 +484,12 @@ public class Communicator {
 //      for (; origin < ending; origin += Message.Header.fromReadInt(rc.readSharedArray(origin%NUM_MESSAGING_INTS)).type.standardSize+1) {
 //        if (message.writeInfo.startIndex == origin) {
 //          System.out.println("CLEAN " + message.header.type + ": " + origin);
-          Message last = sentMessages.get(sentMessages.size() - 1);
-          metaInfo.validRegionStart = (last.writeInfo.startIndex + last.size()) % NUM_MESSAGING_INTS;
+          metaInfo.validRegionStart = (lastSentMessage.writeInfo.startIndex + lastSentMessage.size()) % NUM_MESSAGING_INTS;
           if (metaInfo.validRegionEnd == metaInfo.validRegionStart) {
             metaInfo.initializeValidRegion();
+          } else {
+            metaInfo.writeValidRegion();
           }
-          metaInfo.dirty = true;
-          metaInfo.encodeAndWrite();
 //          if (rc.getRoundNum() == 1471) {
 //            System.out.println("Cleaning " + (sentMessages.size() - sentMessages.indexOf(message)) + " messages!");
 //            System.out.println("Clearing messages! - starting from " + message.header.type + " on " + message.header.cyclicRoundNum + " at " + message.writeInfo.startIndex);
@@ -739,7 +524,7 @@ public class Communicator {
 //    System.out.println("\nstarting - " + metaInfo);
 
     cleanStaleMessages(); // clean out stale bois
-    sentMessages.clear();
+    lastSentMessage = null;
 //    System.out.println("clean stale - " + Clock.getBytecodeNum());
     int origin = metaInfo.validRegionStart;
     int ending = metaInfo.validRegionEnd;
@@ -792,26 +577,26 @@ public class Communicator {
   private Message readMessageAt(final int messageOrigin) throws GameActionException {
 //     assert messageOrigin < NUM_MESSAGING_INTS; // ensure that the message is within the messaging ints
     int headerInt = Global.rc.readSharedArray(messageOrigin);//sharedBuffer[messageOrigin];
-    Message.Header header = null;
-    try {
+    Message.Header header;
+//    try {
 //      int beforeReadHeader = Clock.getBytecodeNum();
       header = Message.Header.fromReadInt(headerInt);
 //      System.out.println("Cost to read header: " + (Clock.getBytecodeNum() - beforeReadHeader));
 //      header.validate();
-    } catch (Exception e) {
-      System.out.println("Failed to parse header! at: " + messageOrigin);
-      System.out.println("Reading bounds: " + metaInfo);
-      System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
-      System.out.println("Header int: " + headerInt);
-      System.out.println("Header: " + header);
-//      e.printStackTrace();
-//      metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
-//      return null;
-//      if (messageOrigin < metaInfo.validRegionEnd || (metaInfo.validRegionStart < metaInfo.validRegionEnd && messageOrigin < NUM_MESSAGING_INTS)) {
-//        return readMessageAt((messageOrigin+1) % NUM_MESSAGING_INTS);
-//      }
-      throw e;
-    }
+//    } catch (Exception e) {
+//      System.out.println("Failed to parse header! at: " + messageOrigin);
+//      System.out.println("Reading bounds: " + metaInfo);
+//      System.out.println("ints: " + Arrays.toString(readInts(metaInfo.validRegionStart, (metaInfo.validRegionEnd-metaInfo.validRegionStart + NUM_MESSAGING_INTS) % NUM_MESSAGING_INTS)));
+//      System.out.println("Header int: " + headerInt);
+//      System.out.println("Header: " + header);
+////      e.printStackTrace();
+////      metaInfo.validRegionStart = metaInfo.validRegionEnd = 0;
+////      return null;
+////      if (messageOrigin < metaInfo.validRegionEnd || (metaInfo.validRegionStart < metaInfo.validRegionEnd && messageOrigin < NUM_MESSAGING_INTS)) {
+////        return readMessageAt((messageOrigin+1) % NUM_MESSAGING_INTS);
+////      }
+//      throw e;
+//    }
 
     switch (header.type.standardSize) {
       case 0:
@@ -911,6 +696,7 @@ public class Communicator {
     int[] messageBits = message.toEncodedInts();
     int origin = metaInfo.validRegionEnd % NUM_MESSAGING_INTS;
     int messageOrigin = origin;
+//    System.out.printf("---\nSEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
 //    System.out.printf("---\nSEND  %s:\n%d - %s\n%s\nbc: %d\n", message.header.type, messageOrigin, Arrays.toString(messageBits),metaInfo,Clock.getBytecodesLeft());
 //    Utils.print(String.format("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits)));
     rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,0,0);
@@ -928,7 +714,7 @@ public class Communicator {
       rc.writeSharedArray(origin, messageChunk);
       origin = (origin + 1) % NUM_MESSAGING_INTS;
     }
-    sentMessages.add(message);
+    lastSentMessage = message;
     rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,255,0);
     metaInfo.validRegionEnd = origin;//(origin+1) % NUM_MESSAGING_INTS;
     if (updateStart) { // first message!
@@ -937,21 +723,9 @@ public class Communicator {
 //      System.out.println("Move start: " + metaInfo);
     }
     message.setWriteInfo(new Message.WriteInfo(messageOrigin));
-    metaInfo.dirty = true;
-    metaInfo.encodeAndWrite();
+//    metaInfo.dirty = true;
+    metaInfo.writeValidRegion();
     return true;
-  }
-
-  /**
-   * updates the meta ints in the shared memory if needed
-   *    comunicator is dirty
-   *      any messages were written
-   * @return true if updated
-   * @throws GameActionException if updating fails
-   */
-  public boolean updateMetaIntsIfNeeded() throws GameActionException {
-//    System.out.println("\nend turn - " + metaInfo);
-    return metaInfo.encodeAndWrite();
   }
 
   /**
