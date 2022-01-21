@@ -248,6 +248,7 @@ public abstract class Droid extends Robot {
 //    int b = Clock.getBytecodeNum();
 //    Utils.print("RUNNING randomizeExplorationTarget(): ");
     explorationTarget = Utils.randomMapLocation();
+    exploringRandomly = true;
     if (this instanceof Soldier) {
       MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
       MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
@@ -323,7 +324,14 @@ public abstract class Droid extends Robot {
     return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
   }
 
+  /**
+   *
+   * @param desired
+   * @return if target was changed
+   * @throws GameActionException
+   */
   protected boolean checkTooMuchRubbleOnPathToExploration(Direction desired) throws GameActionException {
+    if (!exploringRandomly) return false;
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(desired);
     int rubbleThere = rc.senseRubble(newLoc);
     int myRubble1p5 = (int) (1.5 * rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION));

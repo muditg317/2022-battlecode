@@ -74,6 +74,7 @@ public class Soldier extends Droid {
 //    }
     if (closestCommedEnemy != null) {
       explorationTarget = closestCommedEnemy;
+      exploringRandomly = false;
       MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
       MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
       Direction backHome = enemy.directionTo(friendly);
@@ -308,9 +309,9 @@ public class Soldier extends Droid {
       }
       for (RobotInfo friendly : rc.senseNearbyRobots(
               closestEnemy.location,
-              Cache.Permanent.VISION_RADIUS_SQUARED,
+              Cache.Permanent.ACTION_RADIUS_SQUARED,
               Cache.Permanent.OUR_TEAM)) {
-        if (friendly.type == RobotType.SOLDIER) {
+        if (friendly.type == RobotType.SOLDIER) {// && friendly.location.isWithinDistanceSquared(closestEnemy.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
           numHelpingFriends++;
           double turnsTillNextCooldown = Utils.turnsTillNextCooldown(friendly.type.actionCooldown, rc.senseRubble(friendly.location));
           friendlyDPS += (3 / turnsTillNextCooldown);
@@ -383,8 +384,9 @@ public class Soldier extends Droid {
     //    pick higher score, then lower rubble, then less distance? =>
 
     public boolean isBetterThan(MicroInfo other) throws GameActionException {
-      if (this.rubble > 25 && this.rubble >= other.rubble * 2) return false;
-      if (other.rubble > 25 && other.rubble >= this.rubble * 2) return true;
+      if (this.rubble != other.rubble) return this.rubble < other.rubble;
+//      if (this.rubble > 25 && this.rubble >= other.rubble * 2) return false;
+//      if (other.rubble > 25 && other.rubble >= this.rubble * 2) return true;
 
       if (this.hasHugeAdvantage != other.hasHugeAdvantage) return this.hasHugeAdvantage;
       if (this.hasHugeAdvantage) {
