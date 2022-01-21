@@ -122,6 +122,20 @@ public class Communicator {
 //      Utils.submitPrint();
     }
 
+    public MapLocation getEnemyArchon(int whichArchon) {
+      switch (whichArchon) {
+        case 4:
+          return enemyArchon4;
+        case 3:
+          return enemyArchon3;
+        case 2:
+          return enemyArchon2;
+        case 1:
+          return enemyArchon1;
+      }
+      return null;
+    }
+
 //    public boolean mirrored;
     public void mirrorSelfToEnemies() throws GameActionException {
       switch (Global.rc.getArchonCount()) {

@@ -249,9 +249,14 @@ public abstract class Robot {
       for (RobotInfo enemyInfo : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) { // look for archons
         if (enemyInfo.type == RobotType.ARCHON) {
           enemy = enemyInfo;
-          communicator.archonInfo.setEnemyArchonLoc(communicator.archonInfo.getNearestEnemyArchonIndex(enemyInfo.location), enemyInfo.location);
-          System.out.println("Update enemy archon locs!");
-          communicator.archonInfo.readEnemyArchonLocs();
+          int nearestEnemyIndex = communicator.archonInfo.getNearestEnemyArchonIndex(enemyInfo.location);
+          if (nearestEnemyIndex == -1) {
+            communicator.archonInfo.setEnemyArchonLoc(1, enemyInfo.location);
+          } else if (!communicator.archonInfo.getEnemyArchon(nearestEnemyIndex).equals(enemyInfo.location)) {
+            communicator.archonInfo.setEnemyArchonLoc(nearestEnemyIndex, enemyInfo.location);
+          }
+//          System.out.println("Update enemy archon locs!");
+//          communicator.archonInfo.readEnemyArchonLocs();
 //          Utils.cleanPrint();
 //          Utils.print("Set enemy mirror");
 //          Utils.print("our 1: " + communicator.archonInfo.ourArchon1);
