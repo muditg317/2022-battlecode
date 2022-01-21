@@ -312,7 +312,7 @@ public class Miner extends Droid {
   }
 
   int[] leadByLocationMap;
-  private static final int MAX_LEAD_LOCS_LEN = 10;
+  private static final int MAX_LEAD_LOCS_LEN = 8;
   /**
    * iterates over all visible lead and friendly miners to smartly determine what position would be optimal for lead mining
    * @return the best location to mine lead from
@@ -324,12 +324,14 @@ public class Miner extends Droid {
 //    if (Cache.PerTurn.ROUND_NUM == 5 && Cache.Permanent.ID == 11283) {
 //      System.out.println("Get optimal lead mining from " + Cache.PerTurn.CURRENT_LOCATION);
 //    }
-    if (rc.senseNearbyLocationsWithLead(Utils.DSQ_1by1, 2).length >= 2) return Cache.PerTurn.CURRENT_LOCATION;
+    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(Utils.DSQ_1by1, 2);
+    if (leadLocs.length >= 2 && rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < 5) return Cache.PerTurn.CURRENT_LOCATION;
 
     int minBound = 2;
-    MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(-1, minBound);
+    leadLocs = leadLocs.length >= 2 ? rc.senseNearbyLocationsWithLead(Utils.DSQ_2by2, minBound) : rc.senseNearbyLocationsWithLead(-1, minBound);
 //    System.out.println("getOptimalLeadMiningPosition: " + leadLocs.length);
-    while (leadLocs.length > MAX_LEAD_LOCS_LEN) {
+    int tries = 5;
+    while (tries-- > 0 && leadLocs.length > MAX_LEAD_LOCS_LEN) {
       int minLead = 99999;
       int maxLead = -1;
       for (MapLocation loc : leadLocs) {
@@ -344,6 +346,9 @@ public class Miner extends Droid {
       } else {
         leadLocs = Arrays.copyOf(leadLocs, MAX_LEAD_LOCS_LEN);
       }
+    }
+    if (tries == 0 && leadLocs.length > MAX_LEAD_LOCS_LEN) {
+      leadLocs = Arrays.copyOf(leadLocs, MAX_LEAD_LOCS_LEN);
     }
 //    System.out.println("Miner start create map(" + Clock.getBytecodeNum() + ") - " + Cache.PerTurn.ROUND_NUM);
 

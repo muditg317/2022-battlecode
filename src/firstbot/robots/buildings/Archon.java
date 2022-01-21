@@ -155,22 +155,26 @@ public class Archon extends Building {
     }
   }
 
-  private MapLocation closestEnemyArchon;
+  private MapLocation whereToGo;
   private boolean shouldStop;
   /**
    * run function for an archon when it is moving
    * @throws GameActionException if any action fails
    */
   private void runArchonMoving() throws GameActionException {
-    if (closestEnemyArchon == null) { // determine closest enemy archon to move towards
-      closestEnemyArchon = communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION);
+    if (whereToGo == null || closestCommedEnemy == null) { // determine closest enemy archon to move towards
+//      whereToGo = communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION);
+      whereToGo = Utils.applySymmetry(Cache.Permanent.START_LOCATION, communicator.metaInfo.guessedSymmetry);
+    }
+    if (closestCommedEnemy != null) {
+      whereToGo = closestCommedEnemy;
     }
     if (rc.canTransform()) {
       updateShouldStop();
 
       if (!shouldStop) {
 //        if (closestCommedEnemy != null) closestEnemyArchon = closestCommedEnemy;
-        if (moveOptimalTowards(closestEnemyArchon)) {
+        if (moveOptimalTowards(whereToGo)) {
           communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
         }
       } else {
@@ -179,9 +183,9 @@ public class Archon extends Building {
         } else {
           MapLocation lowestRubbleLoc = null;
           int lowestRubble = 9999;
-          int distToClosestCurr = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(closestEnemyArchon);
+          int distToClosestCurr = Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(whereToGo);
           for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
-            if (!rc.isLocationOccupied(loc) && !loc.isWithinDistanceSquared(closestEnemyArchon, distToClosestCurr-1)) {
+            if (!rc.isLocationOccupied(loc) && !loc.isWithinDistanceSquared(whereToGo, distToClosestCurr-1)) {
               int rubble = rc.senseRubble(loc);
               if (rubble < lowestRubble) {
                 lowestRubbleLoc = loc;
@@ -194,7 +198,7 @@ public class Archon extends Building {
               communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
             }
           } else {
-            if (moveOptimalAway(closestEnemyArchon)) {
+            if (moveOptimalAway(whereToGo)) {
               communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
             }
           }
@@ -207,7 +211,7 @@ public class Archon extends Building {
     rc.transform();
     communicator.archonInfo.setOurArchonMoving(whichArchonAmI);
     moving = true;
-    closestEnemyArchon = null;
+    whereToGo = null;
     shouldStop = false;
   }
 
@@ -215,7 +219,7 @@ public class Archon extends Building {
     // check if any enemy damaging units or any damaged friendly soldiers
     shouldStop = false;
 
-    if (closestEnemyArchon != null && closestEnemyArchon.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+    if (whereToGo != null && whereToGo.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
       shouldStop = true;
       return;
     }
