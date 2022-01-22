@@ -1,6 +1,7 @@
 package firstbot.utils;
 
 import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 
 import java.util.Random;
@@ -317,6 +318,10 @@ public class Utils {
     int x = location.x - (location.x % Cache.Permanent.CHUNK_WIDTH);
     int y = location.y - (location.y % Cache.Permanent.CHUNK_HEIGHT);
     return new MapLocation(x + Cache.Permanent.CHUNK_WIDTH / 2, y + Cache.Permanent.CHUNK_HEIGHT / 2);
+  }
+
+  public static boolean tooCloseToEnemyArchon(MapLocation location) throws GameActionException {
+    return Global.communicator.archonInfo.getNearestEnemyArchon(location).distanceSquaredTo(location) <= Global.communicator.archonInfo.getNearestFriendlyArchon(location).distanceSquaredTo(location);
   }
 
   public static void setPrint() {

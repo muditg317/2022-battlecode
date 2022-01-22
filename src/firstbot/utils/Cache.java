@@ -157,6 +157,16 @@ public class Cache {
         public static RobotInfo[] ALL_NEARBY_ROBOTS;
         public static RobotInfo[] ALL_NEARBY_FRIENDLY_ROBOTS;
         public static RobotInfo[] ALL_NEARBY_ENEMY_ROBOTS;
+        public static RobotInfo ENEMY_0;
+        public static RobotInfo ENEMY_1;
+        public static RobotInfo ENEMY_2;
+        public static RobotInfo ENEMY_3;
+        public static RobotInfo ENEMY_4;
+        public static RobotInfo ENEMY_5;
+        public static RobotInfo ENEMY_6;
+        public static RobotInfo ENEMY_7;
+        public static RobotInfo ENEMY_8;
+        public static RobotInfo ENEMY_9;
         public static MapLocation CURRENT_LOCATION;
         public static int LEVEL;
         public static int HEALTH;

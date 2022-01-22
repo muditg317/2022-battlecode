@@ -294,7 +294,7 @@ public abstract class Droid extends Robot {
     if (desired == null) {
       rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
 //      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
-      return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
+      return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED);
     }
     boolean changed = checkTooMuchRubbleOnPathToExploration(desired);
     if (changed) {
@@ -303,7 +303,12 @@ public abstract class Droid extends Robot {
       if (desired == null) {
         rc.setIndicatorString("Cannot reach new (changed for lead) exploreTarget: " + explorationTarget);
 //      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
-        return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED); // set explorationTarget to null if found!
+        return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED);
+      }
+    }
+    if (this instanceof Soldier) {
+      if (Utils.tooCloseToEnemyArchon(Cache.PerTurn.CURRENT_LOCATION) && Utils.tooCloseToEnemyArchon(Cache.PerTurn.CURRENT_LOCATION.add(desired))) {
+        return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED);
       }
     }
     if (move(desired)) {

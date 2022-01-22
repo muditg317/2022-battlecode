@@ -121,7 +121,7 @@ public class Archon extends Building {
 
     // only allow movement if we know symmetry
 //    Utils.cleanPrint();;
-    if (communicator.metaInfo.knownSymmetry != null && rc.canTransform()) {
+    if (rc.canTransform() && communicator.metaInfo.knownSymmetry != null) {
       // only move once / if we have more than 1 archon to keep spawning while we move
 //      Utils.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
       updateShouldStop();
@@ -155,6 +155,7 @@ public class Archon extends Building {
     }
   }
 
+//  private MapLocation tooMuchStartingRubbleEscapeLocation;
   private MapLocation whereToGo;
   private boolean shouldStop;
   /**
@@ -165,15 +166,14 @@ public class Archon extends Building {
     if (whereToGo == null || closestCommedEnemy == null) { // determine closest enemy archon to move towards
 //      whereToGo = communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION);
       whereToGo = Utils.applySymmetry(Cache.Permanent.START_LOCATION, communicator.metaInfo.guessedSymmetry);
+//      if ()
     }
-    if (closestCommedEnemy != null) {
-      whereToGo = closestCommedEnemy;
-    }
-    if (rc.canTransform()) {
+    if (closestCommedEnemy != null) whereToGo = closestCommedEnemy;
+
+    if (rc.isTransformReady()) {
       updateShouldStop();
 
       if (!shouldStop) {
-//        if (closestCommedEnemy != null) closestEnemyArchon = closestCommedEnemy;
         if (moveOptimalTowards(whereToGo)) {
           communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
         }
@@ -207,17 +207,26 @@ public class Archon extends Building {
     }
   }
 
+//  private int lastTurnStartedMoving = -1;
+//  private int turnFirstMoved = -1;
   private void startMoving() throws GameActionException {
     rc.transform();
     communicator.archonInfo.setOurArchonMoving(whichArchonAmI);
     moving = true;
+//    lastTurnStartedMoving = Cache.PerTurn.ROUND_NUM;
+//    if (turnFirstMoved == -1) turnFirstMoved = lastTurnStartedMoving;
     whereToGo = null;
     shouldStop = false;
   }
 
-  public void updateShouldStop() {
+  public void updateShouldStop() throws GameActionException {
     // check if any enemy damaging units or any damaged friendly soldiers
     shouldStop = false;
+
+//    if (tooMuchStartingRubbleEscapeLocation != null && lastTurnStartedMoving == turnFirstMoved) {
+//      shouldStop = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < 10;
+//      return;
+//    }
 
     if (whereToGo != null && whereToGo.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
       shouldStop = true;
@@ -225,7 +234,7 @@ public class Archon extends Building {
     }
 
     for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-      if (ri.type.damage > 0) {
+      if (ri.type.damage > 0 || ri.type == RobotType.ARCHON) {
         shouldStop = true;
         return;
       }
@@ -286,7 +295,8 @@ public class Archon extends Building {
     communicator.enqueueMessage(helloMessage);
 //    archonLocs.add(Cache.PerTurn.CURRENT_LOCATION);
 
-//    int leastRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+//    int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+//    int leastRubble = rubbleHere;
 //    MapLocation leastRubbleLocation = Cache.PerTurn.CURRENT_LOCATION;
 //    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, -1)) {
 //      int candidateRubble = rc.senseRubble(loc);
@@ -294,6 +304,10 @@ public class Archon extends Building {
 //        leastRubble = candidateRubble;
 //        leastRubbleLocation = loc;
 //      }
+//    }
+
+//    if (rubbleHere >= 10 && leastRubble < rubbleHere) {
+//      tooMuchStartingRubbleEscapeLocation = leastRubbleLocation;
 //    }
 
 //    if (!leastRubbleLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) {

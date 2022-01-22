@@ -336,7 +336,7 @@ public abstract class Robot {
    * @return if the robot moved
    * @throws GameActionException if movement failed
    */
-  protected boolean move(Direction dir) throws GameActionException {
+  public boolean move(Direction dir) throws GameActionException {
     if (Clock.getBytecodesLeft() < 25) Clock.yield(); // todo: this should be larger? whenMoved takes a bit longer...
     if (rc.canMove(dir)) {
       rc.move(dir);
@@ -678,7 +678,7 @@ public abstract class Robot {
    */
   private MapLocation cachedFriendlyCentroid;
   private int cacheStateOnCalcFriendlySoldierCentroid = -1;
-  protected MapLocation friendlySoldierCentroid() {
+  public MapLocation friendlySoldierCentroid() {
     if (cacheStateOnCalcFriendlySoldierCentroid == Cache.PerTurn.cacheState) return cachedFriendlyCentroid;
     cacheStateOnCalcFriendlySoldierCentroid = Cache.PerTurn.cacheState;
     if (Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS.length == 0) return (cachedFriendlyCentroid = null);
