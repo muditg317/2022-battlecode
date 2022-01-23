@@ -1,19 +1,10 @@
-package firstbot.robots.droids;
+package sageboost.robots.droids;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.EndFightMessage;
-import firstbot.communications.messages.JoinTheFightMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
-import firstbot.utils.Cache;
-import firstbot.utils.Printer;
-import firstbot.utils.Utils;
+import battlecode.common.*;
+import sageboost.communications.messages.*;
+import sageboost.utils.Cache;
+import sageboost.utils.Printer;
+import sageboost.utils.Utils;
 
 public class Soldier extends Droid {
   private final int HALF_RANGE_TO_CHASE_FROM;
@@ -48,7 +39,7 @@ public class Soldier extends Droid {
     }
 
     if (archonToSave != null && !isMovementDisabled && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-//      Printer.print("archonToSave: " + archonToSave);
+//      //Printer.print("archonToSave: " + archonToSave);
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
@@ -92,7 +83,7 @@ public class Soldier extends Droid {
       lastAttackedEnemy = best;
     } else if (!isMovementDisabled) {
       if (lastAttackedEnemy != null && lastAttackedEnemy.type.damage <= 0) {
-//        Printer.print("robotToChase: " + robotToChase);
+//        //Printer.print("robotToChase: " + robotToChase);
         attackAtAndMoveTo(lastAttackedEnemy.location, lastAttackedEnemy.location, true);
         if (lastAttackedEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, HALF_RANGE_TO_CHASE_FROM)) {
           lastAttackedEnemy = null;
@@ -130,7 +121,7 @@ public class Soldier extends Droid {
 //          continue;
 //        }
 //      }
-      Printer.cleanPrint();
+      //Printer.cleanPrint();
       MicroInfo curr = new MicroInfo.MicroInfoGeneric(this, dir);
       switch (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length) {
         case 10:
@@ -158,7 +149,7 @@ public class Soldier extends Droid {
           for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //            int s = Clock.getBytecodeNum();
             curr.update(enemy);
-//            Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
+//            //Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
           }
       }
       curr.finalizeInfo();
@@ -212,7 +203,7 @@ public class Soldier extends Droid {
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {
-//      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
+//      //System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
       dirToMove = Direction.CENTER;
     }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
