@@ -20,11 +20,12 @@ import firstbot.robots.droids.Sage;
 import firstbot.robots.droids.Soldier;
 import firstbot.utils.Cache;
 import firstbot.utils.Global;
+import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
 public abstract class Robot {
-  private static final boolean RESIGN_ON_GAME_EXCEPTION = false;
-  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = false;
+  private static final boolean RESIGN_ON_GAME_EXCEPTION = true;
+  private static final boolean RESIGN_ON_RUNTIME_EXCEPTION = true;
 
   private static final int MAX_TURNS_FIGURE_SYMMETRY = 200;
 
@@ -47,7 +48,7 @@ public abstract class Robot {
     Global.setupGlobals(rc, this);
     Utils.setUpStatics();
     Cache.setup();
-    Utils.cleanPrint();
+    Printer.cleanPrint();
     this.rc = rc;
     this.communicator = Global.communicator;
 
@@ -90,18 +91,18 @@ public abstract class Robot {
       try {
         this.runTurnWrapper();
 //        Utils.cleanPrint();
-        Utils.submitPrint();
+        Printer.submitPrint();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
         System.out.println(rc.getType() + " GameActionException");
-        Utils.submitPrint();
+        Printer.submitPrint();
         e.printStackTrace();
         rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION) rc.resign();
       } catch (Exception e) {
         // something bad
         System.out.println(rc.getType() + " Exception");
-        Utils.submitPrint();
+        Printer.submitPrint();
         e.printStackTrace();
         rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 255,255,255);
         if (RESIGN_ON_GAME_EXCEPTION || RESIGN_ON_RUNTIME_EXCEPTION) rc.resign();
@@ -112,12 +113,12 @@ public abstract class Robot {
           if (Clock.getBytecodesLeft() < 0.9 * Cache.Permanent.ROBOT_TYPE.bytecodeLimit) { // if don't have 90% of limit, still yield
             dontYield = false;
             Clock.yield();
-          } else {
-            System.out.println("Skipping turn yeild!!");
+//          } else {
+//            System.out.println("Skipping turn yeild!!");
           }
         }
       }
-      Utils.cleanPrint();
+      Printer.cleanPrint();
     }
   }
 
@@ -641,12 +642,16 @@ public abstract class Robot {
    * @throws GameActionException when building fails
    */
   protected boolean buildRobot(RobotType type, Direction dir) throws GameActionException {
-    if (dir == null) dir = Utils.randomDirection();
     if (rc.canBuildRobot(type, dir)) {
       rc.buildRobot(type, dir);
       return true;
     }
     return false;
+  }
+
+  protected boolean buildRobotInDirLoose(RobotType type, Direction dir) throws GameActionException {
+    if (dir == null) return false;
+    return buildRobot(type, dir) || buildRobot(type, dir.rotateRight()) || buildRobot(type, dir.rotateLeft());
   }
 
   /**

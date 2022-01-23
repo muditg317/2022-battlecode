@@ -147,6 +147,17 @@ public class Utils {
 
   public static int randomMapLocationY() { return rng.nextInt(Cache.Permanent.MAP_HEIGHT);}
 
+  public static int minDistanceToEdge(MapLocation loc) {
+    int minDistance = Math.min(loc.x, loc.y);
+    minDistance = Math.min(minDistance, Cache.Permanent.MAP_WIDTH - loc.x);
+    minDistance = Math.min(minDistance, Cache.Permanent.MAP_HEIGHT - loc.y);
+    return minDistance;
+  }
+
+  public static int maxDistanceToCorner(MapLocation loc) {
+    return Math.max(Math.min(loc.x, Cache.Permanent.MAP_WIDTH - loc.x), Math.min(loc.y, Cache.Permanent.MAP_HEIGHT - loc.y));
+  }
+
   /**
    * encode the location into an integer where
    *  bits 15-10 : x
@@ -322,39 +333,6 @@ public class Utils {
 
   public static boolean tooCloseToEnemyArchon(MapLocation location) throws GameActionException {
     return Global.communicator.archonInfo.getNearestEnemyArchon(location).distanceSquaredTo(location) <= Global.communicator.archonInfo.getNearestFriendlyArchon(location).distanceSquaredTo(location);
-  }
-
-  public static void setPrint() {
-
-  }
-
-  public static void print(String s) {
-    Cache.PerTurn.print.append(s).append("\n");
-  }
-
-  public static void print(String s, String s2) {
-    print(s); print(s2);
-  }
-
-  public static void print(String s, String s2, String s3) {
-    print(s); print(s2); print(s3);
-  }
-  public static void print(String s, String s2, String s3, String s4) {
-    print(s); print(s2); print(s3); print(s4);
-  }
-
-  public static void cleanPrint() {
-    Cache.PerTurn.print = new StringBuilder();
-    Cache.PerTurn.print.append(" *** ");
-    Cache.PerTurn.print.append(Cache.PerTurn.CURRENT_LOCATION);
-    Cache.PerTurn.print.append(" ***\n");
-  }
-
-  public static void submitPrint() {
-    if (Cache.PerTurn.print.length() > 25) {
-      System.out.println(Cache.PerTurn.print);
-    }
-    cleanPrint();
   }
 
   /*

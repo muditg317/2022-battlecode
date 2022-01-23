@@ -98,6 +98,7 @@ public abstract class Droid extends Robot {
    */
   public boolean runHome(MapLocation archonLocation) throws GameActionException {
 //    Utils.print("RUNNING runHome():", "archonLocation: " + archonLocation);
+    //todo: run home better (more smart, avoid enemies)
     if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonLocation, Utils.DSQ_3by3plus)) {
       return moveOptimalTowards(archonLocation);
     } else {
@@ -249,7 +250,7 @@ public abstract class Droid extends Robot {
 //    Utils.print("RUNNING randomizeExplorationTarget(): ");
     explorationTarget = Utils.randomMapLocation();
     exploringRandomly = true;
-    if (this instanceof Soldier) {
+    if (this instanceof Soldier && ((Soldier)this).checkNeedToStayOnSafeSide()) {
       MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
       MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
       Direction backHome = enemy.directionTo(friendly);

@@ -170,8 +170,7 @@ public class Cache {
         public static MapLocation CURRENT_LOCATION;
         public static int LEVEL;
         public static int HEALTH;
-        public static StringBuilder print;
-//        public static MapLocation[] NEARBY_LEAD_MIN_2;
+        //        public static MapLocation[] NEARBY_LEAD_MIN_2;
 //        public static MapLocation[] NEARBY_LEAD_2;
 
         public static int cacheState;

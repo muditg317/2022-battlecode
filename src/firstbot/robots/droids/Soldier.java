@@ -3,6 +3,7 @@ package firstbot.robots.droids;
 import battlecode.common.*;
 import firstbot.communications.messages.*;
 import firstbot.utils.Cache;
+import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
 public class Soldier extends Droid {
@@ -24,14 +25,17 @@ public class Soldier extends Droid {
     if (closestCommedEnemy != null) {
       explorationTarget = closestCommedEnemy;
       exploringRandomly = false;
-      MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
-      MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
-      Direction backHome = enemy.directionTo(friendly);
-      int tries = 20;
-      while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
-        explorationTarget = explorationTarget.add(backHome);
-      }
       chasingCommedEnemy = true;
+
+      if (checkNeedToStayOnSafeSide()) {
+        MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);
+        MapLocation enemy = communicator.archonInfo.getNearestEnemyArchon(explorationTarget);
+        Direction backHome = enemy.directionTo(friendly);
+        int tries = 20;
+        while (tries-- > 0 && friendly.distanceSquaredTo(explorationTarget) > enemy.distanceSquaredTo(explorationTarget)) {
+          explorationTarget = explorationTarget.add(backHome);
+        }
+      }
     }
 
     if (archonToSave != null && !needToRunHomeForSaving && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
@@ -117,7 +121,7 @@ public class Soldier extends Droid {
 //          continue;
 //        }
 //      }
-      Utils.cleanPrint();
+      Printer.cleanPrint();
       MicroInfo curr = new MicroInfo.MicroInfoGeneric(this, dir);
       switch (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length) {
         case 10:
@@ -162,6 +166,21 @@ public class Soldier extends Droid {
       if (enemy.type.damage > 0) return true;
     }
     return false;
+  }
+
+  public boolean checkNeedToStayOnSafeSide() {
+    int numFriendlyOffense = 0;
+    int numEnemyOffense = 0;
+    for (RobotInfo robot : Cache.PerTurn.ALL_NEARBY_ROBOTS) {
+      if (robot.type.damage > 0) {
+        if (robot.team == Cache.Permanent.OUR_TEAM) {
+          numFriendlyOffense++;
+        } else {
+          numEnemyOffense++;
+        }
+      }
+    }
+    return numEnemyOffense >= numFriendlyOffense;
   }
 
   /**

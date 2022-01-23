@@ -7,6 +7,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import firstbot.utils.Cache;
 import firstbot.utils.Global;
+import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
 public abstract class MicroInfo<T extends MicroInfo<T>> {
@@ -68,266 +69,6 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
    * @return true if successful (attacked)
    */
   public abstract boolean execute() throws GameActionException;
-  
-  public static class MicroInfoSoldierOnly extends MicroInfo<MicroInfoSoldierOnly> {
-    
-    private int rubble;
-//    private FastQueue<RobotInfo> soldierFriendsFastQueue;
-//    private int numFriendsAvailable;
-    private int numEnemies;
-    private double enemyDPS;
-    private int numHelpingFriends;
-    private double friendlyDPS;
-    private RobotInfo closestEnemy;
-    private int dToClosest = 9999;
-    private RobotInfo bestEnemyInRange;
-    private int healthOfBestInRange = 9999;
-    private RobotInfo bestEnemyOnlyIfMoved;
-    private int healthOfBestIfMoved = 9999;
-
-    private RobotInfo chosenEnemyToAttack;
-    private double scoreDiff;
-    private double scoreRatio;
-    private boolean hasHugeAdvantage;
-
-    private boolean hasTarget;
-    private boolean mustMoveFirst;
-    private boolean mustAttackFirst;
-
-    private boolean isMovingFurtherAway;
-    private boolean isLeavingActionRadius;
-
-    protected MicroInfoSoldierOnly(Soldier soldier, Direction direction) throws GameActionException {
-      super(soldier, direction);
-      this.rubble = Global.rc.senseRubble(location);
-    }
-
-    @Override
-    public void update(RobotInfo nextEnemy) throws GameActionException {
-      if (nextEnemy.type != RobotType.SOLDIER) return;
-      if (nextEnemy.location.distanceSquaredTo(location) < dToClosest) {
-        closestEnemy = nextEnemy;
-        dToClosest = nextEnemy.location.distanceSquaredTo(location);
-      }
-
-      // if enemy is within action radius of current location, select the minimum health enemy.
-      // If the enemy is not within action radius of current location, check if it will be after moving
-      if (nextEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
-        if (nextEnemy.health < healthOfBestInRange) {
-          bestEnemyInRange = nextEnemy;
-          healthOfBestInRange = nextEnemy.health;
-        }
-      } else if (nextEnemy.location.isWithinDistanceSquared(location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
-        // enemy was not in current action range but is in action range of candidate location
-        if (nextEnemy.health < healthOfBestIfMoved) {
-          bestEnemyOnlyIfMoved = nextEnemy;
-          healthOfBestIfMoved = nextEnemy.health;
-        }
-      }
-
-      if (nextEnemy.location.isWithinDistanceSquared(location, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-        // if enemy can see you, assume they can move in and hurt you
-        numEnemies++;
-        double turnsTillNextCooldown = Utils.turnsTillNextCooldown(nextEnemy.type.actionCooldown, Global.rc.senseRubble(nextEnemy.location));
-        enemyDPS += (nextEnemy.type.damage / turnsTillNextCooldown);
-      }
-//      int friendsToCheck = soldierFriendsFastQueue.size();
-//      for (int i = 0; i < friendsToCheck; i++) {
-//        RobotInfo friend = soldierFriendsFastQueue.popFront();
-//        if (friend.location.isWithinDistanceSquared(nextEnemy.location, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-//          // if friend can see enemy, assume they can help you
-//          numHelpingFriends++;
-//          double turnsTillNextCooldown = Utils.turnsTillNextCooldown(10, Global.rc.senseRubble(friend.location));
-//          friendlyDPS += (3 / turnsTillNextCooldown);
-//          break;
-//        }
-//        soldierFriendsFastQueue.push(friend);
-//      }
-    }
-
-    private void computeFriendlyDPSWithClosestEnemy() throws GameActionException {
-      if (closestEnemy == null) return;
-      if (closestEnemy.location.isWithinDistanceSquared(location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
-        // if the closest enemy is in range, chose it as attack priority
-        numHelpingFriends++;
-        double turnsTillNextCooldown = Utils.turnsTillNextCooldown(Global.rc.getType().actionCooldown, Global.rc.senseRubble(location));
-        friendlyDPS += (3 / turnsTillNextCooldown);
-      }
-      for (RobotInfo friendly : Global.rc.senseNearbyRobots(
-          closestEnemy.location,
-          Cache.Permanent.ACTION_RADIUS_SQUARED,
-          Cache.Permanent.OUR_TEAM)) {
-        if (friendly.type == RobotType.SOLDIER) {// && friendly.location.isWithinDistanceSquared(closestEnemy.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
-          numHelpingFriends++;
-          double turnsTillNextCooldown = Utils.turnsTillNextCooldown(friendly.type.actionCooldown, Global.rc.senseRubble(friendly.location));
-          friendlyDPS += (3 / turnsTillNextCooldown);
-        }
-      }
-    }
-
-    /**
-     * if there are enemies only reachable by moving,
-     *    pick the better one
-     *    mark ourselves as needing to move first
-     *   NOTE - chosenEnemyToAttack CAN still be NULL
-     */
-    public void pickBestEnemyToAttack() {
-      chosenEnemyToAttack = bestEnemyInRange;
-      if (bestEnemyOnlyIfMoved != null) { // there is an enemy that can only be reached by moving, decide if it is better than current choice
-        if (chosenEnemyToAttack == null || bestEnemyOnlyIfMoved.health < chosenEnemyToAttack.health) {
-          chosenEnemyToAttack = bestEnemyOnlyIfMoved;
-          mustMoveFirst = true;
-        }
-      }
-      // technically both can be false but if we dont HAVE to move first, we might as well not move first
-      //    b/c you won't reveal a better target
-      //    exception: 25 -> 13 but whatever
-      hasTarget = chosenEnemyToAttack != null;
-      // enable regardless of actionReady -- based on same isBetter logic
-      mustAttackFirst = hasTarget && !mustMoveFirst; // && Global.rc.isActionReady();
-      // has a target and candidate is further awat
-      isMovingFurtherAway = hasTarget && chosenEnemyToAttack.location.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION) < chosenEnemyToAttack.location.distanceSquaredTo(location);
-      isLeavingActionRadius = isMovingFurtherAway && !chosenEnemyToAttack.location.isWithinDistanceSquared(location, Cache.Permanent.ACTION_RADIUS_SQUARED);
-    }
-
-    @Override
-    public void finalizeInfo() throws GameActionException {
-      computeFriendlyDPSWithClosestEnemy();
-      pickBestEnemyToAttack();
-
-      scoreDiff = friendlyDPS - enemyDPS;
-      if (enemyDPS == 0) { // there were only enemies in vision which we have now run away from
-        // almost guaranteed no enemies in current action radius since there would still be in vision
-        //    exception is the 13->25 distance locations
-        scoreRatio = friendlyDPS;
-      } else {
-        scoreRatio = scoreDiff > 0 ? friendlyDPS / enemyDPS : 0;
-      }
-
-//       closestEnemySoldier guaranteed not null bc otherwise friendly and enemy would both be 0
-      if (scoreRatio >= 2 || scoreDiff >= 5) { // huge advantage -->  "go in"
-        hasHugeAdvantage = true;
-      }
-
-      if (!hasHugeAdvantage) {
-        //change score based on how close to enemy base vs ours
-        Utils.MapSymmetry guess = Global.communicator.metaInfo.guessedSymmetry;
-
-      }
-
-//      Utils.print("\n\nlocation: " + location, "enemyDPS: " + enemyDPS, "friendlyDPS: " + friendlyDPS);
-//      Utils.print("closestEnemy: " + closestEnemy, "bestEnemyInRange: " + bestEnemyInRange, "bestEnemyOnlyIfMoved: " + bestEnemyOnlyIfMoved, "chosenEnemyToAttack: " + chosenEnemyToAttack);
-//      Utils.print("scoreDiff: " + scoreDiff, "scoreRatio: " + scoreRatio);
-//      Utils.print("hasTarget: " + hasTarget, "mustMoveFirst: " + mustMoveFirst, "mustAttackFirst: " + mustAttackFirst);
-//      Utils.print("isMovingFurtherAway: " + isMovingFurtherAway, "isLeavingActionRadius: " + isLeavingActionRadius);
-
-      // true when:
-      //    I must go in
-    }
-
-    @Override
-    public boolean isBetterThan(MicroInfoSoldierOnly other) {
-      if (this.rubble != other.rubble) return this.rubble < other.rubble;
-//      if (this.rubble > 25 && this.rubble >= other.rubble * 2) return false;
-//      if (other.rubble > 25 && other.rubble >= this.rubble * 2) return true;
-
-      if (this.hasHugeAdvantage != other.hasHugeAdvantage) return this.hasHugeAdvantage;
-      if (this.hasHugeAdvantage) {
-        if (this.hasTarget != other.hasTarget) return this.hasTarget;
-        if (!this.hasTarget) return false;
-        boolean thisCloser = this.location.isWithinDistanceSquared(this.closestEnemy.location, Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(this.closestEnemy.location));
-        if (thisCloser
-            != other.location.isWithinDistanceSquared(other.closestEnemy.location, Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(other.closestEnemy.location))
-        ) return thisCloser;
-        if (!thisCloser) return false;
-        if (this.location.equals(Cache.PerTurn.CURRENT_LOCATION)) return false;
-        if (other.location.equals(Cache.PerTurn.CURRENT_LOCATION)) return true;
-        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
-        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
-        if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
-        if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
-        // i am NOT closer to our friends --> i'm staying further --> i'm better
-        MapLocation myFriends = soldier.friendlySoldierCentroid();
-        if (myFriends == null) return true;
-        return !this.location.isWithinDistanceSquared(myFriends, other.location.distanceSquaredTo(myFriends));
-      }
-
-      if (this.mustAttackFirst != other.mustAttackFirst) {
-        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
-        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
-        return this.mustAttackFirst;
-      }
-
-      // neither me nor other has huge advantage, and both can attack
-      if (this.mustAttackFirst) {
-        // one set of logic
-        // if this goes out of action radius and other does not, then this is better (careful about rubble?)
-        // if both go out of action radius, then higher score is better. If tied score, pick further one out of action radius
-        // if neither go out of action radius,
-
-        if (this.isLeavingActionRadius != other.isLeavingActionRadius) {
-          if (Global.rc.isActionReady()) {
-            if (this.scoreDiff >= other.scoreDiff * 0.7 && other.rubble > this.rubble * 2) return true;
-            if (other.scoreDiff >= this.scoreDiff * 0.7 && this.rubble > other.rubble * 2) return false;
-          }
-          return this.isLeavingActionRadius;
-        }
-        if (this.isLeavingActionRadius) { //both are leaving
-          if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
-          if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
-          if (this.rubble < other.rubble) return true;
-          if (this.rubble > other.rubble) return false;
-          if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
-          if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
-          return this.location.distanceSquaredTo(soldier.parentArchonLoc) < other.location.distanceSquaredTo(soldier.parentArchonLoc);
-        } else { // both are staying in action radius
-          if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
-          if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
-          if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
-          if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
-          if (this.rubble < other.rubble) return true;
-          if (this.rubble > other.rubble) return false;
-          return this.location.distanceSquaredTo(soldier.parentArchonLoc) < other.location.distanceSquaredTo(soldier.parentArchonLoc);
-        }
-
-      } else if (Global.rc.isActionReady() && this.mustMoveFirst && other.mustMoveFirst) {
-        // other set
-        // if this can go in action radius and other cannot, this is better
-        // choose positive score
-        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
-        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
-        if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) < other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return true;
-        if (this.location.distanceSquaredTo(this.chosenEnemyToAttack.location) > other.location.distanceSquaredTo(other.chosenEnemyToAttack.location)) return false;
-        if (this.rubble < other.rubble) return true;
-        if (this.rubble > other.rubble) return false;
-        return this.location.distanceSquaredTo(soldier.parentArchonLoc) > other.location.distanceSquaredTo(soldier.parentArchonLoc);
-      }
-
-      if (this.mustMoveFirst != other.mustMoveFirst) {
-        if (this.scoreDiff != other.scoreDiff) return this.scoreDiff > other.scoreDiff;
-        if (this.scoreRatio != other.scoreRatio) return this.scoreRatio > other.scoreRatio;
-        return this.mustMoveFirst;
-      }
-
-
-      // what if action ready, moving does not result in the guy in action radius, and other must move first
-
-
-      return false;
-    }
-
-    @Override
-    public boolean execute() throws GameActionException {
-      soldier.broadcastJoinOrEndMyFight(this);
-      if (mustMoveFirst) {
-        soldier.move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
-        return hasTarget && soldier.attackTarget(chosenEnemyToAttack.location);
-      }
-      boolean attacked = hasTarget && soldier.attackTarget(chosenEnemyToAttack.location);
-      soldier.move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
-      return attacked;
-    }
-  }
 
   public static class MicroInfoGeneric extends MicroInfo<MicroInfoGeneric> {
     final int rubble;
@@ -601,16 +342,16 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
     }
 
     public void utilPrint() {
-      Utils.cleanPrint();
-      Utils.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
-      Utils.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
-      Utils.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
-      Utils.print("closestOffensive: " + closestOffensive, "shouldMoveInAnyways: " + shouldMoveInAnyways);
-      Utils.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
-      Utils.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
-      Utils.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
-      Utils.print("isBadIdea: " + isBadIdea);
-      Utils.submitPrint();
+      Printer.cleanPrint();
+      Printer.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
+      Printer.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
+      Printer.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
+      Printer.print("closestOffensive: " + closestOffensive, "shouldMoveInAnyways: " + shouldMoveInAnyways);
+      Printer.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
+      Printer.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
+      Printer.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
+      Printer.print("isBadIdea: " + isBadIdea);
+      Printer.submitPrint();
     }
 
   }

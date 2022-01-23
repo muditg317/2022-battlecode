@@ -17,7 +17,7 @@ public abstract class Message {
     ARCHON_HELLO(ArchonHelloMessage.MESSAGE_LENGTH),
     LEAD_FOUND(LeadFoundMessage.MESSAGE_LENGTH),
     LEAD_REQUEST(LeadRequestMessage.MESSAGE_LENGTH),
-    START_RAID(StartRaidMessage.MESSAGE_LENGTH),
+    LAB_BUILT(LabBuiltMessage.MESSAGE_LENGTH),
     END_FIGHT(EndFightMessage.MESSAGE_LENGTH),
     SAVE_ME(SaveMeMessage.MESSAGE_LENGTH),
     ARCHON_SAVED(ArchonSavedMessage.MESSAGE_LENGTH),
@@ -135,6 +135,7 @@ public abstract class Message {
   public static Message fromHeaderAndInfo0(Header header, int headerInt) {
     switch (header.type) {
       case ENEMY_FOUND: return new EnemyFoundMessage(header, headerInt);
+      case LAB_BUILT: return new LabBuiltMessage(header, headerInt);
       default: throw new RuntimeException("Provided message type has length != 0 : " + header.type);
     }
   }
@@ -143,7 +144,6 @@ public abstract class Message {
     switch (header.type) {
       case ARCHON_HELLO: return new ArchonHelloMessage(header, information);
       case LEAD_FOUND: return new LeadFoundMessage(header, information);
-      case START_RAID: return new StartRaidMessage(header, information);
       case END_FIGHT: return new EndFightMessage(header, information);
       case SAVE_ME: return new SaveMeMessage(header, information);
       case ARCHON_SAVED: return new ArchonSavedMessage(header, information);

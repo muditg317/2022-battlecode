@@ -1,10 +1,6 @@
 package firstbot.communications;
 
-import battlecode.common.Clock;
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 import firstbot.communications.messages.Message;
 import firstbot.containers.FastQueue;
 import firstbot.utils.Cache;

@@ -1,15 +1,7 @@
 package firstbot.robots.buildings;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import firstbot.communications.messages.ArchonHelloMessage;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
+import battlecode.common.*;
+import firstbot.communications.messages.*;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
@@ -17,6 +9,8 @@ public class Archon extends Building {
   public static final int SUICIDE_ROUND = -500;
 
   public static final int MAX_RUBBLE_TO_STOP = 5;
+
+  public static final int CRITICAL_HEALTH_TO_HEAL_LOWEST = 20;
 
   private int whichArchonAmI = 1;
   //  private List<MapLocation> archonLocs;
@@ -48,6 +42,11 @@ public class Archon extends Building {
 
   private boolean canMoveToBetterLocation = false;
 
+  private int minimumDistanceToEdge = 60;
+  private int bestArchonToSpawnBuilderForLab = -1;
+  private boolean labBuilderSpawned;
+  private boolean saveUpForBuilderAndLab;
+
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
 //    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
@@ -72,6 +71,37 @@ public class Archon extends Building {
     updateHistories();
     if (rc.getRoundNum() == 1 && !doFirstTurn()) { // executes turn 1 and continues if needed
       return;
+    }
+
+    if (Cache.PerTurn.ROUND_NUM == 2) {
+      communicator.archonInfo.readOurArchonLocs();
+      int bestDistance = 20;
+      switch (rc.getArchonCount()) {
+        case 4:
+          int candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon4);
+          if (candidateDistance <= bestDistance) {
+            bestArchonToSpawnBuilderForLab = 4;
+            bestDistance = candidateDistance;
+          }
+        case 3:
+          candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon3);
+          if (candidateDistance <= bestDistance) {
+            bestArchonToSpawnBuilderForLab = 3;
+            bestDistance = candidateDistance;
+          }
+        case 2:
+          candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon2);
+          if (candidateDistance <= bestDistance) {
+            bestArchonToSpawnBuilderForLab = 2;
+            bestDistance = candidateDistance;
+          }
+        case 1:
+          candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon1);
+          if (candidateDistance <= bestDistance) {
+            bestArchonToSpawnBuilderForLab = 1;
+            bestDistance = candidateDistance;
+          }
+      }
     }
 
 //    if (communicator.metaInfo.knownSymmetry != null && !communicator.archonInfo.mirrored) {
@@ -105,12 +135,20 @@ public class Archon extends Building {
       }
     }
 
-    // Spawn new droid if none to repair
+    // Spawn new droid
     int archons = rc.getArchonCount();
     if (rc.isActionReady()) {
-      RobotType typeToSpawn = determineSpawnDroidType();
-      if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) >= typeToSpawn.buildCostLead*2 || rc.getRoundNum() % archons == whichArchonAmI % archons || whichArchonAmI == archons) {
-        spawnDroid(typeToSpawn);
+      if (saveUpForBuilderAndLab) {
+        if (bestArchonToSpawnBuilderForLab == whichArchonAmI && !labBuilderSpawned) {
+          labBuilderSpawned = spawnBuilderForLab();
+        }
+      } else {
+        RobotType typeToSpawn = determineSpawnDroidType();
+        if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) >= typeToSpawn.buildCostLead * 2 || rc.getRoundNum() % archons == whichArchonAmI % archons || whichArchonAmI == archons) {
+          if (spawnDroid(typeToSpawn)) {
+            if (initialMinersToSpawn == minersSpawned && typeToSpawn == RobotType.MINER) saveUpForBuilderAndLab = true;
+          }
+        }
       }
     }
 
@@ -303,6 +341,27 @@ public class Archon extends Building {
 
   private void runTeamStartupLogic() throws GameActionException {
 
+    int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+    int leastRubble = rubbleHere;
+    MapLocation leastRubbleLocation = Cache.PerTurn.CURRENT_LOCATION;
+    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+      int candidateRubble = rc.senseRubble(loc);
+      if (candidateRubble < leastRubble) {
+        leastRubble = candidateRubble;
+        leastRubbleLocation = loc;
+      }
+    }
+
+    if (leastRubble < rubbleHere) {
+      // worth to move?
+    }
+
+
+    minimumDistanceToEdge = Math.min(Cache.PerTurn.CURRENT_LOCATION.x, Cache.PerTurn.CURRENT_LOCATION.y);
+    minimumDistanceToEdge = Math.min(minimumDistanceToEdge, Cache.Permanent.MAP_WIDTH - Cache.PerTurn.CURRENT_LOCATION.x);
+    minimumDistanceToEdge = Math.min(minimumDistanceToEdge, Cache.Permanent.MAP_HEIGHT - Cache.PerTurn.CURRENT_LOCATION.y);
+
+
     // let's get some data...
     int mapHeight = Cache.Permanent.MAP_HEIGHT;
     int mapWidth = Cache.Permanent.MAP_WIDTH;
@@ -328,7 +387,7 @@ public class Archon extends Building {
     double turnsTillNextMove = Utils.turnsTillNextCooldown(RobotType.SOLDIER.movementCooldown, avgRubble);
     int totalMoves = (int) (minDist * turnsTillNextMove);
 
-    initialMinersToSpawn = totalMoves / 75;
+    initialMinersToSpawn += totalMoves / 75;
   }
 
   /**
@@ -349,6 +408,8 @@ public class Archon extends Building {
       ackArchonHello((ArchonHelloMessage) message);
     } else if (message instanceof ArchonSavedMessage) {
       ackArchonSaved((ArchonSavedMessage) message);
+    } else if (message instanceof LabBuiltMessage) {
+      ackLabBuilt((LabBuiltMessage) message);
     }
   }
 
@@ -378,6 +439,15 @@ public class Archon extends Building {
   }
 
   /**
+   * acknowledge that a lab has been built, stop saving lead
+   * @param message the location of the built lab
+   */
+  private void ackLabBuilt(LabBuiltMessage message) {
+    saveUpForBuilderAndLab = false;
+//    System.out.println("ack lab has been built!");
+  }
+
+  /**
    * archon is bouta die, request saving
    * store request internally
    * @throws GameActionException if messaging fails
@@ -398,9 +468,28 @@ public class Archon extends Building {
   }
 
   /**
+   * spawn a builder which should be sent to spawn a lab
+   * @return true if the builder was spawned
+   * @throws GameActionException if building fails
+   */
+  private boolean spawnBuilderForLab() throws GameActionException {
+    MapLocation corner = new MapLocation(
+            Cache.PerTurn.CURRENT_LOCATION.x <= Cache.Permanent.MAP_WIDTH/2 ? 0 : (Cache.Permanent.MAP_WIDTH-1),
+            Cache.PerTurn.CURRENT_LOCATION.y <= Cache.Permanent.MAP_HEIGHT/2 ? 0 : (Cache.Permanent.MAP_HEIGHT-1));
+    Direction dirToCorner = Cache.PerTurn.CURRENT_LOCATION.directionTo(corner);
+    if (buildRobotInDirLoose(RobotType.BUILDER, dirToCorner)) {
+      rc.setIndicatorString("Spawn builder!");
+      buildersSpawned++;
+      leadSpent += RobotType.BUILDER.buildCostLead;
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Spawn some droid around the archon based on some heuristics
    */
-  private void spawnDroid(RobotType typeToSpawn) throws GameActionException {
+  private boolean spawnDroid(RobotType typeToSpawn) throws GameActionException {
     switch(typeToSpawn) {
       case MINER:
         MapLocation bestLead = getWeightedAvgLeadLoc();
@@ -417,6 +506,7 @@ public class Archon extends Building {
           rc.setIndicatorString("Spawn miner!");
           minersSpawned++;
           leadSpent += RobotType.MINER.buildCostLead;
+          return true;
         }
         break;
       case BUILDER:
@@ -424,6 +514,7 @@ public class Archon extends Building {
           rc.setIndicatorString("Spawn builder!");
           buildersSpawned++;
           leadSpent += RobotType.BUILDER.buildCostLead;
+          return true;
         }
         break;
       case SOLDIER:
@@ -431,17 +522,31 @@ public class Archon extends Building {
           rc.setIndicatorString("Spawn soldier!");
           soldiersSpawned++;
           leadSpent += RobotType.SOLDIER.buildCostLead;
+          return true;
+        }
+      case SAGE:
+        if (buildRobot(RobotType.SAGE, Utils.randomDirection())) {
+          rc.setIndicatorString("Spawn sage!");
+//          soldiersSpawned++;
+//          leadSpent += RobotType.SAGE.buildCostLead;
+          return true;
         }
     }
+    return false;
   }
 
   /**
    * Spawn some droid around the archon based on some heuristics
    */
   private RobotType determineSpawnDroidType() throws GameActionException {
+    if (needSage()) return RobotType.SAGE;
     if (needMiner()) return RobotType.MINER;
     else if (needBuilder()) return RobotType.BUILDER;
     else return RobotType.SOLDIER;
+  }
+
+  private boolean needSage() throws GameActionException {
+    return rc.getTeamGoldAmount(Cache.Permanent.OUR_TEAM) >= RobotType.SAGE.buildCostGold;
   }
 
   /**
@@ -487,22 +592,22 @@ public class Archon extends Building {
     RobotInfo lowestOtherHealthFriend = null;
     RobotInfo higherOtherHealthFriend = null;
 
-    for (RobotInfo info : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-      if (RobotType.ARCHON.canRepair(info.type) && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(info.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
-        if (info.type == RobotType.SOLDIER) {
-          if ((lowestHealthFriend == null || info.health < lowestHealthFriend.health) && info.health < 20) {
-            lowestHealthFriend = info;
+    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+      if (RobotType.ARCHON.canRepair(friend.type) && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(friend.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        if (friend.type.damage > 0) {
+          if ((lowestHealthFriend == null || friend.health < lowestHealthFriend.health) && friend.health < CRITICAL_HEALTH_TO_HEAL_LOWEST) {
+            lowestHealthFriend = friend;
           }
-          if ((highestHealthFriend == null || info.health > highestHealthFriend.health) && info.health < 49) {
-            highestHealthFriend = info;
+          if ((highestHealthFriend == null || friend.health > highestHealthFriend.health) && friend.health < friend.type.health) {
+            highestHealthFriend = friend;
           }
         } else {
-          if ((lowestOtherHealthFriend == null || info.health < lowestOtherHealthFriend.health) && info.health < info.type.getMaxHealth(info.level)) {
-            lowestOtherHealthFriend = info;
+          if ((lowestOtherHealthFriend == null || friend.health < lowestOtherHealthFriend.health) && friend.health < friend.type.health) {
+            lowestOtherHealthFriend = friend;
           }
         }
-        if ((higherOtherHealthFriend == null || higherOtherHealthFriend.health < info.health) && info.health < info.type.getMaxHealth(info.level)) {
-          higherOtherHealthFriend = info;
+        if ((higherOtherHealthFriend == null || higherOtherHealthFriend.health < friend.health) && friend.health < friend.type.health) {
+          higherOtherHealthFriend = friend;
         }
       }
     }
