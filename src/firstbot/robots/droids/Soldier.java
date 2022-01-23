@@ -110,7 +110,7 @@ public class Soldier extends Droid {
     }
   }
 
-  private boolean attackEnemies() throws GameActionException {
+  protected boolean attackEnemies() throws GameActionException {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
     for (Direction dir : Utils.directionsNine) {

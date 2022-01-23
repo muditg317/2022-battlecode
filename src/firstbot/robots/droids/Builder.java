@@ -118,15 +118,15 @@ public class Builder extends Droid {
           bestLocationToSpawnLab = findBestLabSpawnLocation();
         }
 
-        Direction dirToBuild = Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocationToSpawnLab);
-        if (buildRobot(RobotType.LABORATORY, dirToBuild)) {
+        Direction dirToBuildLab = getLeastRubbleDir(); //Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocationToSpawnLab);
+        if (buildRobot(RobotType.LABORATORY, dirToBuildLab)) {
           System.out.println("spawning lab at " + bestLocationToSpawnLab);
-          myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dirToBuild);
+          myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dirToBuildLab);
           broadcastLabBuilt();
           labBuilt = true;
         }
       }
-    } else if (myBuilding == null && (moveInDirRandom(dirToBuild) || moveRandomly())) {
+    } else if (myBuilding == null && (moveInDirAvoidRubble(dirToBuild) || moveRandomly())) {
       if (!rc.onTheMap(Cache.PerTurn.CURRENT_LOCATION.add(dirToBuild)) || offensiveEnemiesNearby()) { // gone to map edge
         dirToBuild = dirToBuild.rotateRight();
       } else if (!readyToBuild && Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(parentArchonLoc) >= 0) {
