@@ -305,9 +305,41 @@ public class Communicator {
     }
   }
 
+  public static class SpawnInfo {
+    public static final int NUM_SPAWN_INTS = 1;
+    public static final int SPAWN_INTS_START = ArchonInfo.ARCHON_INTS_START - NUM_SPAWN_INTS;
+
+    public static final int NUM_MINERS_NEEDED_IND = SPAWN_INTS_START;
+    public static final int NUM_MINERS_MASK = 0b1111;
+    public static final int NUM_MINERS_INVERTED_MASK = ~NUM_MINERS_MASK;
+
+    public int getNumMinersNeeded() throws GameActionException {
+      return Global.rc.readSharedArray(NUM_MINERS_NEEDED_IND) & NUM_MINERS_MASK;
+    }
+
+    /**
+     * decrement the number of miners needed by the team
+     * BETTER MAKE SURE THIS WAS >0 BEFORE
+     * @throws GameActionException if reading/writing fails
+     */
+    public void decrNumMinersNeeded() throws GameActionException {
+      Global.rc.writeSharedArray(NUM_MINERS_NEEDED_IND, Global.rc.readSharedArray(NUM_MINERS_NEEDED_IND) - 1);
+    }
+
+    /**
+     * set the number of miners needed by the team
+     * @param newNum the new number of miners needed
+     * @throws GameActionException if reading/writing fails
+     */
+    public void setNumMinersNeeded(int newNum) throws GameActionException {
+      Global.rc.writeSharedArray(NUM_MINERS_NEEDED_IND, (Global.rc.readSharedArray(NUM_MINERS_NEEDED_IND) & NUM_MINERS_INVERTED_MASK) + newNum);
+    }
+
+  }
+
   public class MetaInfo {
     public static final int NUM_META_INTS = 1;
-    public static final int META_INT_START = ArchonInfo.ARCHON_INTS_START - NUM_META_INTS;
+    public static final int META_INT_START = SpawnInfo.SPAWN_INTS_START - NUM_META_INTS;
 
     public static final int VALID_REGION_IND = META_INT_START;
     private int validRegionStart; // 0-62    -- 6 bits [15,10]

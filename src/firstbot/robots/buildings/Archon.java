@@ -293,31 +293,15 @@ public class Archon extends Building {
 
     ArchonHelloMessage helloMessage = generateArchonHello();
     communicator.enqueueMessage(helloMessage);
-//    archonLocs.add(Cache.PerTurn.CURRENT_LOCATION);
 
-//    int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
-//    int leastRubble = rubbleHere;
-//    MapLocation leastRubbleLocation = Cache.PerTurn.CURRENT_LOCATION;
-//    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, -1)) {
-//      int candidateRubble = rc.senseRubble(loc);
-//      if (candidateRubble < leastRubble) {
-//        leastRubble = candidateRubble;
-//        leastRubbleLocation = loc;
-//      }
+//    if (whichArchonAmI == 1) {
+      runTeamStartupLogic();
 //    }
 
-//    if (rubbleHere >= 10 && leastRubble < rubbleHere) {
-//      tooMuchStartingRubbleEscapeLocation = leastRubbleLocation;
-//    }
+    return true;
+  }
 
-//    if (!leastRubbleLocation.equals(Cache.PerTurn.CURRENT_LOCATION)) {
-//
-//    }
-
-//    if (whichArchonAmI == rc.getArchonCount()) {
-//      System.out.println("I am the last archon! locs: " + archonLocs);
-//
-//    }
+  private void runTeamStartupLogic() throws GameActionException {
 
     // let's get some data...
     int mapHeight = Cache.Permanent.MAP_HEIGHT;
@@ -344,13 +328,7 @@ public class Archon extends Building {
     double turnsTillNextMove = Utils.turnsTillNextCooldown(RobotType.SOLDIER.movementCooldown, avgRubble);
     int totalMoves = (int) (minDist * turnsTillNextMove);
 
-    initialMinersToSpawn += totalMoves / 75;
-//    System.out.println("I am archon #" + whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION + " with " + leadAtArchonLocation + " lead and " + avgRubble + " avg rubble" + " and " + totalMoves + " moves to reach enemy archon" + " and " + initialMinersToSpawn + " miners to spawn");
-
-    // find direction s.t. the miner can go far in the direction
-
-
-    return true;
+    initialMinersToSpawn = totalMoves / 75;
   }
 
   /**
@@ -361,15 +339,6 @@ public class Archon extends Building {
    * @return the message to send to the other archons
    */
   private ArchonHelloMessage generateArchonHello() {
-//    boolean notHoriz = false;
-//    MapLocation myLoc = Cache.PerTurn.CURRENT_LOCATION;
-//    int width = Cache.Permanent.MAP_WIDTH;
-//    int height = Cache.Permanent.MAP_HEIGHT;
-//    int dToPastCenter = Math.abs(myLoc.x - width) + 1;
-//    if (dToPastCenter*dToPastCenter <= rc.getType().visionRadiusSquared) { // can see both sides of the width midpoint
-//      System.out.println("archon at " + myLoc + " - can see width midpoint");
-////      rc.senseRubble()
-//    }
     return new ArchonHelloMessage(Cache.PerTurn.CURRENT_LOCATION, false, false, false);
   }
 
