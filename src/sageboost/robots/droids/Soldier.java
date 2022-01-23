@@ -1,9 +1,17 @@
 package sageboost.robots.droids;
 
-import battlecode.common.*;
-import sageboost.communications.messages.*;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
+import sageboost.communications.messages.ArchonSavedMessage;
+import sageboost.communications.messages.EndFightMessage;
+import sageboost.communications.messages.JoinTheFightMessage;
+import sageboost.communications.messages.Message;
+import sageboost.communications.messages.SaveMeMessage;
 import sageboost.utils.Cache;
-import sageboost.utils.Printer;
 import sageboost.utils.Utils;
 
 public class Soldier extends Droid {

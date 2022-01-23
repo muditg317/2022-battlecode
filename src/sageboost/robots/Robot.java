@@ -20,7 +20,6 @@ import sageboost.robots.droids.Sage;
 import sageboost.robots.droids.Soldier;
 import sageboost.utils.Cache;
 import sageboost.utils.Global;
-import sageboost.utils.Printer;
 import sageboost.utils.Utils;
 
 public abstract class Robot {
