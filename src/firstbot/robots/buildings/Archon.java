@@ -158,34 +158,34 @@ public class Archon extends Building {
     }
 
     // only allow movement if we know symmetry
-//    Utils.cleanPrint();;
-    if (rc.canTransform() && communicator.metaInfo.knownSymmetry != null) {
+//    Printer.cleanPrint();;
+    if (rc.canTransform() && communicator.metaInfo.knownSymmetry != null && (bestArchonToSpawnBuilderForLab != whichArchonAmI || labBuilderSpawned)) {
       // only move once / if we have more than 1 archon to keep spawning while we move
-//      Utils.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
+//      Printer.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
       updateShouldStop();
       if (!shouldStop && rc.getArchonCount() > 1) {
         boolean canMove = true;
         switch (rc.getArchonCount()) {
           case 1:
             canMove = false;
-//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 2:
             canMove = !communicator.archonInfo.ourArchonIsMoving(3 - whichArchonAmI);
-//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 3:
             canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%3)+1)
                     || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%3)+1);
-//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 4:
             canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%4)+1)
                     || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%4)+1)
                     || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+2)%4)+1);
-//            Utils.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
         }
-//        Utils.submitPrint();
+//        Printer.submitPrint();
         if (canMove) {
           startMoving();
         }
@@ -228,6 +228,8 @@ public class Archon extends Building {
               if (rubble < lowestRubble) {
                 lowestRubbleLoc = loc;
                 lowestRubble = rubble;
+              } else if (rubble == lowestRubble && loc.distanceSquaredTo(whereToGo) < lowestRubbleLoc.distanceSquaredTo(whereToGo)) {
+                lowestRubbleLoc = loc;
               }
             }
           }

@@ -67,55 +67,55 @@ public class Communicator {
     }
 
     public void setOurArchonLoc(int whichArchon, MapLocation archonLoc) throws GameActionException {
-//      Utils.cleanPrint();
+//      Printer.cleanPrint();
       switch (whichArchon) {
         case 1:
           ourArchon1 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_1, (Global.rc.readSharedArray(OUR_ARCHONS_1) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("OUR_ARCHONS_1: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_1)));
+//          Printer.print("OUR_ARCHONS_1: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_1)));
           break;
         case 2:
           ourArchon2 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_2, (Global.rc.readSharedArray(OUR_ARCHONS_2) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("OUR_ARCHONS_2: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_2)));
+//          Printer.print("OUR_ARCHONS_2: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_2)));
           break;
         case 3:
           ourArchon3 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_3, (Global.rc.readSharedArray(OUR_ARCHONS_3) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("OUR_ARCHONS_3: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_3)));
+//          Printer.print("OUR_ARCHONS_3: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_3)));
           break;
         case 4:
           ourArchon4 = archonLoc;
           Global.rc.writeSharedArray(OUR_ARCHONS_4, (Global.rc.readSharedArray(OUR_ARCHONS_4) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
           break;
       }
-//      Utils.submitPrint();
+//      Printer.submitPrint();
     }
 
     public void setEnemyArchonLoc(int whichArchon, MapLocation archonLoc) throws GameActionException {
-//      Utils.cleanPrint();
+//      Printer.cleanPrint();
       switch (whichArchon) {
         case 1:
           enemyArchon1 = archonLoc;
           Global.rc.writeSharedArray(ENEMY_ARCHONS_1, (Global.rc.readSharedArray(ENEMY_ARCHONS_1) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("ENEMY_ARCHONS_1: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_1)));
+//          Printer.print("ENEMY_ARCHONS_1: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_1)));
           break;
         case 2:
           enemyArchon2 = archonLoc;
           Global.rc.writeSharedArray(ENEMY_ARCHONS_2, (Global.rc.readSharedArray(ENEMY_ARCHONS_2) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("ENEMY_ARCHONS_2: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_2)));
+//          Printer.print("ENEMY_ARCHONS_2: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_2)));
           break;
         case 3:
           enemyArchon3 = archonLoc;
           Global.rc.writeSharedArray(ENEMY_ARCHONS_3, (Global.rc.readSharedArray(ENEMY_ARCHONS_3) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
-//          Utils.print("ENEMY_ARCHONS_3: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_3)));
+//          Printer.print("ENEMY_ARCHONS_3: " + Integer.toBinaryString(Global.rc.readSharedArray(ENEMY_ARCHONS_3)));
           break;
         case 4:
           enemyArchon4 = archonLoc;
           Global.rc.writeSharedArray(ENEMY_ARCHONS_4, (Global.rc.readSharedArray(ENEMY_ARCHONS_4) & ARCHON_LOC_INVERTED_MASK) | Utils.encodeLocation(archonLoc));
           break;
       }
-//      Utils.submitPrint();
+//      Printer.submitPrint();
     }
 
     public MapLocation getEnemyArchon(int whichArchon) {
@@ -146,40 +146,40 @@ public class Communicator {
       }
 //      mirrored = true;
 //      readEnemyArchonLocs();
-//      Utils.cleanPrint();
-//      Utils.print("Set enemy mirror");
-//      Utils.print("our 1: " + ourArchon1);
-//      Utils.print("our 2: " + ourArchon2);
-//      Utils.print("our 3: " + ourArchon3);
-//      Utils.print("our 4: " + ourArchon4);
-//      Utils.print("enemy 1: " + enemyArchon1);
-//      Utils.print("enemy 2: " + enemyArchon2);
-//      Utils.print("enemy 3: " + enemyArchon3);
-//      Utils.print("enemy 4: " + enemyArchon4);
-//      Utils.submitPrint();
+//      Printer.cleanPrint();
+//      Printer.print("Set enemy mirror");
+//      Printer.print("our 1: " + ourArchon1);
+//      Printer.print("our 2: " + ourArchon2);
+//      Printer.print("our 3: " + ourArchon3);
+//      Printer.print("our 4: " + ourArchon4);
+//      Printer.print("enemy 1: " + enemyArchon1);
+//      Printer.print("enemy 2: " + enemyArchon2);
+//      Printer.print("enemy 3: " + enemyArchon3);
+//      Printer.print("enemy 4: " + enemyArchon4);
+//      Printer.submitPrint();
     }
 
     public void setOurArchonMoving(int whichArchon) throws GameActionException {
-//      Utils.cleanPrint();
+//      Printer.cleanPrint();
       switch (whichArchon) {
         case 1:
           Global.rc.writeSharedArray(OUR_ARCHONS_1, Global.rc.readSharedArray(OUR_ARCHONS_1) | ARCHON_MOVING_MASK);
-//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
+//          Printer.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 2:
           Global.rc.writeSharedArray(OUR_ARCHONS_2, Global.rc.readSharedArray(OUR_ARCHONS_2) | ARCHON_MOVING_MASK);
-//          Utils.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
+//          Printer.print("OUR_ARCHONS_12: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_12)));
           break;
         case 3:
           Global.rc.writeSharedArray(OUR_ARCHONS_3, Global.rc.readSharedArray(OUR_ARCHONS_3) | ARCHON_MOVING_MASK);
-//          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
+//          Printer.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
         case 4:
           Global.rc.writeSharedArray(OUR_ARCHONS_4, Global.rc.readSharedArray(OUR_ARCHONS_4) | ARCHON_MOVING_MASK);
-//          Utils.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
+//          Printer.print("OUR_ARCHONS_34: " + Integer.toBinaryString(Global.rc.readSharedArray(OUR_ARCHONS_34)));
           break;
       }
-//      Utils.submitPrint();
+//      Printer.submitPrint();
     }
 
     public void setOurArchonNotMoving(int whichArchon) throws GameActionException {
@@ -683,9 +683,9 @@ public class Communicator {
   public void enqueueMessage(Message message) {
     messageQueue.push(message);
 //    if (rc.getID() == 10618) {
-//      Utils.cleanPrint();
-//      Utils.print("Enqueued message: " + messageQueue.size(), "header: " + message.header);
-//      Utils.submitPrint();
+//      Printer.cleanPrint();
+//      Printer.print("Enqueued message: " + messageQueue.size(), "header: " + message.header);
+//      Printer.submitPrint();
 //    }
   }
 
@@ -740,7 +740,7 @@ public class Communicator {
     int messageOrigin = origin;
 //    System.out.printf("---\nSEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits));
 //    System.out.printf("---\nSEND  %s:\n%d - %s\n%s\nbc: %d\n", message.header.type, messageOrigin, Arrays.toString(messageBits),metaInfo,Clock.getBytecodesLeft());
-//    Utils.print(String.format("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits)));
+//    Printer.print(String.format("SEND  %s:\n%d - %s\n", message.header.type, messageOrigin, Arrays.toString(messageBits)));
     rc.setIndicatorDot(Cache.PerTurn.CURRENT_LOCATION, 0,0,0);
 //    System.out.println(message.header);
     for (int messageChunk : messageBits) {

@@ -90,7 +90,7 @@ public abstract class Robot {
       // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
       try {
         this.runTurnWrapper();
-//        Utils.cleanPrint();
+//        Printer.cleanPrint();
         Printer.submitPrint();
       } catch (GameActionException e) {
         // something illegal in the Battlecode world
@@ -258,27 +258,27 @@ public abstract class Robot {
           }
 //          System.out.println("Update enemy archon locs!");
 //          communicator.archonInfo.readEnemyArchonLocs();
-//          Utils.cleanPrint();
-//          Utils.print("Set enemy mirror");
-//          Utils.print("our 1: " + communicator.archonInfo.ourArchon1);
-//          Utils.print("our 2: " + communicator.archonInfo.ourArchon2);
-//          Utils.print("our 3: " + communicator.archonInfo.ourArchon3);
-//          Utils.print("our 4: " + communicator.archonInfo.ourArchon4);
-//          Utils.print("enemy 1: " + communicator.archonInfo.enemyArchon1);
-//          Utils.print("enemy 2: " + communicator.archonInfo.enemyArchon2);
-//          Utils.print("enemy 3: " + communicator.archonInfo.enemyArchon3);
-//          Utils.print("enemy 4: " + communicator.archonInfo.enemyArchon4);
-//          Utils.submitPrint();
+//          Printer.cleanPrint();
+//          Printer.print("Set enemy mirror");
+//          Printer.print("our 1: " + communicator.archonInfo.ourArchon1);
+//          Printer.print("our 2: " + communicator.archonInfo.ourArchon2);
+//          Printer.print("our 3: " + communicator.archonInfo.ourArchon3);
+//          Printer.print("our 4: " + communicator.archonInfo.ourArchon4);
+//          Printer.print("enemy 1: " + communicator.archonInfo.enemyArchon1);
+//          Printer.print("enemy 2: " + communicator.archonInfo.enemyArchon2);
+//          Printer.print("enemy 3: " + communicator.archonInfo.enemyArchon3);
+//          Printer.print("enemy 4: " + communicator.archonInfo.enemyArchon4);
+//          Printer.submitPrint();
           break;
         }
       }
       // no already seen enemy or closest seen is very far
-//      Utils.cleanPrint();
-//      Utils.print("closestCommedEnemy: " + closestCommedEnemy, "enemy: " + enemy);
+//      Printer.cleanPrint();
+//      Printer.print("closestCommedEnemy: " + closestCommedEnemy, "enemy: " + enemy);
 //      if (closestCommedEnemy != null) {
-//        Utils.print("dist: " + closestCommedEnemy.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION));
+//        Printer.print("dist: " + closestCommedEnemy.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION));
 //      }
-//      Utils.submitPrint();
+//      Printer.submitPrint();
       if (closestCommedEnemy == null
           || !closestCommedEnemy.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
         communicator.enqueueMessage(new EnemyFoundMessage(enemy));
@@ -322,9 +322,9 @@ public abstract class Robot {
    * @throws GameActionException if acking fails
    */
   private void ackEnemyFound(EnemyFoundMessage message) throws GameActionException {
-//    Utils.cleanPrint();
-//    Utils.print("ackEnemyFound: " + message.enemyLocation, "dist: " + message.enemyLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION));
-//    Utils.submitPrint();
+//    Printer.cleanPrint();
+//    Printer.print("ackEnemyFound: " + message.enemyLocation, "dist: " + message.enemyLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION));
+//    Printer.submitPrint();
     if (message.enemyLocation.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, distToClosestCommedEnemy-1)) {
       closestCommedEnemy = message.enemyLocation;
       distToClosestCommedEnemy = message.enemyLocation.distanceSquaredTo(Cache.PerTurn.CURRENT_LOCATION);
@@ -487,7 +487,7 @@ public abstract class Robot {
    * @throws GameActionException if movement fails
    */
   protected boolean moveOptimalTowards(MapLocation target) throws GameActionException {
-//    Utils.print("RUNNING moveOptimalTowards(): ", "target: " + target);
+//    Printer.print("RUNNING moveOptimalTowards(): ", "target: " + target);
     if (!rc.isMovementReady()) return false;
 
     Direction bestDirection = getOptimalDirectionTowards(target);
@@ -512,10 +512,10 @@ public abstract class Robot {
 
     MapLocation newLoc; // temp
     int newLocDist; // temp
-    for (Direction candidateDir : Utils.directionsNine) {
+    for (Direction candidateDir : Utils.directions) {
       newLoc = myLoc.add(candidateDir);
       newLocDist = newLoc.distanceSquaredTo(source);
-      if (candidateDir == Direction.CENTER || (rc.canMove(candidateDir) && newLocDist >= dToLoc)) {
+      if ((rc.canMove(candidateDir) && newLocDist >= dToLoc)) {
         if (rc.canSenseLocation(newLoc)) {
           int rubble = rc.senseRubble(newLoc);
           if (rubble < bestPosRubble || (rubble == bestPosRubble && newLocDist > bestPosDist)) {

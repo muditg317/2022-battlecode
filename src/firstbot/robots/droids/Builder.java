@@ -43,28 +43,28 @@ public class Builder extends Droid {
   // 2) location has least rubble
   // 3) location is closest to corner
   private MapLocation findBestLabSpawnLocation() throws GameActionException {
-//    Utils.cleanPrint();
+//    Printer.cleanPrint();
     MapLocation bestLabLocation = null;
     int bestRubbleAtLocation = 101;
     int bestDistanceToCorner = 101;
     for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-//      Utils.submitPrint();
-//      Utils.print("loc: " + loc);
+//      Printer.submitPrint();
+//      Printer.print("loc: " + loc);
       if (!rc.canSenseLocation(loc) || (rc.isLocationOccupied(loc) && !Cache.PerTurn.CURRENT_LOCATION.equals(loc))) continue;
       int candidateDistanceToCorner = Utils.maxSingleAxisDist(loc, corner);
-//      Utils.print("candidateDistanceToCorner " + candidateDistanceToCorner, "archonDistanceToCorner: " + archonDistanceToCorner);
+//      Printer.print("candidateDistanceToCorner " + candidateDistanceToCorner, "archonDistanceToCorner: " + archonDistanceToCorner);
       if (candidateDistanceToCorner <= archonDistanceToCorner) {
         int candidateRubble = rc.senseRubble(loc);
-//        Utils.print("candidateRubble " + candidateRubble, "bestRubbleAtLocation: " + bestRubbleAtLocation);
+//        Printer.print("candidateRubble " + candidateRubble, "bestRubbleAtLocation: " + bestRubbleAtLocation);
         if (candidateRubble < bestRubbleAtLocation) {
           bestLabLocation = loc;
           bestRubbleAtLocation = candidateRubble;
           bestDistanceToCorner = candidateDistanceToCorner;
-//          Utils.print("updating to " + bestLabLocation);
+//          Printer.print("updating to " + bestLabLocation);
         } else if (candidateRubble == bestRubbleAtLocation && candidateDistanceToCorner < bestDistanceToCorner) {
           bestLabLocation = loc;
           bestDistanceToCorner = candidateDistanceToCorner;
-//          Utils.print("updating to " + bestLabLocation);
+//          Printer.print("updating to " + bestLabLocation);
         }
       }
     }
@@ -103,12 +103,12 @@ public class Builder extends Droid {
   protected void runTurn() throws GameActionException {
 
     if (!labBuilt) {
-
-      if (bestLocationToSpawnLab == null || rc.isLocationOccupied(bestLocationToSpawnLab)) {
-        System.out.println("no best location to spawn lab or location occupied");
-        if (bestLocationToSpawnLab != null && Cache.PerTurn.CURRENT_LOCATION.equals(bestLocationToSpawnLab)) {
-          moveOptimalAway(bestLocationToSpawnLab);
-        }
+      if (bestLocationToSpawnLab != null && Cache.PerTurn.CURRENT_LOCATION.equals(bestLocationToSpawnLab)) {
+//        System.out.println("Sorry im in the way! moving...");
+        moveOptimalAway(bestLocationToSpawnLab);
+      }
+      if (bestLocationToSpawnLab == null) {
+        System.out.println("no best location to spawn lab!!");
       } else {
         MapLocation bestBuildSpot = findBestBuildSpot(bestLocationToSpawnLab);
         if (bestBuildSpot == null) bestBuildSpot = bestLocationToSpawnLab;

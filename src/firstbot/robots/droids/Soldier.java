@@ -38,8 +38,8 @@ public class Soldier extends Droid {
       }
     }
 
-    if (archonToSave != null && !needToRunHomeForSaving && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-//      Utils.print("archonToSave: " + archonToSave);
+    if (archonToSave != null && !isMovementDisabled && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+//      Printer.print("archonToSave: " + archonToSave);
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
@@ -81,9 +81,9 @@ public class Soldier extends Droid {
       }
       attackAtAndMoveTo(best.location, best.location, true);
       lastAttackedEnemy = best;
-    } else if (!needToRunHomeForSaving) {
+    } else if (!isMovementDisabled) {
       if (lastAttackedEnemy != null && lastAttackedEnemy.type.damage <= 0) {
-//        Utils.print("robotToChase: " + robotToChase);
+//        Printer.print("robotToChase: " + robotToChase);
         attackAtAndMoveTo(lastAttackedEnemy.location, lastAttackedEnemy.location, true);
         if (lastAttackedEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, HALF_RANGE_TO_CHASE_FROM)) {
           lastAttackedEnemy = null;
@@ -114,7 +114,7 @@ public class Soldier extends Droid {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
     for (Direction dir : Utils.directionsNine) {
-      if (dir != Direction.CENTER && (needToRunHomeForSaving || !rc.canMove(dir))) continue;
+      if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue;
 //      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
 //      if (dir != Direction.CENTER && Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS.length < 6 && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION)))) {
 //        if (!newLoc.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(newLoc), newLoc.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(newLoc)))) {
@@ -149,7 +149,7 @@ public class Soldier extends Droid {
           for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //            int s = Clock.getBytecodeNum();
             curr.update(enemy);
-//            Utils.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
+//            Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
           }
       }
       curr.finalizeInfo();
@@ -168,7 +168,11 @@ public class Soldier extends Droid {
     return false;
   }
 
+  private boolean cachedCheckNeedToStay;
+  private int cacheStateOnLastNeedToStayCalc = -1;
   public boolean checkNeedToStayOnSafeSide() {
+    if (Cache.PerTurn.cacheState == cacheStateOnLastNeedToStayCalc) return cachedCheckNeedToStay;
+    cacheStateOnLastNeedToStayCalc = Cache.PerTurn.cacheState;
     int numFriendlyOffense = 0;
     int numEnemyOffense = 0;
     for (RobotInfo robot : Cache.PerTurn.ALL_NEARBY_ROBOTS) {
@@ -180,7 +184,7 @@ public class Soldier extends Droid {
         }
       }
     }
-    return numEnemyOffense >= numFriendlyOffense;
+    return cachedCheckNeedToStay = (numFriendlyOffense < 4 || numEnemyOffense * 1.5 >= numFriendlyOffense);
   }
 
   /**
@@ -195,7 +199,7 @@ public class Soldier extends Droid {
   private boolean attackAtAndMoveTo(MapLocation whereToAttack, MapLocation whereToMove, boolean usePathing) throws GameActionException {
 
     boolean attacked = false;
-    Direction dirToMove = (needToRunHomeForSaving || !rc.isMovementReady() || whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, HALF_RANGE_TO_CHASE_FROM))
+    Direction dirToMove = (isMovementDisabled || !rc.isMovementReady() || whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, HALF_RANGE_TO_CHASE_FROM))
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {

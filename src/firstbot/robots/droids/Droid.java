@@ -23,16 +23,20 @@ public abstract class Droid extends Robot {
 
   protected boolean needToRunHomeForSaving;
   protected boolean needToRunHomeForSuicide;
+  protected boolean isMovementDisabled;
   protected boolean leaveArchon;
   protected int leaveArchonRound;
 
   public Droid(RobotController rc) throws GameActionException {
     super(rc);
-    for (RobotInfo info : rc.senseNearbyRobots(2, Cache.Permanent.OUR_TEAM)) {
+    for (RobotInfo info : rc.senseNearbyRobots(Utils.DSQ_1by1, Cache.Permanent.OUR_TEAM)) {
       if (info.type == RobotType.ARCHON) {
         parentArchonLoc = info.location;
         break;
       }
+    }
+    if (parentArchonLoc == null) {
+      parentArchonLoc = Cache.Permanent.START_LOCATION;
     }
     randomizeExplorationTarget(false);
   }
@@ -79,10 +83,12 @@ public abstract class Droid extends Robot {
       leaveArchon = false;
     }
 
-//    Utils.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-//    Utils.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
+    isMovementDisabled = (needToRunHomeForSaving || needToRunHomeForSuicide) && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared/2);
+
+//    Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//    Printer.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
     runTurn();
-//    Utils.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
+//    Printer.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
     if (needToRunHomeForSaving || needToRunHomeForSuicide) {
       runHome(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION));
     }
@@ -97,11 +103,14 @@ public abstract class Droid extends Robot {
    * @return true if moved
    */
   public boolean runHome(MapLocation archonLocation) throws GameActionException {
-//    Utils.print("RUNNING runHome():", "archonLocation: " + archonLocation);
+//    Printer.print("RUNNING runHome():", "archonLocation: " + archonLocation);
     //todo: run home better (more smart, avoid enemies)
     if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonLocation, Utils.DSQ_3by3plus)) {
       return moveOptimalTowards(archonLocation);
     } else {
+      if (needToRunHomeForSuicide && rc.senseLead(Cache.PerTurn.CURRENT_LOCATION) == 0) rc.disintegrate();
+
+      if (!rc.isMovementReady()) return false;
 
       boolean shouldLeave = checkIfTooManySoldiers(archonLocation);
       if (shouldLeave) {
@@ -109,7 +118,6 @@ public abstract class Droid extends Robot {
         leaveArchonRound = Cache.PerTurn.ROUND_NUM;
       }
 
-      if (needToRunHomeForSuicide && rc.senseLead(Cache.PerTurn.CURRENT_LOCATION) == 0) rc.disintegrate();
       boolean isMyCurrentSquareGood = checkIfGoodSquare(Cache.PerTurn.CURRENT_LOCATION);
       if (isMyCurrentSquareGood) {
         return currentSquareIsGoodExecute(archonLocation);
@@ -247,7 +255,7 @@ public abstract class Droid extends Robot {
 
   protected void randomizeExplorationTarget(boolean forceNotSelf) throws GameActionException {
 //    int b = Clock.getBytecodeNum();
-//    Utils.print("RUNNING randomizeExplorationTarget(): ");
+//    Printer.print("RUNNING randomizeExplorationTarget(): ");
     explorationTarget = Utils.randomMapLocation();
     exploringRandomly = true;
     if (this instanceof Soldier && ((Soldier)this).checkNeedToStayOnSafeSide()) {
@@ -307,7 +315,7 @@ public abstract class Droid extends Robot {
         return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED);
       }
     }
-    if (this instanceof Soldier) {
+    if (this instanceof Soldier && ((Soldier) this).checkNeedToStayOnSafeSide()) {
       if (Utils.tooCloseToEnemyArchon(Cache.PerTurn.CURRENT_LOCATION) && Utils.tooCloseToEnemyArchon(Cache.PerTurn.CURRENT_LOCATION.add(desired))) {
         return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.CHUNK_EXPLORATION_RADIUS_SQUARED);
       }
@@ -394,7 +402,7 @@ public abstract class Droid extends Robot {
    * @throws GameActionException if exploring/moving fails
    */
   protected boolean doExploration() throws GameActionException {
-//    Utils.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
+//    Printer.print("RUNNING doExploration(): ", "old explorationTarget: " + explorationTarget);
     // if we are explorating smartly and the chunk has been explored already
 //    System.out.println("  " + Cache.PerTurn.CURRENT_LOCATION + " - \nexploringRandomly: " + exploringRandomly + "\nExploration target: " + explorationTarget + "\nalready explored: " + !communicator.chunkInfo.chunkIsGoodForMinerExploration(explorationTarget));
 //    if (!exploringRandomly) {
@@ -414,7 +422,7 @@ public abstract class Droid extends Robot {
 //        rc.setIndicatorString("bad target... now go to - " + explorationTarget);
 //      }
 //    }
-//    Utils.print("explorationTarget: " + explorationTarget);
+//    Printer.print("explorationTarget: " + explorationTarget);
     if (goToExplorationTarget()) {
       MapLocation oldTarget = explorationTarget;
       randomizeExplorationTarget(true);

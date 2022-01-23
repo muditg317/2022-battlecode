@@ -69,10 +69,10 @@ public class Miner extends Droid {
         runAwayTarget = null; // runAway() is true iff we move away
         randomizeExplorationTarget(false);
       }
-    } else if (!needToRunHomeForSaving) {
+    } else if (!isMovementDisabled) {
       if (/*Cache.PerTurn.ROUND_NUM >= 15 && */ resourcesLeft && followLead()) {
         // performs action of moving to lead
-      } else if (!needToRunHomeForSuicide) {
+      } else if (!isMovementDisabled) {
         doExploration();
 //      reachedTarget = goToTarget(); // performs action of moving to target location
       }
@@ -241,7 +241,7 @@ public class Miner extends Droid {
    * @return true if reached target
    */
   private boolean runAway() throws GameActionException {
-    if (moveOptimalTowards(runAwayTarget) || runHome(parentArchonLoc)) {
+    if (moveOptimalTowards(runAwayTarget) || runHome(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION))) {
       rc.setIndicatorString("run away! " + runAwayTarget);
 //      rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, runAwayTarget, 0,255,0);
       return Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(runAwayTarget, Cache.Permanent.ACTION_RADIUS_SQUARED);
