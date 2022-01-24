@@ -8,6 +8,7 @@ import firstbot.robots.Robot;
  * This RobotPlayer will create a custom object for each type of robot which internally handles what it should do
  */
 public strictfp class RobotPlayer {
+    public static final boolean RESIGN_ON_FATAL_ERROR = false;
 
     /**
      * Create the correct type of Robot object based on rc.getType()
@@ -26,7 +27,7 @@ public strictfp class RobotPlayer {
             } catch (Exception e) {
                 System.out.println("FATAL ERROR - " + rc.getLocation());
                 e.printStackTrace();
-                rc.resign();
+                if (RESIGN_ON_FATAL_ERROR) rc.resign();
             }
         }
     }
