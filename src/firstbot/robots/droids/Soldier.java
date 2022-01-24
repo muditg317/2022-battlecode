@@ -224,27 +224,30 @@ public class Soldier extends Droid {
       }
     }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
-//    if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION)))) {
-//      if (!newLoc.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(newLoc), newLoc.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(newLoc)))) {
-//        dirToMove = Direction.CENTER;
-//      }
-//    }
-    // only try to attack early if rubble is better
-//    if (rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < rc.senseRubble(newLoc)) attacked |= attackTarget(whereToAttack);
-    // TODO: why is above making things worse?????
+
+    RobotInfo enemy = rc.canSenseRobotAtLocation(whereToAttack) ? rc.senseRobotAtLocation(whereToAttack) : null;
+    boolean shouldCharge = this instanceof Sage && enemy != null && !enemy.type.isBuilding() && enemy.health <= enemy.type.health * 0.22;
+    boolean shouldFury = this instanceof Sage && enemy != null && enemy.type.isBuilding() && enemy.type.health * 0.10 >= Cache.Permanent.ROBOT_TYPE.damage;
+
 
     // only attack early if moving first screws us over
     if (whereToAttack != null
         && !whereToAttack.isWithinDistanceSquared(newLoc, Cache.Permanent.ACTION_RADIUS_SQUARED)
         && rubbleHere <= rc.senseRubble(newLoc)) {
-      attacked = attackTarget(whereToAttack);
+      if (shouldCharge) attacked = ((Sage)this).envision(AnomalyType.CHARGE);
+      else if (shouldFury && noFriendlyBuildingsNearby()) attacked = ((Sage)this).envision(AnomalyType.CHARGE);
+      else attacked = attackTarget(whereToAttack);
     }
     // only move if not CENTER and target isn't already within 1by1 from self
 //    if (dirToMove != Direction.CENTER && rc.isMovementReady() && (!whereToMove.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_1by1))) {
       move(dirToMove);
 //    }
     // retry attack if incomplete
-    attacked |= attackTarget(whereToAttack);
+    if (!attacked) {
+      if (shouldCharge) attacked = ((Sage)this).envision(AnomalyType.CHARGE);
+      else if (shouldFury && noFriendlyBuildingsNearby()) attacked = ((Sage)this).envision(AnomalyType.CHARGE);
+      else attacked = attackTarget(whereToAttack);
+    }
     return attacked;
 
 //    boolean attacked = false;

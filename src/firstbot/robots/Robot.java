@@ -737,6 +737,13 @@ public abstract class Robot {
     return offensiveEnemyCentroid() != null;
   }
 
+  public boolean noFriendlyBuildingsNearby() throws GameActionException {
+    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+      if (friend.type.isBuilding()) return true;
+    }
+    return false;
+  }
+
   /**
    * looks through enemies in vision and finds the one with lowest health that matches the type criteria
    * @param enemyType the robottype to look for

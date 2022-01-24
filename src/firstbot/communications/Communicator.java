@@ -302,7 +302,7 @@ public class Communicator {
   }
 
   public static class SpawnInfo {
-    public static final int NUM_SPAWN_INTS = 1;
+    public static final int NUM_SPAWN_INTS = 0;
     public static final int SPAWN_INTS_START = ArchonInfo.ARCHON_INTS_START - NUM_SPAWN_INTS;
 
     public static final int NUM_MINERS_NEEDED_IND = SPAWN_INTS_START;

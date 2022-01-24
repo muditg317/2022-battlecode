@@ -5,6 +5,8 @@ import firstbot.communications.messages.*;
 import firstbot.utils.Cache;
 import firstbot.utils.Utils;
 
+import java.util.Arrays;
+
 public class Archon extends Building {
   public static final int SUICIDE_ROUND = -500;
 
@@ -41,11 +43,14 @@ public class Archon extends Building {
   int initialMinersToSpawn = 2;
 
   private boolean canMoveToBetterLocation = false;
+  private MovingReason movingReason = null;
 
   private int minimumDistanceToEdge = 60;
   private int bestArchonToSpawnBuilderForLab = -1;
   private boolean labBuilderSpawned;
   private boolean saveUpForBuilderAndLab;
+
+  MapLocation[] furthestLocs;
 
   public Archon(RobotController rc) throws GameActionException {
     super(rc);
@@ -74,34 +79,7 @@ public class Archon extends Building {
     }
 
     if (Cache.PerTurn.ROUND_NUM == 2) {
-      communicator.archonInfo.readOurArchonLocs();
-      int bestDistance = 20;
-      switch (rc.getArchonCount()) {
-        case 4:
-          int candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon4);
-          if (candidateDistance <= bestDistance) {
-            bestArchonToSpawnBuilderForLab = 4;
-            bestDistance = candidateDistance;
-          }
-        case 3:
-          candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon3);
-          if (candidateDistance <= bestDistance) {
-            bestArchonToSpawnBuilderForLab = 3;
-            bestDistance = candidateDistance;
-          }
-        case 2:
-          candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon2);
-          if (candidateDistance <= bestDistance) {
-            bestArchonToSpawnBuilderForLab = 2;
-            bestDistance = candidateDistance;
-          }
-        case 1:
-          candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon1);
-          if (candidateDistance <= bestDistance) {
-            bestArchonToSpawnBuilderForLab = 1;
-            bestDistance = candidateDistance;
-          }
-      }
+      calcBestArchonForLab();
     }
 
 //    if (communicator.metaInfo.knownSymmetry != null && !communicator.archonInfo.mirrored) {
@@ -117,6 +95,74 @@ public class Archon extends Building {
 
     if (rc.getRoundNum() == SUICIDE_ROUND) {
       rc.resign();
+    }
+  }
+
+  private void determineFurthestLocationDirections() {
+    // determines furthest location in all 8 locations
+    // creates sorted list with distance and location
+    // reverse sort
+    // go in order
+
+    MapLocation loc = Cache.PerTurn.CURRENT_LOCATION;
+
+    int x = loc.x;
+    int y = loc.y;
+
+    MapLocation N = new MapLocation(x, Cache.Permanent.MAP_HEIGHT - 1);
+    MapLocation S = new MapLocation(x, 0);
+    MapLocation E = new MapLocation(Cache.Permanent.MAP_WIDTH - 1, y);
+    MapLocation W = new MapLocation(0, y);
+
+    int NEdist = Math.min(Utils.maxSingleAxisDist(loc, N), Utils.maxSingleAxisDist(loc, E));
+    MapLocation NE = new MapLocation(x + NEdist, y + NEdist);
+
+    int SWdist = Math.min(Utils.maxSingleAxisDist(loc, S), Utils.maxSingleAxisDist(loc, W));
+    MapLocation SW = new MapLocation(x - SWdist, y - SWdist);
+
+    int NWdist = Math.min(Utils.maxSingleAxisDist(loc, N), Utils.maxSingleAxisDist(loc, W));
+    MapLocation NW = new MapLocation(x - NWdist, y + NWdist);
+    
+    int SEdist = Math.min(Utils.maxSingleAxisDist(loc, S), Utils.maxSingleAxisDist(loc, E));
+    MapLocation SE = new MapLocation(x + SEdist, y - SEdist);
+
+    furthestLocs = new MapLocation[] {NE, SE, SW, NW, N, S, E, W};
+    Arrays.sort(furthestLocs, (o1, o2) -> { // reverse sort
+      return o2.distanceSquaredTo(loc) - o1.distanceSquaredTo(loc);
+    });
+
+
+    System.out.println(Arrays.toString(furthestLocs));
+  }
+
+  private void calcBestArchonForLab() throws GameActionException {
+    communicator.archonInfo.readOurArchonLocs();
+    int bestDistance = 20;
+    switch (rc.getArchonCount()) {
+      case 4:
+        int candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon4);
+        if (candidateDistance <= bestDistance) {
+          bestArchonToSpawnBuilderForLab = 4;
+          bestDistance = candidateDistance;
+        }
+      case 3:
+        candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon3);
+        if (candidateDistance <= bestDistance) {
+          bestArchonToSpawnBuilderForLab = 3;
+          bestDistance = candidateDistance;
+        }
+      case 2:
+        candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon2);
+        if (candidateDistance <= bestDistance) {
+          bestArchonToSpawnBuilderForLab = 2;
+          bestDistance = candidateDistance;
+        }
+      case 1:
+        candidateDistance = Utils.maxDistanceToCorner(communicator.archonInfo.ourArchon1);
+        if (candidateDistance <= bestDistance) {
+          bestArchonToSpawnBuilderForLab = 1;
+          bestDistance = candidateDistance;
+        }
     }
   }
 
@@ -157,43 +203,84 @@ public class Archon extends Building {
       healNearbyDroids();
     }
 
+//    checkBetterRubbleSpot();
+
     // only allow movement if we know symmetry
 //    Printer.cleanPrint();;
-    if (rc.canTransform() && communicator.metaInfo.knownSymmetry != null && (bestArchonToSpawnBuilderForLab != whichArchonAmI || labBuilderSpawned)) {
+    if (rc.canTransform()
+        && (bestArchonToSpawnBuilderForLab != whichArchonAmI || labBuilderSpawned)
+        && (communicator.metaInfo.knownSymmetry != null)// || betterRubbleSpot != null)
+    ) {
       // only move once / if we have more than 1 archon to keep spawning while we move
 //      Printer.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
+
+      movingReason = MovingReason.APPROACH_BATTLE;
+//      movingReason = communicator.metaInfo.knownSymmetry != null ? MovingReason.APPROACH_BATTLE : MovingReason.RUBBLE;
+
       updateShouldStop();
-      if (!shouldStop && rc.getArchonCount() > 1) {
-        boolean canMove = true;
-        switch (rc.getArchonCount()) {
-          case 1:
-            canMove = false;
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
-            break;
-          case 2:
-            canMove = !communicator.archonInfo.ourArchonIsMoving(3 - whichArchonAmI);
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
-            break;
-          case 3:
-            canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%3)+1)
-                    || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%3)+1);
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
-            break;
-          case 4:
-            canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%4)+1)
-                    || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%4)+1)
-                    || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+2)%4)+1);
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
-        }
+      if (!shouldStop && atLeastOneOtherStationaryArchon()) {
 //        Printer.submitPrint();
-        if (canMove) {
-          startMoving();
-        }
+        startMoving();
       }
     }
   }
 
-//  private MapLocation tooMuchStartingRubbleEscapeLocation;
+  private MapLocation betterRubbleSpot;
+  /**
+   * looks around the archon and determines if there is a better location to be at
+   * sets `betterRubbleSpot`
+   */
+  private void checkBetterRubbleSpot() throws GameActionException {
+    // lowest rubble
+    // closest to us max axis (least moves)
+
+    int currentRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+    if (currentRubble < 5) { // to integrate with the other archon movement code
+      betterRubbleSpot = null;
+      return;
+    }
+
+    MapLocation bestLocation = null;
+    int bestRubble = 101;
+    int bestDistance = 101;
+    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+      int candidateRubble = rc.senseRubble(loc);
+      int candidateDistance = Utils.maxSingleAxisDist(loc, Cache.PerTurn.CURRENT_LOCATION);
+      if (currentRubble <= candidateRubble) continue;
+      if (candidateRubble < bestRubble) {
+        bestRubble = candidateRubble;
+        bestDistance = candidateDistance;
+        bestLocation = loc;
+      } else if (candidateRubble == bestRubble && candidateDistance < bestDistance) {
+        bestDistance = candidateDistance;
+        bestLocation = loc;
+      }
+    }
+    betterRubbleSpot = bestLocation;
+  }
+
+  public boolean atLeastOneOtherStationaryArchon() throws GameActionException {
+    switch (rc.getArchonCount()) {
+      case 1:
+        return false;
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+      case 2:
+        return !communicator.archonInfo.ourArchonIsMoving(3 - whichArchonAmI);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+      case 3:
+        return !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%3)+1)
+                || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%3)+1);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+      case 4:
+        return !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%4)+1)
+                || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%4)+1)
+                || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+2)%4)+1);
+//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+    }
+    return false;
+  }
+
+  private MapLocation previousLocation;
   private MapLocation whereToGo;
   private boolean shouldStop;
   /**
@@ -201,18 +288,32 @@ public class Archon extends Building {
    * @throws GameActionException if any action fails
    */
   private void runArchonMoving() throws GameActionException {
-    if (whereToGo == null || closestCommedEnemy == null) { // determine closest enemy archon to move towards
+    switch (movingReason) {
+      case RUBBLE:
+        checkBetterRubbleSpot();
+        whereToGo = betterRubbleSpot;
+        break;
+      case APPROACH_BATTLE:
+        if (whereToGo == null || closestCommedEnemy == null) { // determine closest enemy archon to move towards
 //      whereToGo = communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION);
-      whereToGo = Utils.applySymmetry(Cache.Permanent.START_LOCATION, communicator.metaInfo.guessedSymmetry);
-//      if ()
+          whereToGo = Utils.applySymmetry(Cache.Permanent.START_LOCATION, communicator.metaInfo.guessedSymmetry);
+        }
+        if (closestCommedEnemy != null) {
+          whereToGo = closestCommedEnemy;
+        }
+        break;
     }
-    if (closestCommedEnemy != null) whereToGo = closestCommedEnemy;
+
 
     if (rc.isTransformReady()) {
       updateShouldStop();
 
       if (!shouldStop) {
-        if (moveOptimalTowards(whereToGo)) {
+        Direction dirToMove = getOptimalDirectionTowards(whereToGo);
+        if (Cache.PerTurn.CURRENT_LOCATION.add(dirToMove).equals(previousLocation)) {
+          stopMoving();
+        } else if (move(dirToMove)) {
+          previousLocation = Cache.PerTurn.CURRENT_LOCATION;
           communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
         }
       } else {
@@ -234,11 +335,19 @@ public class Archon extends Building {
             }
           }
           if (lowestRubbleLoc != null) {
-            if (moveOptimalTowards(lowestRubbleLoc)) {
+            Direction dirToMove = getOptimalDirectionTowards(lowestRubbleLoc);
+            if (Cache.PerTurn.CURRENT_LOCATION.add(dirToMove).equals(previousLocation)) {
+              stopMoving();
+            } else if (move(dirToMove)) {
+              previousLocation = Cache.PerTurn.CURRENT_LOCATION;
               communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
             }
           } else {
-            if (moveOptimalAway(whereToGo)) {
+            Direction dirToMove = getOptimalDirectionAway(whereToGo);
+            if (Cache.PerTurn.CURRENT_LOCATION.add(dirToMove).equals(previousLocation)) {
+              stopMoving();
+            } else if (move(dirToMove)) {
+              previousLocation = Cache.PerTurn.CURRENT_LOCATION;
               communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
             }
           }
@@ -257,44 +366,55 @@ public class Archon extends Building {
 //    if (turnFirstMoved == -1) turnFirstMoved = lastTurnStartedMoving;
     whereToGo = null;
     shouldStop = false;
+    previousLocation = Cache.PerTurn.CURRENT_LOCATION;
+  }
+
+  private enum MovingReason {
+    RUBBLE, APPROACH_BATTLE;
   }
 
   public void updateShouldStop() throws GameActionException {
     // check if any enemy damaging units or any damaged friendly soldiers
     shouldStop = false;
 
-//    if (tooMuchStartingRubbleEscapeLocation != null && lastTurnStartedMoving == turnFirstMoved) {
-//      shouldStop = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < 10;
-//      return;
-//    }
-
-    if (whereToGo != null && whereToGo.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Utils.DSQ_2by2)) {
+    if (!atLeastOneOtherStationaryArchon()) {
       shouldStop = true;
       return;
     }
 
-    for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
-      if (ri.type.damage > 0 || ri.type == RobotType.ARCHON) {
-        shouldStop = true;
-        return;
-      }
-    }
+    switch (movingReason) {
+      case RUBBLE:
+        shouldStop = betterRubbleSpot == null || betterRubbleSpot.equals(Cache.PerTurn.CURRENT_LOCATION);
+        break;
+      case APPROACH_BATTLE:
+        if (whereToGo != null && whereToGo.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+          shouldStop = true;
+          return;
+        }
+
+        for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
+          if (ri.type.damage > 0 || ri.type == RobotType.ARCHON) {
+            shouldStop = true;
+            return;
+          }
+        }
 
 //    if (!shouldStop) {
-    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-      if (friend.type.damage > 0 && friend.health < friend.type.health - 15 && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(friend.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) { //todo: maybe consider changing to a threshold
-        shouldStop = true;
-        return;
-      }
-    }
+        for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+          if (friend.type.damage > 0 && friend.health < friend.type.health - 15 && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(friend.location, Cache.Permanent.ACTION_RADIUS_SQUARED)) { //todo: maybe consider changing to a threshold
+            shouldStop = true;
+            return;
+          }
+        }
 //    }
-
+    }
   }
 
   private void stopMoving() throws GameActionException {
     rc.transform();
     communicator.archonInfo.setOurArchonNotMoving(whichArchonAmI);
     moving = false;
+    movingReason = null;
     hasMoved = true;
   }
 
@@ -390,6 +510,8 @@ public class Archon extends Building {
     int totalMoves = (int) (minDist * turnsTillNextMove);
 
     initialMinersToSpawn += totalMoves / 75;
+
+    determineFurthestLocationDirections();
   }
 
   /**
@@ -488,7 +610,7 @@ public class Archon extends Building {
     return false;
   }
 
-  private int minerDirection = Utils.rng.nextInt(10);
+  private int minerDirection = 0;
   /**
    * Spawn some droid around the archon based on some heuristics
    */
@@ -496,24 +618,26 @@ public class Archon extends Building {
     switch(typeToSpawn) {
       case MINER:
         Direction dir = Utils.randomDirection();
-        if (Cache.PerTurn.ROUND_NUM >= 20) {
+//        if (Cache.PerTurn.ROUND_NUM >= 20) {
           MapLocation bestLead = getWeightedAvgLeadLoc();
-          // TODO: if bestLead is null, spawn on low rubble instead of random
+//          // TODO: if bestLead is null, spawn on low rubble instead of random
           if (bestLead != null) {
             dir = Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
           }
-        } else {
-          dir = Utils.directions[minerDirection % Utils.directions.length];
-          minerDirection += Utils.rng.nextInt(2)+1;
-        }
+//        } else {
+//          dir = Cache.PerTurn.CURRENT_LOCATION.directionTo(furthestLocs[minerDirection % furthestLocs.length]);
+//          System.out.println("dir: " + dir);
+//        }
 
         // using getOptimalDirectionTowards(bestLead) causes slightly worse performance lol
         if (dir == Direction.CENTER) dir = getLeastRubbleUnoccupiedDir();
+
 
 //      System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
         if (buildRobot(RobotType.MINER, dir) || buildRobot(RobotType.MINER, dir.rotateRight()) || buildRobot(RobotType.MINER, dir.rotateLeft())) {
           rc.setIndicatorString("Spawn miner!");
           minersSpawned++;
+          minerDirection++;
           leadSpent += RobotType.MINER.buildCostLead;
           return true;
         }
@@ -571,7 +695,7 @@ public class Archon extends Building {
 
     return minersSpawned < initialMinersToSpawn
         || (/*minersSpawned < soldiersSpawned / 1.5 &&*/ minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 50);
-//        || (movingAvgIncome < 3);
+//        || (Cache.PerTurn.ROUND_NUM > 500 && movingAvgIncome >= 0 && movingAvgIncome <= 3);
 //    return rc.getTeamLeadAmount(rc.getTeam()) < 500 && ( // if we have > 2000Pb, just skip miners
 ////        movingAvgIncome < 10
 //        (rc.getRoundNum() < 100 && localLead > 15 && movingAvgIncome < rc.getRoundNum()*1.5)

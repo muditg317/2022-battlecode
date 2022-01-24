@@ -540,7 +540,7 @@ public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
       boolean shouldFury = this.hasTarget && this.bestTarget.type.isBuilding() && this.bestTarget.type.health * 0.10 >= Cache.Permanent.ROBOT_TYPE.damage;
       if (this.hasTarget && this.bestTarget.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED) && Global.rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) < this.rubble) {
         if (shouldCharge) attacked = this.robotDoingMicro.envision(AnomalyType.CHARGE);
-        else if (shouldFury && noFriendlyBuildingsNearby()) attacked = this.robotDoingMicro.envision(AnomalyType.FURY);
+        else if (shouldFury && this.robotDoingMicro.noFriendlyBuildingsNearby()) attacked = this.robotDoingMicro.envision(AnomalyType.FURY);
         else attacked = this.robotDoingMicro.attackTarget(bestTarget.location);
       }
 
@@ -548,17 +548,10 @@ public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 
       if (this.hasTarget && !attacked) {
         if (shouldCharge) attacked = this.robotDoingMicro.envision(AnomalyType.CHARGE);
-        else if (shouldFury && noFriendlyBuildingsNearby()) attacked = this.robotDoingMicro.envision(AnomalyType.FURY);
+        else if (shouldFury && this.robotDoingMicro.noFriendlyBuildingsNearby()) attacked = this.robotDoingMicro.envision(AnomalyType.FURY);
         else attacked = this.robotDoingMicro.attackTarget(bestTarget.location);
       }
       return attacked;
-    }
-
-    private static boolean noFriendlyBuildingsNearby() throws GameActionException {
-      for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
-        if (friend.type.isBuilding()) return true;
-      }
-      return false;
     }
 
     public void utilPrint() {

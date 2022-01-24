@@ -28,12 +28,49 @@ public class Miner extends Droid {
   public Miner(RobotController rc) throws GameActionException {
     super(rc);
     leadRequest = null;
-    if (Cache.PerTurn.ROUND_NUM < 20) {
-      explorationTarget = new MapLocation(
-          parentArchonLoc.x < Cache.PerTurn.CURRENT_LOCATION.x ? Cache.Permanent.MAP_WIDTH-1 : 0,
-          parentArchonLoc.y < Cache.PerTurn.CURRENT_LOCATION.y ? Cache.Permanent.MAP_HEIGHT-1 : 0);
+    if (false && Cache.PerTurn.ROUND_NUM < 50) {
+      MapLocation loc = Cache.PerTurn.CURRENT_LOCATION;
+      int x = loc.x;
+      int y = loc.y;
+      MapLocation N = new MapLocation(x, Cache.Permanent.MAP_HEIGHT - 1);
+      MapLocation S = new MapLocation(x, 0);
+      MapLocation E = new MapLocation(Cache.Permanent.MAP_WIDTH - 1, y);
+      MapLocation W = new MapLocation(0, y);
+      switch (parentArchonLoc.directionTo(loc)) {
+        case NORTH:
+          explorationTarget = N;
+          break;
+        case NORTHEAST:
+          int NEdist = Math.min(Utils.maxSingleAxisDist(loc, N), Utils.maxSingleAxisDist(loc, E));
+          explorationTarget = new MapLocation(x + NEdist, y + NEdist);
+          break;
+        case EAST:
+          explorationTarget = E;
+          break;
+        case SOUTHEAST:
+          int SEdist = Math.min(Utils.maxSingleAxisDist(loc, S), Utils.maxSingleAxisDist(loc, E));
+          explorationTarget = new MapLocation(x + SEdist, y - SEdist);
+          break;
+        case SOUTH:
+          explorationTarget = S;
+          break;
+        case SOUTHWEST:
+          int SWdist = Math.min(Utils.maxSingleAxisDist(loc, S), Utils.maxSingleAxisDist(loc, W));
+          explorationTarget = new MapLocation(x - SWdist, y - SWdist);
+          break;
+        case WEST:
+          explorationTarget = W;
+        case NORTHWEST:
+          int NWdist = Math.min(Utils.maxSingleAxisDist(loc, N), Utils.maxSingleAxisDist(loc, W));
+          explorationTarget = new MapLocation(x - NWdist, y + NWdist);
+          break;
+      }
+
+//      explorationTarget = new MapLocation(
+//          parentArchonLoc.x < Cache.PerTurn.CURRENT_LOCATION.x ? Cache.Permanent.MAP_WIDTH-1 : (parentArchonLoc.x > Cache.PerTurn.CURRENT_LOCATION.x ? 0 : parentArchonLoc.x),
+//          parentArchonLoc.y < Cache.PerTurn.CURRENT_LOCATION.y ? Cache.Permanent.MAP_HEIGHT-1 : (parentArchonLoc.y > Cache.PerTurn.CURRENT_LOCATION.y ? 0 : parentArchonLoc.y));
+      exploringRandomly = false;
     }
-//    exploringRandomly = false;
 //    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 
