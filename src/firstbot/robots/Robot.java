@@ -586,6 +586,35 @@ public abstract class Robot {
     return myLoc.isWithinDistanceSquared(target, Utils.DSQ_1by1);
   }
 
+  public Direction getLeastRubbleDir() throws GameActionException {
+    Direction best = null;
+    int rubbleOfBest = 9999;
+    for (Direction dir : Utils.directions) {
+      if (!rc.canSenseLocation(Cache.PerTurn.CURRENT_LOCATION.add(dir))) continue;
+      int rubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION.add(dir));
+      if (rubble < rubbleOfBest) {
+        best = dir;
+        rubbleOfBest = rubble;
+      }
+    }
+    return best;
+  }
+
+  public Direction getLeastRubbleUnoccupiedDir() throws GameActionException {
+    Direction best = null;
+    int rubbleOfBest = 9999;
+    for (Direction dir : Utils.directions) {
+      MapLocation loc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
+      if (!rc.canSenseLocation(loc) || rc.isLocationOccupied(loc)) continue;
+      int rubble = rc.senseRubble(loc);
+      if (rubble < rubbleOfBest) {
+        best = dir;
+        rubbleOfBest = rubble;
+      }
+    }
+    return best;
+  }
+
   /**
    * sense all around the robot for lead, return a weighted average location
    *    weighted by how much lead is reached and how much rubble in the way

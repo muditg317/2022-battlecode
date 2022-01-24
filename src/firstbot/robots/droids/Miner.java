@@ -34,6 +34,11 @@ public class Miner extends Droid {
   public Miner(RobotController rc) throws GameActionException {
     super(rc);
     leadRequest = null;
+    if (Cache.PerTurn.ROUND_NUM < 20) {
+      explorationTarget = new MapLocation(
+          parentArchonLoc.x < Cache.PerTurn.CURRENT_LOCATION.x ? Cache.Permanent.MAP_WIDTH-1 : 0,
+          parentArchonLoc.y < Cache.PerTurn.CURRENT_LOCATION.y ? Cache.Permanent.MAP_HEIGHT-1 : 0);
+    }
 //    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 

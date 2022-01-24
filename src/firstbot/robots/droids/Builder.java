@@ -119,7 +119,7 @@ public class Builder extends Droid {
           bestLocationToSpawnLab = findBestLabSpawnLocation();
         }
 
-        Direction dirToBuildLab = getLeastRubbleDir(); //Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocationToSpawnLab);
+        Direction dirToBuildLab = getLeastRubbleUnoccupiedDir(); //Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocationToSpawnLab);
         if (buildRobot(RobotType.LABORATORY, dirToBuildLab)) {
           System.out.println("spawning lab at " + bestLocationToSpawnLab);
           myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dirToBuildLab);
@@ -150,34 +150,20 @@ public class Builder extends Droid {
           moveOptimalTowards(bestRepairSpot);
         }
         if (repairBuilding()) myBuilding = null;
-      } else if (!labBuilt && readyToBuild && hasSpaceToBuild) {
+      } else if (labBuilt && readyToBuild && hasSpaceToBuild) {
 //        for (RobotInfo )
         Direction dir = getLeastRubbleDir();
 //        RobotType typeToBuild = labBuilt ? RobotType.WATCHTOWER : RobotType.LABORATORY;
-        RobotType typeToBuild = RobotType.WATCHTOWER;
+        RobotType typeToBuild = RobotType.LABORATORY;
         if (buildRobot(typeToBuild, dir)) {
           myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dir);
 //          if (typeToBuild == RobotType.LABORATORY) {
 //            labBuilt = true;
-//            broadcastLabBuilt();
+            broadcastLabBuilt();
 //          }
         }
       }
     }
-  }
-
-  public Direction getLeastRubbleDir() throws GameActionException {
-    Direction best = null;
-    int rubbleOfBest = 9999;
-    for (Direction dir : Utils.directions) {
-      if (!rc.canSenseLocation(Cache.PerTurn.CURRENT_LOCATION.add(dir))) continue;
-      int rubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION.add(dir));
-      if (rubble < rubbleOfBest) {
-        best = dir;
-        rubbleOfBest = rubble;
-      }
-    }
-    return best;
   }
 
   /**

@@ -1,18 +1,8 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import firstbot.communications.messages.ArchonSavedMessage;
-import firstbot.communications.messages.EndFightMessage;
-import firstbot.communications.messages.JoinTheFightMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.SaveMeMessage;
+import battlecode.common.*;
+import firstbot.communications.messages.*;
 import firstbot.utils.Cache;
-import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
 public class Soldier extends Droid {
@@ -51,9 +41,9 @@ public class Soldier extends Droid {
       && !isMovementDisabled
       && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)
       && (!offensiveEnemiesNearby() || !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared))) {
-      Printer.cleanPrint();
-      Printer.print("archonToSave: " + archonToSave);
-      Printer.submitPrint();
+//      Printer.cleanPrint();
+//      Printer.print("archonToSave: " + archonToSave);
+//      Printer.submitPrint();
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
@@ -226,6 +216,13 @@ public class Soldier extends Droid {
 //      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
       dirToMove = Direction.CENTER;
     }
+    int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+    if (rubbleHere > 20) {
+      Direction leastRubble = getLeastRubbleDirAroundDir(dirToMove);
+      if (rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION.add(leastRubble)) < rubbleHere) {
+        dirToMove = leastRubble;
+      }
+    }
     MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dirToMove);
 //    if (!Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION)))) {
 //      if (!newLoc.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(newLoc), newLoc.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(newLoc)))) {
@@ -238,7 +235,8 @@ public class Soldier extends Droid {
 
     // only attack early if moving first screws us over
     if (whereToAttack != null
-        && !whereToAttack.isWithinDistanceSquared(newLoc, Cache.Permanent.ACTION_RADIUS_SQUARED)) {
+        && !whereToAttack.isWithinDistanceSquared(newLoc, Cache.Permanent.ACTION_RADIUS_SQUARED)
+        && rubbleHere <= rc.senseRubble(newLoc)) {
       attacked = attackTarget(whereToAttack);
     }
     // only move if not CENTER and target isn't already within 1by1 from self

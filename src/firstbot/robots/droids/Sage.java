@@ -1,11 +1,7 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
+import battlecode.common.*;
 import firstbot.utils.Cache;
-import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
 public class Sage extends Soldier {
@@ -18,11 +14,11 @@ public class Sage extends Soldier {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
 //    if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
-      Printer.cleanPrint();
-      Printer.print("isMovementDisabled: " + isMovementDisabled);
-      Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-      Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
-      Printer.submitPrint();
+//      Printer.cleanPrint();
+//      Printer.print("isMovementDisabled: " + isMovementDisabled);
+//      Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//      Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
+//      Printer.submitPrint();
 //    }
     for (Direction dir : Utils.directionsNine) {
 //      if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
@@ -71,7 +67,7 @@ public class Sage extends Soldier {
       }
       curr.finalizeInfo();
 //      if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
-        ((MicroInfo.MicroInfoSages)curr).utilPrint();
+//        ((MicroInfo.MicroInfoSages)curr).utilPrint();
 //      }
       if (best == null || curr.isBetterThan(best)) {
         best = curr;
@@ -79,5 +75,19 @@ public class Sage extends Soldier {
     }
 
     return best != null && best.execute();
+  }
+
+  /**
+   * envision the provided anomaly
+   * @param anomalyType the anomaly to envision
+   * @return true if envisioned successfully
+   * @throws GameActionException if envisioning fails
+   */
+  public boolean envision(AnomalyType anomalyType) throws GameActionException {
+    if (rc.canEnvision(anomalyType)) {
+      rc.envision(anomalyType);
+      return true;
+    }
+    return false;
   }
 }

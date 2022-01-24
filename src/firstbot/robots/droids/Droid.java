@@ -90,9 +90,18 @@ public abstract class Droid extends Robot {
     runTurn();
 //    Printer.print("aCD: " + rc.getActionCooldownTurns(), "mCD: " + rc.getMovementCooldownTurns());
     if (needToRunHomeForSaving || needToRunHomeForSuicide) {
-      runHome(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION));
+      MapLocation whereToRun = communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION);
+      whereToRun = checkMovingArchonToRunTowards(whereToRun);
+      runHome(whereToRun);
     }
 
+  }
+
+  protected MapLocation checkMovingArchonToRunTowards(MapLocation currentTarget) {
+    for (RobotInfo friend : Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS) {
+      if (friend.type == RobotType.ARCHON && friend.mode == RobotMode.PORTABLE) return friend.location;
+    }
+    return currentTarget;
   }
 
   /**
@@ -284,6 +293,7 @@ public abstract class Droid extends Robot {
    * @throws GameActionException if movement or line indication fails
    */
   protected boolean goToExplorationTarget() throws GameActionException {
+    if (Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(explorationTarget, Cache.Permanent.ACTION_RADIUS_SQUARED)) return true;
     if (!rc.isMovementReady()) {
       if (explorationTarget != null && Cache.Permanent.ROBOT_TYPE == RobotType.SOLDIER) {
 //        if (communicator.chunkInfo.chunkHasDanger(Utils.locationToChunkIndex(explorationTarget))) {

@@ -488,20 +488,27 @@ public class Archon extends Building {
     return false;
   }
 
+  private int minerDirection = Utils.rng.nextInt(10);
   /**
    * Spawn some droid around the archon based on some heuristics
    */
   private boolean spawnDroid(RobotType typeToSpawn) throws GameActionException {
     switch(typeToSpawn) {
       case MINER:
-        MapLocation bestLead = getWeightedAvgLeadLoc();
-        // TODO: if bestLead is null, spawn on low rubble instead of random
+        Direction dir = Utils.randomDirection();
+        if (Cache.PerTurn.ROUND_NUM >= 20) {
+          MapLocation bestLead = getWeightedAvgLeadLoc();
+          // TODO: if bestLead is null, spawn on low rubble instead of random
+          if (bestLead != null) {
+            dir = Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
+          }
+        } else {
+          dir = Utils.directions[minerDirection % Utils.directions.length];
+          minerDirection += Utils.rng.nextInt(2)+1;
+        }
 
-        Direction dir = bestLead == null
-                ? Utils.randomDirection()
-                : Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLead);
         // using getOptimalDirectionTowards(bestLead) causes slightly worse performance lol
-        if (dir == Direction.CENTER) dir = Utils.randomDirection();
+        if (dir == Direction.CENTER) dir = getLeastRubbleUnoccupiedDir();
 
 //      System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
         if (buildRobot(RobotType.MINER, dir) || buildRobot(RobotType.MINER, dir.rotateRight()) || buildRobot(RobotType.MINER, dir.rotateLeft())) {
