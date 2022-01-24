@@ -83,7 +83,7 @@ public abstract class Droid extends Robot {
       leaveArchon = false;
     }
 
-    isMovementDisabled = (needToRunHomeForSaving || needToRunHomeForSuicide) && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared/2);
+    isMovementDisabled = (needToRunHomeForSaving || needToRunHomeForSuicide) && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared);
 
 //    Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving, "needToRunHomeForSuicide: " + needToRunHomeForSuicide);
 //    Printer.print("parentArchonLoc: " + parentArchonLoc, "distance: " + distance);
@@ -256,7 +256,7 @@ public abstract class Droid extends Robot {
   protected void randomizeExplorationTarget(boolean forceNotSelf) throws GameActionException {
 //    int b = Clock.getBytecodeNum();
 //    Printer.print("RUNNING randomizeExplorationTarget(): ");
-    explorationTarget = Utils.randomMapLocation();
+    explorationTarget = this instanceof Soldier ? communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION) : Utils.randomMapLocation();
     exploringRandomly = true;
     if (this instanceof Soldier && ((Soldier)this).checkNeedToStayOnSafeSide()) {
       MapLocation friendly = communicator.archonInfo.getNearestFriendlyArchon(explorationTarget);

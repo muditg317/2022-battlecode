@@ -7,6 +7,7 @@ import firstbot.utils.Utils;
 
 public class Builder extends Droid {
   private static final int DIST_TO_WALL_THRESH = 2;
+  private static final int MIN_LAB_CORNER_DIST = 7;
 
   MapLocation myBuilding;
   Direction dirToBuild;
@@ -34,7 +35,7 @@ public class Builder extends Droid {
             parentArchonLoc.x <= Cache.Permanent.MAP_WIDTH / 2 ? 0 : (Cache.Permanent.MAP_WIDTH-1),
             parentArchonLoc.y <= Cache.Permanent.MAP_HEIGHT / 2 ? 0 : (Cache.Permanent.MAP_HEIGHT-1));
     archonDistanceToCorner = Utils.maxSingleAxisDist(parentArchonLoc, corner);
-    if (archonDistanceToCorner <= 1) archonDistanceToCorner = 2;
+    if (archonDistanceToCorner < MIN_LAB_CORNER_DIST) archonDistanceToCorner = MIN_LAB_CORNER_DIST;
     bestLocationToSpawnLab = findBestLabSpawnLocation();
   }
 

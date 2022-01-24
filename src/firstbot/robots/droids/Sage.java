@@ -17,7 +17,20 @@ public class Sage extends Soldier {
   protected boolean attackEnemies() throws GameActionException {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
+//    if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
+      Printer.cleanPrint();
+      Printer.print("isMovementDisabled: " + isMovementDisabled);
+      Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+      Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
+      Printer.submitPrint();
+//    }
     for (Direction dir : Utils.directionsNine) {
+//      if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
+//        Printer.cleanPrint();
+//        Printer.print("test move in dir: " + dir);
+//        Printer.print("rc.canMove: " + rc.canMove(dir));
+//        Printer.submitPrint();
+//      }
       if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue;
 //      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
 //      if (dir != Direction.CENTER && Cache.PerTurn.ALL_NEARBY_FRIENDLY_ROBOTS.length < 6 && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), Cache.PerTurn.CURRENT_LOCATION.distanceSquaredTo(communicator.archonInfo.getNearestEnemyArchon(Cache.PerTurn.CURRENT_LOCATION)))) {
@@ -25,7 +38,7 @@ public class Sage extends Soldier {
 //          continue;
 //        }
 //      }
-      Printer.cleanPrint();
+//      Printer.cleanPrint();
       MicroInfo curr = new MicroInfo.MicroInfoSages(this, dir);
       switch (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length) {
         case 10:
@@ -57,6 +70,9 @@ public class Sage extends Soldier {
           }
       }
       curr.finalizeInfo();
+//      if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
+        ((MicroInfo.MicroInfoSages)curr).utilPrint();
+//      }
       if (best == null || curr.isBetterThan(best)) {
         best = curr;
       }

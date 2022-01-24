@@ -47,8 +47,13 @@ public class Soldier extends Droid {
       }
     }
 
-    if (archonToSave != null && !isMovementDisabled && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-//      Printer.print("archonToSave: " + archonToSave);
+    if (archonToSave != null
+      && !isMovementDisabled
+      && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)
+      && (!offensiveEnemiesNearby() || !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared))) {
+      Printer.cleanPrint();
+      Printer.print("archonToSave: " + archonToSave);
+      Printer.submitPrint();
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
@@ -68,8 +73,8 @@ public class Soldier extends Droid {
 
   RobotInfo lastAttackedEnemy;
   void runNew() throws GameActionException {
-    if (anyOffensiveEnemies() && attackEnemies()) {
-//      attackEnemies();
+    if (anyOffensiveEnemies()) {
+      attackEnemies();
     } else if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 0) {
       RobotInfo best = null;
       int distToBest = 9999;
@@ -122,6 +127,11 @@ public class Soldier extends Droid {
   protected boolean attackEnemies() throws GameActionException {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
+//    Printer.cleanPrint();
+//    Printer.print("isMovementDisabled: " + isMovementDisabled);
+//    Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//    Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
+//    Printer.submitPrint();
     for (Direction dir : Utils.directionsNine) {
       if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue;
 //      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
@@ -130,7 +140,7 @@ public class Soldier extends Droid {
 //          continue;
 //        }
 //      }
-      Printer.cleanPrint();
+//      Printer.cleanPrint();
       MicroInfo curr = new MicroInfo.MicroInfoGeneric(this, dir);
       switch (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length) {
         case 10:
@@ -162,6 +172,7 @@ public class Soldier extends Droid {
           }
       }
       curr.finalizeInfo();
+//      ((MicroInfo.MicroInfoGeneric)curr).utilPrint();
       if (best == null || curr.isBetterThan(best)) {
         best = curr;
       }
@@ -282,7 +293,7 @@ public class Soldier extends Droid {
   /**
    * send message to fellow soldiers to join my fight
    */
-  void broadcastJoinOrEndMyFight(MicroInfo<?> executedMicro) {
+  void broadcastJoinOrEndMyFight(MicroInfo<?,?> executedMicro) {
 //    if (executedMicro.chosenEnemyToAttack != null && executedMicro.chosenEnemyToAttack.health <= Cache.Permanent.ROBOT_TYPE.damage) {
 //      communicator.enqueueMessage(new EndFightMessage(executedMicro.chosenEnemyToAttack.location));
 //      return;

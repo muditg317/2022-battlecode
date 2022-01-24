@@ -10,9 +10,9 @@ import firstbot.utils.Global;
 import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
-public abstract class MicroInfo<T extends MicroInfo<T>> {
+public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 
-  public final Soldier soldier;
+  public final U robotDoingMicro;
   public final MapLocation location;
   public final Direction direction;
   public final boolean isMovement;
@@ -37,8 +37,8 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
     return 0;
   }
   
-  protected MicroInfo(Soldier soldier, Direction direction) {
-    this.soldier = soldier;
+  protected MicroInfo(U robotDoingMicro, Direction direction) {
+    this.robotDoingMicro = robotDoingMicro;
     this.direction = direction;
     this.location = Cache.PerTurn.CURRENT_LOCATION.add(direction);
     isMovement = direction != Direction.CENTER;
@@ -70,7 +70,7 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
    */
   public abstract boolean execute() throws GameActionException;
 
-  public static class MicroInfoGeneric extends MicroInfo<MicroInfoGeneric> {
+  public static class MicroInfoGeneric extends MicroInfo<MicroInfoGeneric, Soldier> {
     final int rubble;
     final int distanceToFriendlyArchon;
     final int distanceToEnemyArchon;
@@ -78,6 +78,7 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
 
     int totalOffensiveEnemies;
     int numOffendingEnemies;
+    int numOffendingSages;
     double enemyDPS;
     double friendlyDPS;
 
@@ -123,6 +124,9 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
         }
         if (location.isWithinDistanceSquared(nextEnemy.location, nextEnemy.type.actionRadiusSquared)) {
           numOffendingEnemies++;
+          if (nextEnemy.type == RobotType.SAGE) {
+            numOffendingSages++;
+          }
           double turnsTillNextCooldown = Utils.turnsTillNextCooldown(nextEnemy.type.actionCooldown, Global.rc.senseRubble(nextEnemy.location));
           enemyDPS += (nextEnemy.type.damage / turnsTillNextCooldown);
         }
@@ -173,7 +177,7 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
             && rubble <= Global.rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) && ( // TODO: numOffending=0 doesn't account for going from 2 -> 1 enemies
             bestTarget.type.damage <= 0
             || (numOffendingEnemies == 0)))
-            || (numOffendingEnemies == 1 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
+            || (numOffendingEnemies <= 1 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
         ;
         if (shouldAttackAndExit) {
           isBadIdea = false;
@@ -186,10 +190,14 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
         isMovingInToAttack = !bestTarget.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED);
         // only move in if it's a 1v1 and rubble is less than the enemy's
         // TODO: potentially replace numOffensive=1 with something based on enemyDPS (which is based on rubble of enemies)
-        shouldMoveInToAttack = isMovingInToAttack && rubble <= rubbleOfTarget && (
+        shouldMoveInToAttack = isMovingInToAttack
+          && rubble <= rubbleOfTarget
+//          && rubble <= (bestTarget.type == RobotType.SAGE ? rubbleOfTarget)
+          && (
             bestTarget.type.damage <= 0
-            || (numOffendingEnemies == 1)
+            || (numOffendingEnemies <= 1)
             || (numOffendingEnemies <= 2 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
+//            || (bestTarget.type == RobotType.SAGE && numOffendingSages >= numOffendingEnemies-1)
         );
         if (shouldMoveInToAttack) {
           isBadIdea = false;
@@ -213,8 +221,9 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
 
       } else if (closestOffensive != null) { // no target but we have an offensive enemy in sight
         // approach the enemy (vision -> vision)
-        shouldMoveInAnyways = totalOffensiveEnemies == 1
+        shouldMoveInAnyways = totalOffensiveEnemies <= 1
             && rubble <= Global.rc.senseRubble(closestOffensive.location)
+            && Global.rc.getActionCooldownTurns() < 20
             && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(
                 closestOffensive.location,
                 distToClosestOffensive);
@@ -254,15 +263,6 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       }
       // from here, neither can move in for an attack
 
-      // check for approaching an enemy but not attacking
-      if (this.shouldMoveInAnyways != other.shouldMoveInAnyways) return this.shouldMoveInAnyways;
-      if (this.shouldMoveInAnyways) { // both are approaching a single enemy, choose the better option
-        if (this.rubble != other.rubble) return this.rubble < other.rubble;
-        if (this.distToClosestOffensive != other.distToClosestOffensive) return this.distToClosestOffensive < other.distToClosestOffensive;
-        return this.direction != Direction.CENTER;
-      }
-      // from here, there is no enemy which we are approaching or moving in to attack
-
       // check for attacking but not fleeing
       if (this.shouldAttackWithoutFlee != other.shouldAttackWithoutFlee) return this.shouldAttackWithoutFlee;
       if (this.shouldAttackWithoutFlee) { // both are attacking and staying within action, prefer fewer enemies
@@ -273,6 +273,15 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       }
       // from here, there is no enemy which we are attacking and failing to flee from
 
+      // check for approaching an enemy but not attacking
+      if (this.shouldMoveInAnyways != other.shouldMoveInAnyways) return this.shouldMoveInAnyways;
+      if (this.shouldMoveInAnyways) { // both are approaching a single enemy, choose the better option
+        if (this.rubble != other.rubble) return this.rubble < other.rubble;
+        if (this.distToClosestOffensive != other.distToClosestOffensive) return this.distToClosestOffensive < other.distToClosestOffensive;
+        return this.direction != Direction.CENTER;
+      }
+      // from here, there is no enemy which we are approaching or moving in to attack
+
       if (this.rubble != other.rubble) return this.rubble < other.rubble;
       if (this.closestOffensive != null && other.closestOffensive != null) {
         if (this.distToClosestOffensive != other.distToClosestOffensive) return this.distToClosestOffensive > other.distToClosestOffensive;
@@ -280,63 +289,15 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       return this.direction != Direction.CENTER;
     }
 
-    private boolean isBetterThanOld(MicroInfoGeneric other) {
-
-      if (this.rubble != other.rubble) return this.rubble < other.rubble;
-
-      if (this.numOffendingEnemies != other.numOffendingEnemies) { // always prefer less offensive units
-//        if (this.numOffensiveEnemies == 1 && other.numOffensiveEnemies == 0 // this moved towards an enemy
-////            && this.hasTarget && this.bestTarget.type.damage <= 0
-//        ) return Global.rc.isActionReady();
-//        if (this.numOffensiveEnemies == 0 && other.numOffensiveEnemies == 1 // other moved towards an enemy
-////            && other. mekjlnrwelkjgng
-//        ) return !Global.rc.isActionReady();
-        return this.numOffendingEnemies < other.numOffendingEnemies;
-      }
-
-      if (this.hasTarget != other.hasTarget) { // one or the other has a target
-        // return the one with the target if it's a nonOffensive target
-        if (this.tooCloseToEnemy == other.tooCloseToEnemy) {
-          if (this.tooCloseToEnemy) {
-            if (this.hasTarget) return this.bestTarget.type.damage <= 0;
-            else return other.bestTarget.type.damage <= 0;
-          } else {
-            if (this.hasTarget) return this.bestTarget.type.damage > 0;
-            else return other.bestTarget.type.damage > 0;
-          }
-        } else {
-//          if (this.hasTarget) {
-//            return this.tooCloseToEnemy;
-//          } else {
-//            return !this.tooCloseToEnemy;
-//          }
-          return this.tooCloseToEnemy;
-        }
-      }
-      if (!this.hasTarget) { // both have no target
-        if (this.rubble != other.rubble) return this.rubble < other.rubble;
-        if (this.distanceToFriendlyArchon != other.distanceToFriendlyArchon) return this.distanceToFriendlyArchon < other.distanceToFriendlyArchon;
-        if (this.distanceToEnemyArchon != other.distanceToEnemyArchon) return this.distanceToEnemyArchon > other.distanceToEnemyArchon;
-        return false;
-      }
-      // assume both have target now
-      if (this.targetPriority != other.targetPriority) return this.targetPriority > other.targetPriority;
-      if (this.bestTarget.health != other.bestTarget.health) return this.bestTarget.health < other.bestTarget.health;
-      if (this.rubble != other.rubble) return this.rubble < other.rubble;
-      if (this.distanceToFriendlyArchon != other.distanceToFriendlyArchon) return this.distanceToFriendlyArchon < other.distanceToFriendlyArchon;
-      if (this.distanceToEnemyArchon != other.distanceToEnemyArchon) return this.distanceToEnemyArchon > other.distanceToEnemyArchon;
-      return false;
-    }
-
     public boolean execute() throws GameActionException {
       boolean attacked = false;
-      soldier.lastAttackedEnemy = this.bestTarget;
+      this.robotDoingMicro.lastAttackedEnemy = this.bestTarget;
       if (this.hasTarget && this.bestTarget.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED) && this.rubble <= Global.rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION)) {
-        attacked = soldier.attackTarget(bestTarget.location);
+        attacked = this.robotDoingMicro.attackTarget(bestTarget.location);
       }
-      soldier.move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
+      this.robotDoingMicro.move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
       if (this.hasTarget && !attacked) {
-        attacked = soldier.attackTarget(bestTarget.location);
+        attacked = this.robotDoingMicro.attackTarget(bestTarget.location);
       }
       return attacked;
     }
@@ -356,9 +317,7 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
 
   }
 
-  public static class MicroInfoSages extends MicroInfo<MicroInfoSages> {
-    final Sage sage;
-
+  public static class MicroInfoSages extends MicroInfo<MicroInfoSages, Sage> {
     final int rubble;
     final int distanceToFriendlyArchon;
     final int distanceToEnemyArchon;
@@ -393,7 +352,6 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
 
     public MicroInfoSages(Sage sage, Direction direction) throws GameActionException {
       super(sage, direction);
-      this.sage = sage;
       this.rubble = Global.rc.senseRubble(location);
       this.distanceToEnemyArchon = this.distanceToFriendlyArchon = 0;
 //      this.distanceToFriendlyArchon = Global.communicator.archonInfo.getNearestFriendlyArchon(location).distanceSquaredTo(location);
@@ -434,11 +392,14 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       } else if (getPriority(nextEnemy.type) < getPriority(bestTarget.type)) {
         return;
       }
-      if (nextEnemy.health < bestTarget.health) {
-        bestTarget = nextEnemy;
-        distToTarget = nextEnemy.location.distanceSquaredTo(location);
-        return;
-      } else if (nextEnemy.health > bestTarget.health) {
+      if (nextEnemy.health != bestTarget.health) {
+        if (bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage
+                ? (nextEnemy.health <= Cache.Permanent.ROBOT_TYPE.damage
+                    && nextEnemy.health > bestTarget.health)
+                : nextEnemy.health < bestTarget.health) {
+          bestTarget = nextEnemy;
+          distToTarget = nextEnemy.location.distanceSquaredTo(location);
+        }
         return;
       }
       if (nextEnemy.location.isWithinDistanceSquared(location, distToTarget -1)) {
@@ -456,13 +417,13 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
         rubbleOfTarget = Global.rc.senseRubble(bestTarget.location);
 
         // one enemy at edge of action and no others, we are attacking then moving away
-        isAttackAndExit = !location.isWithinDistanceSquared(bestTarget.location, bestTarget.type.actionRadiusSquared);
+        isAttackAndExit = !location.isWithinDistanceSquared(bestTarget.location, Cache.Permanent.ACTION_RADIUS_SQUARED);
         // only do so if there was just that one enemy
         shouldAttackAndExit = (isAttackAndExit
                 && rubble <= Global.rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION) && ( // TODO: numOffending=0 doesn't account for going from 2 -> 1 enemies
                 bestTarget.type.damage <= 0
                         || (numOffendingEnemies == 0)))
-                || (numOffendingEnemies == 1 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
+                || (numOffendingEnemies <= 1 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
         ;
         if (shouldAttackAndExit) {
           isBadIdea = false;
@@ -476,9 +437,9 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
         // only move in if it's a 1v1 and rubble is less than the enemy's
         // TODO: potentially replace numOffensive=1 with something based on enemyDPS (which is based on rubble of enemies)
         shouldMoveInToAttack = isMovingInToAttack && rubble <= rubbleOfTarget && (
-                bestTarget.type.damage <= 0
-                        || (numOffendingEnemies == 1)
-                        || (numOffendingEnemies <= 2 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
+            bestTarget.type.damage <= 0
+            || (numOffendingEnemies <= 1)
+            || (numOffendingEnemies <= 2 && bestTarget.health <= Cache.Permanent.ROBOT_TYPE.damage)
         );
         if (shouldMoveInToAttack) {
           isBadIdea = false;
@@ -502,11 +463,15 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
 
       } else if (closestOffensive != null) { // no target but we have an offensive enemy in sight
         // approach the enemy (vision -> vision)
-        shouldMoveInAnyways = totalOffensiveEnemies == 1
+        shouldMoveInAnyways = totalOffensiveEnemies <= 1
                 && rubble <= Global.rc.senseRubble(closestOffensive.location)
+                && Global.rc.getActionCooldownTurns() < 20
                 && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(
-                closestOffensive.location,
-                distToClosestOffensive);
+                        closestOffensive.location,
+                        Cache.Permanent.ACTION_RADIUS_SQUARED)
+                && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(
+                        closestOffensive.location,
+                        distToClosestOffensive);
       } else {
         isBadIdea = true;
       }
@@ -543,15 +508,6 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       }
       // from here, neither can move in for an attack
 
-      // check for approaching an enemy but not attacking
-      if (this.shouldMoveInAnyways != other.shouldMoveInAnyways) return this.shouldMoveInAnyways;
-      if (this.shouldMoveInAnyways) { // both are approaching a single enemy, choose the better option
-        if (this.rubble != other.rubble) return this.rubble < other.rubble;
-        if (this.distToClosestOffensive != other.distToClosestOffensive) return this.distToClosestOffensive < other.distToClosestOffensive;
-        return this.direction != Direction.CENTER;
-      }
-      // from here, there is no enemy which we are approaching or moving in to attack
-
       // check for attacking but not fleeing
       if (this.shouldAttackWithoutFlee != other.shouldAttackWithoutFlee) return this.shouldAttackWithoutFlee;
       if (this.shouldAttackWithoutFlee) { // both are attacking and staying within action, prefer fewer enemies
@@ -562,6 +518,15 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       }
       // from here, there is no enemy which we are attacking and failing to flee from
 
+      // check for approaching an enemy but not attacking
+      if (this.shouldMoveInAnyways != other.shouldMoveInAnyways) return this.shouldMoveInAnyways;
+      if (this.shouldMoveInAnyways) { // both are approaching a single enemy, choose the better option
+        if (this.rubble != other.rubble) return this.rubble < other.rubble;
+        if (this.distToClosestOffensive != other.distToClosestOffensive) return this.distToClosestOffensive < other.distToClosestOffensive;
+        return this.direction != Direction.CENTER;
+      }
+      // from here, there is no enemy which we are approaching or moving in to attack
+
       if (this.rubble != other.rubble) return this.rubble < other.rubble;
       if (this.closestOffensive != null && other.closestOffensive != null) {
         if (this.distToClosestOffensive != other.distToClosestOffensive) return this.distToClosestOffensive > other.distToClosestOffensive;
@@ -569,63 +534,15 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       return this.direction != Direction.CENTER;
     }
 
-    private boolean isBetterThanOld(MicroInfoGeneric other) {
-
-      if (this.rubble != other.rubble) return this.rubble < other.rubble;
-
-      if (this.numOffendingEnemies != other.numOffendingEnemies) { // always prefer less offensive units
-//        if (this.numOffensiveEnemies == 1 && other.numOffensiveEnemies == 0 // this moved towards an enemy
-////            && this.hasTarget && this.bestTarget.type.damage <= 0
-//        ) return Global.rc.isActionReady();
-//        if (this.numOffensiveEnemies == 0 && other.numOffensiveEnemies == 1 // other moved towards an enemy
-////            && other. mekjlnrwelkjgng
-//        ) return !Global.rc.isActionReady();
-        return this.numOffendingEnemies < other.numOffendingEnemies;
-      }
-
-      if (this.hasTarget != other.hasTarget) { // one or the other has a target
-        // return the one with the target if it's a nonOffensive target
-        if (this.tooCloseToEnemy == other.tooCloseToEnemy) {
-          if (this.tooCloseToEnemy) {
-            if (this.hasTarget) return this.bestTarget.type.damage <= 0;
-            else return other.bestTarget.type.damage <= 0;
-          } else {
-            if (this.hasTarget) return this.bestTarget.type.damage > 0;
-            else return other.bestTarget.type.damage > 0;
-          }
-        } else {
-//          if (this.hasTarget) {
-//            return this.tooCloseToEnemy;
-//          } else {
-//            return !this.tooCloseToEnemy;
-//          }
-          return this.tooCloseToEnemy;
-        }
-      }
-      if (!this.hasTarget) { // both have no target
-        if (this.rubble != other.rubble) return this.rubble < other.rubble;
-        if (this.distanceToFriendlyArchon != other.distanceToFriendlyArchon) return this.distanceToFriendlyArchon < other.distanceToFriendlyArchon;
-        if (this.distanceToEnemyArchon != other.distanceToEnemyArchon) return this.distanceToEnemyArchon > other.distanceToEnemyArchon;
-        return false;
-      }
-      // assume both have target now
-      if (this.targetPriority != other.targetPriority) return this.targetPriority > other.targetPriority;
-      if (this.bestTarget.health != other.bestTarget.health) return this.bestTarget.health < other.bestTarget.health;
-      if (this.rubble != other.rubble) return this.rubble < other.rubble;
-      if (this.distanceToFriendlyArchon != other.distanceToFriendlyArchon) return this.distanceToFriendlyArchon < other.distanceToFriendlyArchon;
-      if (this.distanceToEnemyArchon != other.distanceToEnemyArchon) return this.distanceToEnemyArchon > other.distanceToEnemyArchon;
-      return false;
-    }
-
     public boolean execute() throws GameActionException {
       boolean attacked = false;
-      soldier.lastAttackedEnemy = this.bestTarget;
+      this.robotDoingMicro.lastAttackedEnemy = this.bestTarget;
       if (this.hasTarget && this.bestTarget.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.ACTION_RADIUS_SQUARED) && this.rubble <= Global.rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION)) {
-        attacked = soldier.attackTarget(bestTarget.location);
+        attacked = this.robotDoingMicro.attackTarget(bestTarget.location);
       }
-      soldier.move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
+      this.robotDoingMicro.move(Cache.PerTurn.CURRENT_LOCATION.directionTo(location));
       if (this.hasTarget && !attacked) {
-        attacked = soldier.attackTarget(bestTarget.location);
+        attacked = this.robotDoingMicro.attackTarget(bestTarget.location);
       }
       return attacked;
     }
@@ -635,10 +552,11 @@ public abstract class MicroInfo<T extends MicroInfo<T>> {
       Printer.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
       Printer.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
       Printer.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
-      Printer.print("closestOffensive: " + closestOffensive, "shouldMoveInAnyways: " + shouldMoveInAnyways);
+      Printer.print("closestOffensive: " + closestOffensive);
       Printer.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
       Printer.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
       Printer.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
+      Printer.print("shouldMoveInAnyways: " + shouldMoveInAnyways);
       Printer.print("isBadIdea: " + isBadIdea);
       Printer.submitPrint();
     }

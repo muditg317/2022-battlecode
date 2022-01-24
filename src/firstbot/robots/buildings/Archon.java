@@ -459,11 +459,11 @@ public class Archon extends Building {
     int advantage = 0;
     for (RobotInfo ri : Cache.PerTurn.ALL_NEARBY_ROBOTS) {
       if (ri.type.damage > 0) {
-        if (ri.team == Cache.Permanent.OUR_TEAM) advantage += ri.type.health;
-        else advantage -= ri.type.health;
+        if (ri.team == Cache.Permanent.OUR_TEAM) advantage += ri.health;
+        else advantage -= ri.health;
       }
     }
-    if (advantage >= 1) {
+    if (advantage <= 1) {
       saveMeRequest = new SaveMeMessage(toSave != null ? toSave : Cache.PerTurn.CURRENT_LOCATION);
       communicator.enqueueMessage(saveMeRequest);
     }
