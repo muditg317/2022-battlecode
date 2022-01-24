@@ -144,7 +144,7 @@ public class Archon extends Building {
         }
       } else {
         RobotType typeToSpawn = determineSpawnDroidType();
-        if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) >= typeToSpawn.buildCostLead * 2 || rc.getRoundNum() % archons == whichArchonAmI % archons || whichArchonAmI == archons) {
+        if (typeToSpawn != null && (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) >= typeToSpawn.buildCostLead * 2 || rc.getRoundNum() % archons == whichArchonAmI % archons || whichArchonAmI == archons)) {
           if (spawnDroid(typeToSpawn)) {
             if (initialMinersToSpawn == minersSpawned && typeToSpawn == RobotType.MINER) saveUpForBuilderAndLab = true;
           }
@@ -533,6 +533,7 @@ public class Archon extends Building {
           leadSpent += RobotType.SOLDIER.buildCostLead;
           return true;
         }
+        break;
       case SAGE:
         if (buildRobot(RobotType.SAGE, Utils.randomDirection())) {
           rc.setIndicatorString("Spawn sage!");
@@ -551,7 +552,8 @@ public class Archon extends Building {
     if (needSage()) return RobotType.SAGE;
     if (needMiner()) return RobotType.MINER;
     else if (needBuilder()) return RobotType.BUILDER;
-    else return RobotType.SOLDIER;
+    else if (needSoldier()) return RobotType.SOLDIER;
+    return null;
   }
 
   private boolean needSage() throws GameActionException {
@@ -568,7 +570,8 @@ public class Archon extends Building {
     // TODO: something based on lead income
 
     return minersSpawned < initialMinersToSpawn
-            || (minersSpawned < soldiersSpawned / 2.0 && minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 100);
+        || (/*minersSpawned < soldiersSpawned / 1.5 &&*/ minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 50);
+//        || (movingAvgIncome < 3);
 //    return rc.getTeamLeadAmount(rc.getTeam()) < 500 && ( // if we have > 2000Pb, just skip miners
 ////        movingAvgIncome < 10
 //        (rc.getRoundNum() < 100 && localLead > 15 && movingAvgIncome < rc.getRoundNum()*1.5)
@@ -586,9 +589,13 @@ public class Archon extends Building {
    */
   private boolean needBuilder() {
     return rc.getTeamLeadAmount(rc.getTeam()) > 200 && (  // if lots of lead, make builder to spend that lead
-        rc.getRoundNum() % 10 == 0
+        rc.getRoundNum() % 11 <= rc.getArchonCount()
         || buildersSpawned < 5
     );
+  }
+
+  private boolean needSoldier() throws GameActionException {
+    return soldiersSpawned < 3 || soldiersSpawned < sagesSpawned / 3;
   }
 
   private int lastHealedID = -1;

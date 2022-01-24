@@ -284,7 +284,7 @@ public abstract class Droid extends Robot {
     }
   }
 
-  private final int RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH = this instanceof Miner ? 3 : 5;
+  private final int RUBBLY_EXPLORATIONS_BEFORE_GO_THROUGH = this instanceof Miner ? 0 : 5;
   private int timesTriedEnterHighRubble = 0;
   private boolean justGoThrough = false;
   /**
@@ -309,7 +309,7 @@ public abstract class Droid extends Robot {
     turnsExploring++;
 //    Direction goal = Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget);
     Direction desired = getOptimalDirectionTowards(explorationTarget);
-    if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
+    if (desired == null) desired = getLeastRubbleMoveableDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
     if (desired == null) {
       rc.setIndicatorString("Cannot reach exploreTarget: " + explorationTarget);
 //      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");
@@ -318,7 +318,7 @@ public abstract class Droid extends Robot {
     boolean changed = checkTooMuchRubbleOnPathToExploration(desired);
     if (changed) {
       desired = getOptimalDirectionTowards(explorationTarget);
-      if (desired == null) desired = getLeastRubbleDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
+      if (desired == null) desired = getLeastRubbleMoveableDirAroundDir(Cache.PerTurn.CURRENT_LOCATION.directionTo(explorationTarget));
       if (desired == null) {
         rc.setIndicatorString("Cannot reach new (changed for lead) exploreTarget: " + explorationTarget);
 //      System.out.println("Desired direction (from " + Cache.PerTurn.CURRENT_LOCATION + ") (explorationTarget " + explorationTarget + ") is null!!");

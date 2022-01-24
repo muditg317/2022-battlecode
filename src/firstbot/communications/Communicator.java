@@ -455,7 +455,7 @@ public class Communicator {
       knownSymmetry = Utils.commsSymmetryMap[index];
       guessedSymmetry = Utils.commsSymmetryGuessMap[index];
 //      System.out.println("symIndex: " + index + " known: " + knownSymmetry + " -- guess: " + guessedSymmetry);
-      System.out.printf("NEW SYMMETRY KNOWLEDGE\n\tnot:%s\n\tknown:%s\n\tguess:%s\n", blockedSymmetry, knownSymmetry, guessedSymmetry);
+//      System.out.printf("NEW SYMMETRY KNOWLEDGE\n\tnot:%s\n\tknown:%s\n\tguess:%s\n", blockedSymmetry, knownSymmetry, guessedSymmetry);
 //      dirty = true;
       writeSymmetry();
       archonInfo.mirrorSelfToEnemies();

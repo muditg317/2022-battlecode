@@ -218,8 +218,8 @@ public class Soldier extends Droid {
     }
     int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
     if (rubbleHere > 20) {
-      Direction leastRubble = getLeastRubbleDirAroundDir(dirToMove);
-      if (rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION.add(leastRubble)) < rubbleHere) {
+      Direction leastRubble = getLeastRubbleMoveableDirAroundDir(dirToMove);
+      if (leastRubble != null && rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION.add(leastRubble)) < rubbleHere) {
         dirToMove = leastRubble;
       }
     }

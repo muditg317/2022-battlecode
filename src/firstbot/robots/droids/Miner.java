@@ -1,12 +1,6 @@
 package firstbot.robots.droids;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
+import battlecode.common.*;
 import firstbot.communications.messages.LeadFoundMessage;
 import firstbot.communications.messages.LeadRequestMessage;
 import firstbot.communications.messages.Message;
@@ -39,6 +33,7 @@ public class Miner extends Droid {
           parentArchonLoc.x < Cache.PerTurn.CURRENT_LOCATION.x ? Cache.Permanent.MAP_WIDTH-1 : 0,
           parentArchonLoc.y < Cache.PerTurn.CURRENT_LOCATION.y ? Cache.Permanent.MAP_HEIGHT-1 : 0);
     }
+//    exploringRandomly = false;
 //    System.out.println("Miner init cost: " + Clock.getBytecodeNum());
   }
 
@@ -334,6 +329,8 @@ public class Miner extends Droid {
 
     int minBound = 2;
     leadLocs = leadLocs.length >= 2 ? rc.senseNearbyLocationsWithLead(Utils.DSQ_2by2, minBound) : rc.senseNearbyLocationsWithLead(-1, minBound);
+    boolean exploreMirroredPocket = leadLocs.length > 5;
+
 //    System.out.println("getOptimalLeadMiningPosition: " + leadLocs.length);
     int tries = 5;
     while (tries-- > 0 && leadLocs.length > MAX_LEAD_LOCS_LEN) {
@@ -530,6 +527,11 @@ public class Miner extends Droid {
 
     if (bestLead > Utils.LEAD_PER_MINER_CLAIM) {
       broadcastLead(bestLocation, (int) Math.ceil(bestLead / (double) Utils.LEAD_PER_MINER_CLAIM) - 1);
+    }
+
+    if (bestLocation != null && exploreMirroredPocket) {
+      explorationTarget = Utils.applySymmetry(bestLocation, communicator.metaInfo.guessedSymmetry);
+      exploringRandomly = false;
     }
 
     return bestLocation;

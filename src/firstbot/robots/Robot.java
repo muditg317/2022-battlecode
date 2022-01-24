@@ -403,7 +403,7 @@ public abstract class Robot {
    * @return the closest direction with least rubble
    * @throws GameActionException if sensing fails
    */
-  protected Direction getLeastRubbleDirAroundDir(Direction goalDir) throws GameActionException {
+  protected Direction getLeastRubbleMoveableDirAroundDir(Direction goalDir) throws GameActionException {
     MapLocation a = Cache.PerTurn.CURRENT_LOCATION.add(goalDir);
     MapLocation b = Cache.PerTurn.CURRENT_LOCATION.add(goalDir.rotateRight());
     MapLocation c = Cache.PerTurn.CURRENT_LOCATION.add(goalDir.rotateLeft());

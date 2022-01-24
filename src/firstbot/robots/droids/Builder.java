@@ -109,7 +109,7 @@ public class Builder extends Droid {
         moveOptimalAway(bestLocationToSpawnLab);
       }
       if (bestLocationToSpawnLab == null) {
-        System.out.println("no best location to spawn lab!!");
+//        System.out.println("no best location to spawn lab!!");
       } else {
         MapLocation bestBuildSpot = findBestBuildSpot(bestLocationToSpawnLab);
         if (bestBuildSpot == null) bestBuildSpot = bestLocationToSpawnLab;
@@ -121,7 +121,7 @@ public class Builder extends Droid {
 
         Direction dirToBuildLab = getLeastRubbleUnoccupiedDir(); //Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocationToSpawnLab);
         if (buildRobot(RobotType.LABORATORY, dirToBuildLab)) {
-          System.out.println("spawning lab at " + bestLocationToSpawnLab);
+//          System.out.println("spawning lab at " + bestLocationToSpawnLab);
           myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dirToBuildLab);
           broadcastLabBuilt();
           labBuilt = true;
