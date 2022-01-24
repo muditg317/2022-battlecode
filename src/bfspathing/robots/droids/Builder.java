@@ -1,9 +1,9 @@
-package firstbot.robots.droids;
+package bfspathing.robots.droids;
 
 import battlecode.common.*;
-import firstbot.communications.messages.LabBuiltMessage;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import bfspathing.communications.messages.LabBuiltMessage;
+import bfspathing.utils.Cache;
+import bfspathing.utils.Utils;
 
 public class Builder extends Droid {
   private static final int DIST_TO_WALL_THRESH = 2;
@@ -44,28 +44,28 @@ public class Builder extends Droid {
   // 2) location has least rubble
   // 3) location is closest to corner
   private MapLocation findBestLabSpawnLocation() throws GameActionException {
-//    Printer.cleanPrint();
+//    //Printer.cleanPrint();
     MapLocation bestLabLocation = null;
     int bestRubbleAtLocation = 101;
     int bestDistanceToCorner = 101;
     for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-//      Printer.submitPrint();
-//      Printer.print("loc: " + loc);
+//      //Printer.submitPrint();
+//      //Printer.print("loc: " + loc);
       if (!rc.canSenseLocation(loc) || (rc.isLocationOccupied(loc) && !Cache.PerTurn.CURRENT_LOCATION.equals(loc))) continue;
       int candidateDistanceToCorner = Utils.maxSingleAxisDist(loc, corner);
-//      Printer.print("candidateDistanceToCorner " + candidateDistanceToCorner, "archonDistanceToCorner: " + archonDistanceToCorner);
+//      //Printer.print("candidateDistanceToCorner " + candidateDistanceToCorner, "archonDistanceToCorner: " + archonDistanceToCorner);
       if (candidateDistanceToCorner <= archonDistanceToCorner) {
         int candidateRubble = rc.senseRubble(loc);
-//        Printer.print("candidateRubble " + candidateRubble, "bestRubbleAtLocation: " + bestRubbleAtLocation);
+//        //Printer.print("candidateRubble " + candidateRubble, "bestRubbleAtLocation: " + bestRubbleAtLocation);
         if (candidateRubble < bestRubbleAtLocation) {
           bestLabLocation = loc;
           bestRubbleAtLocation = candidateRubble;
           bestDistanceToCorner = candidateDistanceToCorner;
-//          Printer.print("updating to " + bestLabLocation);
+//          //Printer.print("updating to " + bestLabLocation);
         } else if (candidateRubble == bestRubbleAtLocation && candidateDistanceToCorner < bestDistanceToCorner) {
           bestLabLocation = loc;
           bestDistanceToCorner = candidateDistanceToCorner;
-//          Printer.print("updating to " + bestLabLocation);
+//          //Printer.print("updating to " + bestLabLocation);
         }
       }
     }
@@ -105,23 +105,23 @@ public class Builder extends Droid {
 
     if (!labBuilt) {
       if (bestLocationToSpawnLab != null && Cache.PerTurn.CURRENT_LOCATION.equals(bestLocationToSpawnLab)) {
-//        System.out.println("Sorry im in the way! moving...");
+//        //System.out.println("Sorry im in the way! moving...");
         moveOptimalAway(bestLocationToSpawnLab);
       }
       if (bestLocationToSpawnLab == null) {
-//        System.out.println("no best location to spawn lab!!");
+//        //System.out.println("no best location to spawn lab!!");
       } else {
         MapLocation bestBuildSpot = findBestBuildSpot(bestLocationToSpawnLab);
         if (bestBuildSpot == null) bestBuildSpot = bestLocationToSpawnLab;
 
-        rc.setIndicatorString("lab loc: " + bestLocationToSpawnLab + " build loc: " + bestBuildSpot);
+        //rc.setIndicatorString("lab loc: " + bestLocationToSpawnLab + " build loc: " + bestBuildSpot);
         if (moveOptimalTowards(bestBuildSpot) && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(bestLocationToSpawnLab, Utils.DSQ_1by1) && Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(bestLocationToSpawnLab, Utils.DSQ_2by2)) {
           bestLocationToSpawnLab = findBestLabSpawnLocation();
         }
 
         Direction dirToBuildLab = getLeastRubbleUnoccupiedDir(); //Cache.PerTurn.CURRENT_LOCATION.directionTo(bestLocationToSpawnLab);
         if (dirToBuildLab != null && buildRobot(RobotType.LABORATORY, dirToBuildLab)) {
-//          System.out.println("spawning lab at " + bestLocationToSpawnLab);
+//          //System.out.println("spawning lab at " + bestLocationToSpawnLab);
           myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dirToBuildLab);
           broadcastLabBuilt();
           labBuilt = true;
@@ -187,7 +187,7 @@ public class Builder extends Droid {
   private boolean repairBuilding() throws GameActionException {
     RobotInfo toRepair = rc.senseRobotAtLocation(myBuilding);
     if (toRepair == null) {
-      System.out.println("NOBODY TO REPAIR!! UH OH -- " + myBuilding + " is empty...");
+      //System.out.println("NOBODY TO REPAIR!! UH OH -- " + myBuilding + " is empty...");
       return true; // stop repairing here
     }
     int healthNeeded = toRepair.type.getMaxHealth(1) - toRepair.health;
