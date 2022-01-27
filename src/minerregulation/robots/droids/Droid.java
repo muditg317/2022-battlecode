@@ -1,10 +1,10 @@
-package firstbot.robots.droids;
+package minerregulation.robots.droids;
 
 import battlecode.common.*;
-import firstbot.robots.Robot;
-import firstbot.utils.Cache;
-import firstbot.utils.Printer;
-import firstbot.utils.Utils;
+import minerregulation.robots.Robot;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Printer;
+import minerregulation.utils.Utils;
 
 public abstract class Droid extends Robot {
 

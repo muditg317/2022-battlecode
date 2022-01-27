@@ -1,9 +1,9 @@
-package firstbot.robots.droids;
+package minerregulation.robots.droids;
 
 import battlecode.common.*;
-import firstbot.communications.messages.LabBuiltMessage;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import minerregulation.communications.messages.LabBuiltMessage;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Utils;
 
 public class Builder extends Droid {
   private static final int DIST_TO_WALL_THRESH = 2;

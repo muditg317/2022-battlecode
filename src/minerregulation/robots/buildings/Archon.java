@@ -1,9 +1,9 @@
-package firstbot.robots.buildings;
+package minerregulation.robots.buildings;
 
 import battlecode.common.*;
-import firstbot.communications.messages.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import minerregulation.communications.messages.*;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Utils;
 
 public class Archon extends Building {
   public static final int SUICIDE_ROUND = -50;

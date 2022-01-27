@@ -1,11 +1,11 @@
-package firstbot.communications;
+package minerregulation.communications;
 
 import battlecode.common.*;
-import firstbot.communications.messages.Message;
-import firstbot.containers.FastQueue;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Utils;
+import minerregulation.communications.messages.Message;
+import minerregulation.containers.FastQueue;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Global;
+import minerregulation.utils.Utils;
 
 /**
  * This class will have a variety of methods related to communications between robots

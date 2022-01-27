@@ -1,23 +1,23 @@
-package firstbot.robots;
+package minerregulation.robots;
 
 import battlecode.common.*;
-import firstbot.communications.Communicator;
-import firstbot.communications.messages.EnemyFoundMessage;
-import firstbot.communications.messages.Message;
-import firstbot.communications.messages.RubbleAtLocationMessage;
-import firstbot.pathfinding.BFS;
-import firstbot.pathfinding.StolenBFS2;
-import firstbot.robots.buildings.Archon;
-import firstbot.robots.buildings.Laboratory;
-import firstbot.robots.buildings.Watchtower;
-import firstbot.robots.droids.Builder;
-import firstbot.robots.droids.Miner;
-import firstbot.robots.droids.Sage;
-import firstbot.robots.droids.Soldier;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Printer;
-import firstbot.utils.Utils;
+import minerregulation.communications.Communicator;
+import minerregulation.communications.messages.EnemyFoundMessage;
+import minerregulation.communications.messages.Message;
+import minerregulation.communications.messages.RubbleAtLocationMessage;
+import minerregulation.pathfinding.BFS;
+import minerregulation.pathfinding.StolenBFS2;
+import minerregulation.robots.buildings.Archon;
+import minerregulation.robots.buildings.Laboratory;
+import minerregulation.robots.buildings.Watchtower;
+import minerregulation.robots.droids.Builder;
+import minerregulation.robots.droids.Miner;
+import minerregulation.robots.droids.Sage;
+import minerregulation.robots.droids.Soldier;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Global;
+import minerregulation.utils.Printer;
+import minerregulation.utils.Utils;
 
 public abstract class Robot {
   private static final boolean RESIGN_ON_GAME_EXCEPTION = false;

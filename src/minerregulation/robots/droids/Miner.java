@@ -1,11 +1,11 @@
-package firstbot.robots.droids;
+package minerregulation.robots.droids;
 
 import battlecode.common.*;
-import firstbot.communications.messages.LeadFoundMessage;
-import firstbot.communications.messages.LeadRequestMessage;
-import firstbot.communications.messages.Message;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import minerregulation.communications.messages.LeadFoundMessage;
+import minerregulation.communications.messages.LeadRequestMessage;
+import minerregulation.communications.messages.Message;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Utils;
 
 import java.util.Arrays;
 
@@ -79,12 +79,12 @@ public class Miner extends Droid {
       if (/*Cache.PerTurn.ROUND_NUM >= 15 && */ resourcesLeft && followLead()) {
         // performs action of moving to lead
       } else {
-//        if (closestCommedEnemy != null && !rc.canSenseLocation(closestCommedEnemy) && closestCommedEnemy.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, RAD_SQ_TO_RUN_FROM_COMM)) {
-//          runAwayFrom(closestCommedEnemy);
-////          randomizeExplorationTarget(true);
-//        } else {
+        if (closestCommedEnemy != null && !rc.canSenseLocation(closestCommedEnemy) && closestCommedEnemy.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, RAD_SQ_TO_RUN_FROM_COMM)) {
+          runAwayFrom(closestCommedEnemy);
+//          randomizeExplorationTarget(true);
+        } else {
           doExploration();
-//        }
+        }
 //      reachedTarget = goToTarget(); // performs action of moving to target location
       }
     }

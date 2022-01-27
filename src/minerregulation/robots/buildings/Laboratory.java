@@ -1,11 +1,11 @@
-package firstbot.robots.buildings;
+package minerregulation.robots.buildings;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotMode;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import minerregulation.utils.Cache;
+import minerregulation.utils.Utils;
 
 public class Laboratory extends Building {
   private static final int MIN_MINERS_TO_TRANSMUTE = 2;
