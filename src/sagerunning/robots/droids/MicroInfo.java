@@ -1,10 +1,10 @@
-package firstbot.robots.droids;
+package sagerunning.robots.droids;
 
 import battlecode.common.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Global;
-import firstbot.utils.Printer;
-import firstbot.utils.Utils;
+import sagerunning.utils.Cache;
+import sagerunning.utils.Global;
+import sagerunning.utils.Printer;
+import sagerunning.utils.Utils;
 
 public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 
@@ -107,7 +107,7 @@ public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 //      this.distanceToFriendlyArchon = Global.communicator.archonInfo.getNearestFriendlyArchon(location).distanceSquaredTo(location);
 //      this.distanceToEnemyArchon = Global.communicator.archonInfo.getNearestEnemyArchon(location).distanceSquaredTo(location);
       this.tooCloseToEnemy = this.distanceToEnemyArchon <= this.distanceToFriendlyArchon;
-//      Printer.print("Moving to " + location, "distToFriendArchon " + distanceToFriendlyArchon, "distToEnemyArchon " + distanceToEnemyArchon, "tooClose: " + tooCloseToEnemy);
+//      //Printer.print("Moving to " + location, "distToFriendArchon " + distanceToFriendlyArchon, "distToEnemyArchon " + distanceToEnemyArchon, "tooClose: " + tooCloseToEnemy);
     }
 
     @Override
@@ -301,14 +301,14 @@ public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 
     public void utilPrint() {
       Printer.cleanPrint();
-      Printer.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
-      Printer.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
-      Printer.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
-      Printer.print("closestOffensive: " + closestOffensive, "shouldMoveInAnyways: " + shouldMoveInAnyways);
-      Printer.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
-      Printer.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
-      Printer.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
-      Printer.print("isBadIdea: " + isBadIdea);
+      //Printer.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
+      //Printer.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
+      //Printer.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
+      //Printer.print("closestOffensive: " + closestOffensive, "shouldMoveInAnyways: " + shouldMoveInAnyways);
+      //Printer.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
+      //Printer.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
+      //Printer.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
+      //Printer.print("isBadIdea: " + isBadIdea);
       Printer.submitPrint();
     }
 
@@ -356,7 +356,7 @@ public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 //      this.distanceToFriendlyArchon = Global.communicator.archonInfo.getNearestFriendlyArchon(location).distanceSquaredTo(location);
 //      this.distanceToEnemyArchon = Global.communicator.archonInfo.getNearestEnemyArchon(location).distanceSquaredTo(location);
       this.tooCloseToEnemy = this.distanceToEnemyArchon <= this.distanceToFriendlyArchon;
-//      Printer.print("Moving to " + location, "distToFriendArchon " + distanceToFriendlyArchon, "distToEnemyArchon " + distanceToEnemyArchon, "tooClose: " + tooCloseToEnemy);
+//      //Printer.print("Moving to " + location, "distToFriendArchon " + distanceToFriendlyArchon, "distToEnemyArchon " + distanceToEnemyArchon, "tooClose: " + tooCloseToEnemy);
     }
 
     @Override
@@ -567,15 +567,15 @@ public abstract class MicroInfo<T extends MicroInfo<T, U>, U extends Soldier> {
 
     public void utilPrint() {
       Printer.cleanPrint();
-      Printer.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
-      Printer.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
-      Printer.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
-      Printer.print("closestOffensive: " + closestOffensive);
-      Printer.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
-      Printer.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
-      Printer.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
-      Printer.print("shouldMoveInAnyways: " + shouldMoveInAnyways);
-      Printer.print("isBadIdea: " + isBadIdea);
+      //Printer.print("EVALUATE MOVING IN DIR: " + direction, "Moving: " + Cache.PerTurn.CURRENT_LOCATION + " --> " + location, "isMovement: " + isMovement);
+      //Printer.print("rubble: " + rubble, "distanceToFriendlyArchon: " + distanceToFriendlyArchon, "distanceToEnemyArchon: " + distanceToEnemyArchon, "tooCloseToEnemy: " + tooCloseToEnemy);
+      //Printer.print("totalOffensiveEnemies: " + totalOffensiveEnemies, "numOffendingEnemies: " + numOffendingEnemies);
+      //Printer.print("closestOffensive: " + closestOffensive);
+      //Printer.print("bestTarget: " + bestTarget, "hasTarget: " + hasTarget, "rubbleOfTarget: " + rubbleOfTarget);
+      //Printer.print("canAttackAndExit: " + isAttackAndExit, "shouldAttackAndExit: " + shouldAttackAndExit);
+      //Printer.print("isMovingInToAttack: " + isMovingInToAttack, "shouldMoveInToAttack: " + shouldMoveInToAttack);
+      //Printer.print("shouldMoveInAnyways: " + shouldMoveInAnyways);
+      //Printer.print("isBadIdea: " + isBadIdea);
       Printer.submitPrint();
     }
 

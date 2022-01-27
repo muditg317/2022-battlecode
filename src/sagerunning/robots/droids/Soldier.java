@@ -1,9 +1,9 @@
-package firstbot.robots.droids;
+package sagerunning.robots.droids;
 
 import battlecode.common.*;
-import firstbot.communications.messages.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import sagerunning.communications.messages.*;
+import sagerunning.utils.Cache;
+import sagerunning.utils.Utils;
 
 public class Soldier extends Droid {
   private final int HALF_RANGE_TO_CHASE_FROM;
@@ -44,7 +44,7 @@ public class Soldier extends Droid {
       && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)
       && (!offensiveEnemiesNearby() || !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared))) {
 //      Printer.cleanPrint();
-//      Printer.print("archonToSave: " + archonToSave);
+//      //Printer.print("archonToSave: " + archonToSave);
 //      Printer.submitPrint();
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
@@ -53,11 +53,11 @@ public class Soldier extends Droid {
 
     boolean isActionReadyBefore = rc.isActionReady();
 
-//    if (this instanceof Sage && lastAttackedEnemy != null) System.out.println("1 lastAttackedEnemy: " + lastAttackedEnemy);
+//    if (this instanceof Sage && lastAttackedEnemy != null) //System.out.println("1 lastAttackedEnemy: " + lastAttackedEnemy);
 
     runNew();
 
-//    if (this instanceof Sage && lastAttackedEnemy != null) System.out.println("2 lastAttackedEnemy: " + lastAttackedEnemy);
+//    if (this instanceof Sage && lastAttackedEnemy != null) //System.out.println("2 lastAttackedEnemy: " + lastAttackedEnemy);
 
 
     if (rc.isActionReady()) {
@@ -69,18 +69,18 @@ public class Soldier extends Droid {
     // we attacked this round
     if (!isActionReadyAfter && isActionReadyBefore && this instanceof Sage) {
       if (lastAttackedEnemy == null) {
-        System.out.println("lastAttackedEnemy is null!!! " + Cache.PerTurn.CURRENT_LOCATION);
+        //System.out.println("lastAttackedEnemy is null!!! " + Cache.PerTurn.CURRENT_LOCATION);
       } else {
         int myRubble = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
-        rc.setIndicatorString("myRubble: " + myRubble + " lastAERubble: " + lastAttackedEnemyRubble);
-        if (myRubble >= lastAttackedEnemyRubble && lastAttackedEnemy.type != RobotType.ARCHON) { //health?
+        //rc.setIndicatorString("myRubble: " + myRubble + " lastAERubble: " + lastAttackedEnemyRubble);
+        if (myRubble >= lastAttackedEnemyRubble) { //health?
           cooldownAfterAttack = rc.getActionCooldownTurns();
         }
       }
     }
 
     // attacked someone on this round and this is a soldier
-//    if (this instanceof Sage && lastAttackedEnemy != null) System.out.println("3 lastAttackedEnemy: " + lastAttackedEnemy);
+//    if (this instanceof Sage && lastAttackedEnemy != null) //System.out.println("3 lastAttackedEnemy: " + lastAttackedEnemy);
 
 //    if (lastAttackedEnemy != null && this instanceof Sage && lastAttackedEnemy.type.damage > 0) {
 //      cooldownAfterAttack = rc.getActionCooldownTurns();
@@ -95,7 +95,7 @@ public class Soldier extends Droid {
   void runNew() throws GameActionException {
     if (anyOffensiveEnemies()) {
       attackEnemies();
-//      System.out.println("SETTING! " + lastAttackedEnemy);
+//      //System.out.println("SETTING! " + lastAttackedEnemy);
     } else if (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length > 0 && (!(this instanceof Sage) || rc.isActionReady())) {
       RobotInfo best = null;
       int distToBest = 9999;
@@ -116,14 +116,14 @@ public class Soldier extends Droid {
       }
       lastAttackedEnemy = null;
       if (attackAtAndMoveTo(best.location, best.location, true)) {
-//        System.out.println("HERE! " + best);
+//        //System.out.println("HERE! " + best);
         lastAttackedEnemy = best;
         lastAttackedEnemyRubble = rc.senseRubble(best.location);
       }
     } else if (!isMovementDisabled) {
       if (lastAttackedEnemy != null) {
         if (lastAttackedEnemy.type.damage <= 0) {
-//        Printer.print("robotToChase: " + robotToChase);
+//        //Printer.print("robotToChase: " + robotToChase);
           attackAtAndMoveTo(lastAttackedEnemy.location, lastAttackedEnemy.location, true);
           if (lastAttackedEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, HALF_RANGE_TO_CHASE_FROM)) {
             lastAttackedEnemy = null;
@@ -134,8 +134,8 @@ public class Soldier extends Droid {
       if (rc.getActionCooldownTurns() * 2 > cooldownAfterAttack && cooldownAfterAttack != 0) {
         MapLocation runTo = communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION);
         runHome(runTo);
-        rc.setIndicatorString("runTo: " + runTo + " cdAfterA: " + cooldownAfterAttack + " aCD: " + rc.getActionCooldownTurns());
-        rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, runTo, 255, 0, 0);
+        //rc.setIndicatorString("runTo: " + runTo + " cdAfterA: " + cooldownAfterAttack + " aCD: " + rc.getActionCooldownTurns());
+        //rc.setIndicatorLine(Cache.PerTurn.CURRENT_LOCATION, runTo, 255, 0, 0);
       } else {
         cooldownAfterAttack = 0;
       }
@@ -155,7 +155,7 @@ public class Soldier extends Droid {
           lastAttackedEnemy = rc.senseRobot(lastAttackedEnemy.ID);
           lastAttackedEnemyRubble = rc.senseRubble(lastAttackedEnemy.location);
 
-//          System.out.println("HERE2! " + lastAttackedEnemy);
+//          //System.out.println("HERE2! " + lastAttackedEnemy);
         }
       }
 
@@ -166,9 +166,9 @@ public class Soldier extends Droid {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
 //    Printer.cleanPrint();
-//    Printer.print("isMovementDisabled: " + isMovementDisabled);
-//    Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-//    Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
+//    //Printer.print("isMovementDisabled: " + isMovementDisabled);
+//    //Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//    //Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
 //    Printer.submitPrint();
     for (Direction dir : Utils.directionsNine) {
       if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue;
@@ -206,7 +206,7 @@ public class Soldier extends Droid {
           for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //            int s = Clock.getBytecodeNum();
             curr.update(enemy);
-//            Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
+//            //Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
           }
       }
       curr.finalizeInfo();
@@ -261,7 +261,7 @@ public class Soldier extends Droid {
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {
-//      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
+//      //System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
       dirToMove = Direction.CENTER;
     }
     int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
