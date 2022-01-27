@@ -1,9 +1,9 @@
-package firstbot.robots.buildings;
+package furyandminerrunning.robots.buildings;
 
 import battlecode.common.*;
-import firstbot.communications.messages.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import furyandminerrunning.communications.messages.*;
+import furyandminerrunning.utils.Cache;
+import furyandminerrunning.utils.Utils;
 
 public class Archon extends Building {
   public static final int SUICIDE_ROUND = -500;
@@ -51,7 +51,7 @@ public class Archon extends Building {
     super(rc);
 //    whichArchonAmI = rc.getID() >> 1; // floor(id / 2)
 //    archonLocs = new ArrayList<>();
-//    System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
+//    //System.out.println("Hello from Archon constructor #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
     localLead = rc.senseNearbyLocationsWithLead(Cache.Permanent.VISION_RADIUS_SQUARED).length;
 
 //    lastTurnStartingLead = 0;
@@ -109,7 +109,7 @@ public class Archon extends Building {
     if (saveMeRequest != null || nearbyEnemies != null) {
       if (healthLostThisTurn < Cache.PerTurn.HEALTH) broadcastSaveMe();
       if (buildRobotInDirLoose(RobotType.SOLDIER, Cache.PerTurn.CURRENT_LOCATION.directionTo(nearbyEnemies)) || buildRobot(RobotType.SOLDIER, getLeastRubbleUnoccupiedDir())) {
-        rc.setIndicatorString("Spawn soldier!");
+        //rc.setIndicatorString("Spawn soldier!");
         soldiersSpawned++;
         leadSpent += RobotType.SOLDIER.buildCostLead;
       }
@@ -154,34 +154,34 @@ public class Archon extends Building {
     }
 
     // only allow movement if we know symmetry
-//    Printer.cleanPrint();;
+//    //Printer.cleanPrint();;
     if (rc.canTransform() && communicator.metaInfo.knownSymmetry != null && (bestArchonToSpawnBuilderForLab != whichArchonAmI || labBuilderSpawned)) {
       // only move once / if we have more than 1 archon to keep spawning while we move
-//      Printer.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
+//      //Printer.print("has moved: " + hasMoved, "# of archons: " + rc.getArchonCount());
       updateShouldStop();
       if (!shouldStop && rc.getArchonCount() > 1) {
         boolean canMove = true;
         switch (rc.getArchonCount()) {
           case 1:
             canMove = false;
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            //Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 2:
             canMove = !communicator.archonInfo.ourArchonIsMoving(3 - whichArchonAmI);
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            //Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 3:
             canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%3)+1)
                     || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%3)+1);
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            //Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
             break;
           case 4:
             canMove = !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI)%4)+1)
                     || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+1)%4)+1)
                     || !communicator.archonInfo.ourArchonIsMoving(((whichArchonAmI+2)%4)+1);
-//            Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
+//            //Printer.print("whichArchonAmI: " + whichArchonAmI, "canMove: " + canMove);
         }
-//        Printer.submitPrint();
+//        //Printer.submitPrint();
         if (canMove) {
           startMoving();
         }
@@ -308,13 +308,13 @@ public class Archon extends Building {
     movingTotalIncome += leadIncome - incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH];
     incomeHistory[Cache.PerTurn.ROUND_NUM % INCOME_HISTORY_LENGTH] = leadIncome;
     movingAvgIncome = movingTotalIncome / INCOME_HISTORY_LENGTH;
-    rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
+    //rc.setIndicatorString("income - " + leadIncome + " avg: " + movingAvgIncome + " tot: " + movingTotalIncome);
 //    if (whichArchonAmI == rc.getArchonCount()) {
-//      System.out.println("Lead income: " + leadIncome);
+//      //System.out.println("Lead income: " + leadIncome);
 //    }
 
     healthLostThisTurn = lastTurnHealth - Cache.PerTurn.HEALTH;
-//    rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
+//    //rc.setIndicatorString("health: " + Cache.PerTurn.HEALTH + " - lastHP: " + lastTurnHealth + " - lost: " + healthLostThisTurn);
     lastTurnHealth = Cache.PerTurn.HEALTH;
   }
 
@@ -323,7 +323,7 @@ public class Archon extends Building {
    * @return if running should continue
    */
   private boolean doFirstTurn() throws GameActionException {
-//    System.out.println("Hello from Archon #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
+//    //System.out.println("Hello from Archon #"+whichArchonAmI + " at " + Cache.PerTurn.CURRENT_LOCATION);
 
     communicator.archonInfo.setOurArchonLoc(whichArchonAmI, Cache.PerTurn.CURRENT_LOCATION);
 
@@ -436,7 +436,7 @@ public class Archon extends Building {
     if (saveMeRequest != null && message.location.equals(saveMeRequest.location)) {
       saveMeRequest = null;
 //    } else {
-//      System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
+//      //System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
     }
   }
 
@@ -446,7 +446,7 @@ public class Archon extends Building {
    */
   private void ackLabBuilt(LabBuiltMessage message) {
     saveUpForBuilderAndLab = false;
-//    System.out.println("ack lab has been built!");
+//    //System.out.println("ack lab has been built!");
   }
 
   /**
@@ -480,7 +480,7 @@ public class Archon extends Building {
             Cache.PerTurn.CURRENT_LOCATION.y <= Cache.Permanent.MAP_HEIGHT/2 ? 0 : (Cache.Permanent.MAP_HEIGHT-1));
     Direction dirToCorner = Cache.PerTurn.CURRENT_LOCATION.directionTo(corner);
     if (buildRobotInDirLoose(RobotType.BUILDER, dirToCorner) || buildRobot(RobotType.BUILDER, getLeastRubbleUnoccupiedDir())) {
-      rc.setIndicatorString("Spawn builder!");
+      //rc.setIndicatorString("Spawn builder!");
       buildersSpawned++;
       leadSpent += RobotType.BUILDER.buildCostLead;
       return true;
@@ -509,11 +509,10 @@ public class Archon extends Building {
 
         // using getOptimalDirectionTowards(bestLead) causes slightly worse performance lol
         if (dir == Direction.CENTER) dir = getLeastRubbleUnoccupiedDir();
-        if (dir == null) dir = Utils.randomDirection();
 
-//      System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
+//      //System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
         if (buildRobotInDirLoose(RobotType.MINER, dir) || buildRobot(RobotType.MINER, getLeastRubbleUnoccupiedDir())) {
-          rc.setIndicatorString("Spawn miner!");
+          //rc.setIndicatorString("Spawn miner!");
           minersSpawned++;
           leadSpent += RobotType.MINER.buildCostLead;
           return true;
@@ -521,7 +520,7 @@ public class Archon extends Building {
         break;
       case BUILDER:
         if (buildRobot(RobotType.BUILDER, Utils.randomDirection()) || buildRobot(RobotType.BUILDER, getLeastRubbleUnoccupiedDir())) {
-          rc.setIndicatorString("Spawn builder!");
+          //rc.setIndicatorString("Spawn builder!");
           buildersSpawned++;
           leadSpent += RobotType.BUILDER.buildCostLead;
           return true;
@@ -529,7 +528,7 @@ public class Archon extends Building {
         break;
       case SOLDIER:
         if (buildRobot(RobotType.SOLDIER, Utils.randomDirection()) || buildRobot(RobotType.SOLDIER, getLeastRubbleUnoccupiedDir())) {
-          rc.setIndicatorString("Spawn soldier!");
+          //rc.setIndicatorString("Spawn soldier!");
           soldiersSpawned++;
           leadSpent += RobotType.SOLDIER.buildCostLead;
           return true;
@@ -537,7 +536,7 @@ public class Archon extends Building {
         break;
       case SAGE:
         if (buildRobot(RobotType.SAGE, Utils.randomDirection()) || buildRobot(RobotType.SAGE, getLeastRubbleUnoccupiedDir())) {
-          rc.setIndicatorString("Spawn sage!");
+          //rc.setIndicatorString("Spawn sage!");
           sagesSpawned++;
 //          leadSpent += RobotType.SAGE.buildCostLead;
           return true;
@@ -566,8 +565,8 @@ public class Archon extends Building {
    * @return boolean of necessity of building a miner
    */
   private boolean needMiner() throws GameActionException {
-//    System.out.printf("Archon%s checking need Miner -- \n\tminersSpawned=%d\n\trcArchonCount=%d\n\tsoldiersSpawned=%d\n", Cache.PerTurn.CURRENT_LOCATION, minersSpawned, rc.getArchonCount(), soldiersSpawned);
-//    System.out.println(Cache.PerTurn.CURRENT_LOCATION + " --\nminersSpawned: " + minersSpawned + "\nrc.getArchonCount(): " + rc.getArchonCount() + "\nsoldiersSpawned: " + soldiersSpawned);
+//    //System.out.printf("Archon%s checking need Miner -- \n\tminersSpawned=%d\n\trcArchonCount=%d\n\tsoldiersSpawned=%d\n", Cache.PerTurn.CURRENT_LOCATION, minersSpawned, rc.getArchonCount(), soldiersSpawned);
+//    //System.out.println(Cache.PerTurn.CURRENT_LOCATION + " --\nminersSpawned: " + minersSpawned + "\nrc.getArchonCount(): " + rc.getArchonCount() + "\nsoldiersSpawned: " + soldiersSpawned);
     // TODO: something based on lead income
 
     return minersSpawned < initialMinersToSpawn
@@ -596,8 +595,7 @@ public class Archon extends Building {
   }
 
   private boolean needSoldier() throws GameActionException {
-    if (Cache.Permanent.MAP_AREA <= 625) return soldiersSpawned < 3; // 3 soldiers
-    return false; //soldiersSpawned < 3;// || soldiersSpawned < sagesSpawned / 3;
+    return soldiersSpawned < 3;// || soldiersSpawned < sagesSpawned / 3;
   }
 
   private int lastHealedID = -1;
@@ -634,7 +632,7 @@ public class Archon extends Building {
     else if (highestHealthFriend != null) rc.repair(highestHealthFriend.location);
     else if (lowestOtherHealthFriend != null) rc.repair(lowestOtherHealthFriend.location);
     else if (higherOtherHealthFriend != null) rc.repair(higherOtherHealthFriend.location);
-//    System.out.println("movingAvgIncome: " + movingAvgIncome);
+//    //System.out.println("movingAvgIncome: " + movingAvgIncome);
 //    if (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) < 60 - movingAvgIncome) {
 //    if (lastHealedID != -1) {
 //      if (rc.canSenseRobot(lastHealedID)) {
@@ -659,7 +657,7 @@ public class Archon extends Building {
 //      lastHealedID = lowestHealthFriend.ID;
 //    }
 //    } else {
-//      rc.setIndicatorString("No repair, save lead: " + rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) + " / " + (60 - movingAvgIncome));
+//      //rc.setIndicatorString("No repair, save lead: " + rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) + " / " + (60 - movingAvgIncome));
 //    }
   }
 
@@ -677,7 +675,7 @@ public class Archon extends Building {
       int chunksPerArchon = Utils.MAX_MAP_CHUNKS / rc.getArchonCount();
       for (int chunk = chunksPerArchon * (whichArchonAmI-2), max = chunksPerArchon * (whichArchonAmI-1) + 10; chunk < max; chunk++) {
         MapLocation loc = Utils.chunkIndexToLocation(chunk);
-//        System.out.println("loc: " + loc + " chunk: " + chunk2 + " decode: " + Utils.chunkIndexToLocation(chunk));
+//        //System.out.println("loc: " + loc + " chunk: " + chunk2 + " decode: " + Utils.chunkIndexToLocation(chunk));
         int width = Cache.Permanent.MAP_WIDTH;
         int height = Cache.Permanent.MAP_HEIGHT;
         int x = loc.x;
@@ -690,23 +688,23 @@ public class Archon extends Building {
 
         int b = 2 * xy255 / Cache.Permanent.MAP_AREA;
 
-        rc.setIndicatorDot(loc, r, g, b);
+        //rc.setIndicatorDot(loc, r, g, b);
 
         MapLocation tl = loc.translate(-Cache.Permanent.CHUNK_WIDTH/2, -1 + (int) Math.ceil(Cache.Permanent.CHUNK_HEIGHT/2.));
         MapLocation tr = loc.translate(-1 + (int) Math.ceil(Cache.Permanent.CHUNK_WIDTH/2.), -1 + (int) Math.ceil(Cache.Permanent.CHUNK_HEIGHT/2.));
         MapLocation bl = loc.translate(-Cache.Permanent.CHUNK_WIDTH/2, -Cache.Permanent.CHUNK_HEIGHT/2);
         MapLocation br = loc.translate(-1 + (int) Math.ceil(Cache.Permanent.CHUNK_WIDTH/2.), -Cache.Permanent.CHUNK_HEIGHT/2);
 
-        rc.setIndicatorLine(tl, tr, r, g, b);
-        rc.setIndicatorLine(tl, bl, r, g, b);
-        rc.setIndicatorLine(br, tr, r, g, b);
-        rc.setIndicatorLine(br, bl, r, g, b);
+        //rc.setIndicatorLine(tl, tr, r, g, b);
+        //rc.setIndicatorLine(tl, bl, r, g, b);
+        //rc.setIndicatorLine(br, tr, r, g, b);
+        //rc.setIndicatorLine(br, bl, r, g, b);
         if (chunk < 33) {
-          rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
+          //rc.setIndicatorDot(loc, 255 / 33 * chunk, 0, 0);
         } else if (chunk < 66) {
-          rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
+          //rc.setIndicatorDot(loc, 255 / 33 * (chunk - 33), 255 / 33 * (chunk - 33), 0);
         } else {
-          rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
+          //rc.setIndicatorDot(loc, 0, 255 / 34 * (chunk - 66), 255 / 34 * (chunk - 66));
         }
 
       }
