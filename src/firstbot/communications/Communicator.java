@@ -302,15 +302,15 @@ public class Communicator {
   }
 
   public static class SpawnInfo {
-    public static final int NUM_SPAWN_INTS = 1;
+    public static final int NUM_SPAWN_INTS = 0;
     public static final int SPAWN_INTS_START = ArchonInfo.ARCHON_INTS_START - NUM_SPAWN_INTS;
 
-    public static final int NUM_MINERS_NEEDED_IND = SPAWN_INTS_START;
-    public static final int NUM_MINERS_MASK = 0b1111;
-    public static final int NUM_MINERS_INVERTED_MASK = ~NUM_MINERS_MASK;
+    public static final int NUM_MINERS_ALIVE_IND = SPAWN_INTS_START;
+    public static final int NUM_MINERS_ALIVE_MASK = 0b1111;
+    public static final int NUM_MINERS_ALIVE_INVERTED_MASK = ~NUM_MINERS_ALIVE_MASK;
 
     public int getNumMinersNeeded() throws GameActionException {
-      return Global.rc.readSharedArray(NUM_MINERS_NEEDED_IND) & NUM_MINERS_MASK;
+      return Global.rc.readSharedArray(NUM_MINERS_ALIVE_IND) & NUM_MINERS_ALIVE_MASK;
     }
 
     /**
@@ -319,7 +319,7 @@ public class Communicator {
      * @throws GameActionException if reading/writing fails
      */
     public void decrNumMinersNeeded() throws GameActionException {
-      Global.rc.writeSharedArray(NUM_MINERS_NEEDED_IND, Global.rc.readSharedArray(NUM_MINERS_NEEDED_IND) - 1);
+      Global.rc.writeSharedArray(NUM_MINERS_ALIVE_IND, Global.rc.readSharedArray(NUM_MINERS_ALIVE_IND) - 1);
     }
 
     /**
@@ -328,7 +328,7 @@ public class Communicator {
      * @throws GameActionException if reading/writing fails
      */
     public void setNumMinersNeeded(int newNum) throws GameActionException {
-      Global.rc.writeSharedArray(NUM_MINERS_NEEDED_IND, (Global.rc.readSharedArray(NUM_MINERS_NEEDED_IND) & NUM_MINERS_INVERTED_MASK) + newNum);
+      Global.rc.writeSharedArray(NUM_MINERS_ALIVE_IND, (Global.rc.readSharedArray(NUM_MINERS_ALIVE_IND) & NUM_MINERS_ALIVE_INVERTED_MASK) + newNum);
     }
 
   }

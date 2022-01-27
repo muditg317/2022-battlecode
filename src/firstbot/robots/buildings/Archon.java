@@ -1,18 +1,33 @@
 package firstbot.robots.buildings;
 
-import battlecode.common.*;
-import firstbot.communications.messages.*;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
+import firstbot.communications.messages.ArchonHelloMessage;
+import firstbot.communications.messages.ArchonSavedMessage;
+import firstbot.communications.messages.BuilderSpawnedMessage;
+import firstbot.communications.messages.EnemyNearArchonMessage;
+import firstbot.communications.messages.LabBuiltMessage;
+import firstbot.communications.messages.Message;
+import firstbot.communications.messages.SaveMeMessage;
 import firstbot.utils.Cache;
+import firstbot.utils.Printer;
 import firstbot.utils.Utils;
 
 public class Archon extends Building {
   public static final int SUICIDE_ROUND = -500;
 
+  public static final double AREA_TO_MINERS_RATIO = 0.00548147052207;
+  public static final int MIN_LEAD_FOR_EXTRA_BUILDER = 220;
   public static final int MAX_RUBBLE_TO_STOP = 5;
 
   public static final int CRITICAL_HEALTH_TO_HEAL_LOWEST = 20;
 
   private int whichArchonAmI = 1;
+  private int numStartingArchons;
   //  private List<MapLocation> archonLocs;
   private boolean hasMoved;
   public boolean moving;
@@ -21,6 +36,7 @@ public class Archon extends Building {
 //  private MapSymmetry predictedSymmetry;
 
   private int minersSpawned;
+  private int lastTurnMinerSpawned;
   private int buildersSpawned;
   private int soldiersSpawned;
   private int sagesSpawned;
@@ -38,12 +54,16 @@ public class Archon extends Building {
   private SaveMeMessage saveMeRequest;
 
   int leadAtArchonLocation = 0;
+  int baseMinersToSpawn;
   int initialMinersToSpawn = 2;
+
+  private boolean globalEnemiesSeen;
 
   private boolean canMoveToBetterLocation = false;
 
   private int minimumDistanceToEdge = 60;
   private int bestArchonToSpawnBuilderForLab = -1;
+  private boolean readyToSpawnBuilder;
   private boolean labBuilderSpawned;
   private boolean saveUpForBuilderAndLab;
 
@@ -109,6 +129,18 @@ public class Archon extends Building {
 //    }
 
 //    drawChunkBounds();
+
+    MapLocation nearbyEnemies = offensiveEnemyCentroid();
+    if (saveMeRequest != null || nearbyEnemies != null) {
+      if (healthLostThisTurn < Cache.PerTurn.HEALTH) broadcastSaveMe();
+      if (!globalEnemiesSeen) broadcastEnemyNearArchon();
+      if (buildRobotInDirLoose(RobotType.SOLDIER, Cache.PerTurn.CURRENT_LOCATION.directionTo(nearbyEnemies)) || buildRobot(RobotType.SOLDIER, getLeastRubbleUnoccupiedDir())) {
+        rc.setIndicatorString("Spawn soldier!");
+        soldiersSpawned++;
+        leadSpent += RobotType.SOLDIER.buildCostLead;
+      }
+    }
+
     if (!moving) {
       runArchonStationaryMode();
     } else {
@@ -125,28 +157,27 @@ public class Archon extends Building {
    * @throws GameActionException if any action fails
    */
   private void runArchonStationaryMode() throws GameActionException {
-    MapLocation nearbyEnemies = offensiveEnemyCentroid();
-    if (saveMeRequest != null || nearbyEnemies != null) {
-      if (healthLostThisTurn < Cache.PerTurn.HEALTH) broadcastSaveMe();
-      if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
-        rc.setIndicatorString("Spawn soldier!");
-        soldiersSpawned++;
-        leadSpent += RobotType.SOLDIER.buildCostLead;
-      }
-    }
-
     // Spawn new droid
     int archons = rc.getArchonCount();
     if (rc.isActionReady()) {
-      if (saveUpForBuilderAndLab) {
-        if (bestArchonToSpawnBuilderForLab == whichArchonAmI && !labBuilderSpawned) {
+      if (readyToSpawnBuilder && bestArchonToSpawnBuilderForLab == whichArchonAmI && !labBuilderSpawned) {
           labBuilderSpawned = spawnBuilderForLab();
-        }
-      } else {
+          if (labBuilderSpawned) {
+            broadcastBuilderSpawned();
+            readyToSpawnBuilder = false;
+          }
+      } else if (!readyToSpawnBuilder && !saveUpForBuilderAndLab) {
         RobotType typeToSpawn = determineSpawnDroidType();
         if (typeToSpawn != null && (rc.getTeamLeadAmount(Cache.Permanent.OUR_TEAM) >= typeToSpawn.buildCostLead * 2 || rc.getRoundNum() % archons == whichArchonAmI % archons || whichArchonAmI == archons)) {
           if (spawnDroid(typeToSpawn)) {
-            if (initialMinersToSpawn == minersSpawned && typeToSpawn == RobotType.MINER) saveUpForBuilderAndLab = true;
+            if (typeToSpawn == RobotType.MINER) {
+              if (baseMinersToSpawn == minersSpawned) {
+                readyToSpawnBuilder = true;
+              }
+              if (initialMinersToSpawn == minersSpawned) {
+                saveUpForBuilderAndLab = true;
+              }
+            }
           }
         }
       }
@@ -347,20 +378,20 @@ public class Archon extends Building {
 
   private void runTeamStartupLogic() throws GameActionException {
 
-    int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
-    int leastRubble = rubbleHere;
-    MapLocation leastRubbleLocation = Cache.PerTurn.CURRENT_LOCATION;
-    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
-      int candidateRubble = rc.senseRubble(loc);
-      if (candidateRubble < leastRubble) {
-        leastRubble = candidateRubble;
-        leastRubbleLocation = loc;
-      }
-    }
-
-    if (leastRubble < rubbleHere) {
-      // worth to move?
-    }
+//    int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);
+//    int leastRubble = rubbleHere;
+//    MapLocation leastRubbleLocation = Cache.PerTurn.CURRENT_LOCATION;
+//    for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(Cache.PerTurn.CURRENT_LOCATION, Cache.Permanent.VISION_RADIUS_SQUARED)) {
+//      int candidateRubble = rc.senseRubble(loc);
+//      if (candidateRubble < leastRubble) {
+//        leastRubble = candidateRubble;
+//        leastRubbleLocation = loc;
+//      }
+//    }
+//
+//    if (leastRubble < rubbleHere) {
+//      // worth to move?
+//    }
 
 
     minimumDistanceToEdge = Math.min(Cache.PerTurn.CURRENT_LOCATION.x, Cache.PerTurn.CURRENT_LOCATION.y);
@@ -394,13 +425,28 @@ public class Archon extends Building {
     int totalMoves = (int) (minDist * turnsTillNextMove);
 
     initialMinersToSpawn += totalMoves / 75;
+    baseMinersToSpawn = initialMinersToSpawn;
+    numStartingArchons = rc.getArchonCount();
+//    switch (numStartingArchons) {
+//      case 1:
+//        baseMinersToSpawn = 2;
+//        break;
+//      case 2:
+//        baseMinersToSpawn = Cache.Permanent.MAP_AREA > 1000 ? 2 : 1;
+//        break;
+//      case 3:
+//      case 4:
+//        baseMinersToSpawn = 1;
+//        break;
+//    }
+//    initialMinersToSpawn = (int) Math.round(Cache.Permanent.MAP_AREA * AREA_TO_MINERS_RATIO / numStartingArchons);
+    Printer.print("baseMiners: " + baseMinersToSpawn, "initialMiners: " + initialMinersToSpawn);
   }
 
   /**
    * generate a message to be sent to the other arhcons on the first turn of the game
    *    this message contains various bits of info that should be shared
    *    - location
-   *    - symmetry info (TODO: implement)
    * @return the message to send to the other archons
    */
   private ArchonHelloMessage generateArchonHello() {
@@ -414,6 +460,10 @@ public class Archon extends Building {
       ackArchonHello((ArchonHelloMessage) message);
     } else if (message instanceof ArchonSavedMessage) {
       ackArchonSaved((ArchonSavedMessage) message);
+    } else if (message instanceof EnemyNearArchonMessage) {
+      ackEnemyNearArchon((EnemyNearArchonMessage) message);
+    } else if (message instanceof BuilderSpawnedMessage) {
+      ackBuilderSpawned((BuilderSpawnedMessage) message);
     } else if (message instanceof LabBuiltMessage) {
       ackLabBuilt((LabBuiltMessage) message);
     }
@@ -442,6 +492,21 @@ public class Archon extends Building {
 //    } else {
 //      System.out.println("Ignore archon saved message: " + (saveMeRequest != null ? saveMeRequest.location : "null") + " vs " + message.location);
     }
+  }
+
+  private void ackEnemyNearArchon(EnemyNearArchonMessage message) {
+    initialMinersToSpawn = minersSpawned;
+    if (minersSpawned < baseMinersToSpawn) baseMinersToSpawn = minersSpawned;
+    globalEnemiesSeen = true;
+  }
+
+  /**
+   * acknowledge that a builder has been spawned, stop saving lead
+   * @param message the location of the built lab
+   */
+  private void ackBuilderSpawned(BuilderSpawnedMessage message) {
+    readyToSpawnBuilder = false;
+//    Printer.print("ack builder has been spawned!");
   }
 
   /**
@@ -473,6 +538,10 @@ public class Archon extends Building {
     }
   }
 
+  private void broadcastEnemyNearArchon() throws GameActionException {
+    communicator.enqueueMessage(new EnemyNearArchonMessage());
+  }
+
   /**
    * spawn a builder which should be sent to spawn a lab
    * @return true if the builder was spawned
@@ -483,13 +552,17 @@ public class Archon extends Building {
             Cache.PerTurn.CURRENT_LOCATION.x <= Cache.Permanent.MAP_WIDTH/2 ? 0 : (Cache.Permanent.MAP_WIDTH-1),
             Cache.PerTurn.CURRENT_LOCATION.y <= Cache.Permanent.MAP_HEIGHT/2 ? 0 : (Cache.Permanent.MAP_HEIGHT-1));
     Direction dirToCorner = Cache.PerTurn.CURRENT_LOCATION.directionTo(corner);
-    if (buildRobotInDirLoose(RobotType.BUILDER, dirToCorner)) {
+    if (buildRobotInDirLoose(RobotType.BUILDER, dirToCorner) || buildRobot(RobotType.BUILDER, getLeastRubbleUnoccupiedDir())) {
       rc.setIndicatorString("Spawn builder!");
       buildersSpawned++;
       leadSpent += RobotType.BUILDER.buildCostLead;
       return true;
     }
     return false;
+  }
+
+  private void broadcastBuilderSpawned() {
+    communicator.enqueueMessage(new BuilderSpawnedMessage());
   }
 
   private int minerDirection = Utils.rng.nextInt(10);
@@ -515,15 +588,16 @@ public class Archon extends Building {
         if (dir == Direction.CENTER) dir = getLeastRubbleUnoccupiedDir();
 
 //      System.out.println("I need a miner! bestLead: " + bestLead + " dir: " + dir);
-        if (buildRobot(RobotType.MINER, dir) || buildRobot(RobotType.MINER, dir.rotateRight()) || buildRobot(RobotType.MINER, dir.rotateLeft())) {
+        if (buildRobot(RobotType.MINER, dir) || buildRobot(RobotType.MINER, dir.rotateRight()) || buildRobot(RobotType.MINER, dir.rotateLeft()) || buildRobot(RobotType.MINER, getLeastRubbleUnoccupiedDir())) {
           rc.setIndicatorString("Spawn miner!");
           minersSpawned++;
+          lastTurnMinerSpawned = Cache.PerTurn.ROUND_NUM;
           leadSpent += RobotType.MINER.buildCostLead;
           return true;
         }
         break;
       case BUILDER:
-        if (buildRobot(RobotType.BUILDER, Utils.randomDirection())) {
+        if (buildRobot(RobotType.BUILDER, Utils.randomDirection()) || buildRobot(RobotType.BUILDER, getLeastRubbleUnoccupiedDir())) {
           rc.setIndicatorString("Spawn builder!");
           buildersSpawned++;
           leadSpent += RobotType.BUILDER.buildCostLead;
@@ -531,7 +605,7 @@ public class Archon extends Building {
         }
         break;
       case SOLDIER:
-        if (buildRobot(RobotType.SOLDIER, Utils.randomDirection())) {
+        if (buildRobot(RobotType.SOLDIER, Utils.randomDirection()) || buildRobot(RobotType.SOLDIER, getLeastRubbleUnoccupiedDir())) {
           rc.setIndicatorString("Spawn soldier!");
           soldiersSpawned++;
           leadSpent += RobotType.SOLDIER.buildCostLead;
@@ -539,10 +613,10 @@ public class Archon extends Building {
         }
         break;
       case SAGE:
-        if (buildRobot(RobotType.SAGE, Utils.randomDirection())) {
+        if (buildRobot(RobotType.SAGE, Utils.randomDirection()) || buildRobot(RobotType.SAGE, getLeastRubbleUnoccupiedDir())) {
           rc.setIndicatorString("Spawn sage!");
-//          soldiersSpawned++;
-//          leadSpent += RobotType.SAGE.buildCostLead;
+          sagesSpawned++;
+//          goldSpent += RobotType.SAGE.buildCostGold;
           return true;
         }
     }
@@ -572,9 +646,12 @@ public class Archon extends Building {
 //    System.out.printf("Archon%s checking need Miner -- \n\tminersSpawned=%d\n\trcArchonCount=%d\n\tsoldiersSpawned=%d\n", Cache.PerTurn.CURRENT_LOCATION, minersSpawned, rc.getArchonCount(), soldiersSpawned);
 //    System.out.println(Cache.PerTurn.CURRENT_LOCATION + " --\nminersSpawned: " + minersSpawned + "\nrc.getArchonCount(): " + rc.getArchonCount() + "\nsoldiersSpawned: " + soldiersSpawned);
     // TODO: something based on lead income
-
+//    Printer.print("minersSpawned: " + minersSpawned, "sagesSpawned: " + sagesSpawned);
     return minersSpawned < initialMinersToSpawn
-        || (/*minersSpawned < soldiersSpawned / 1.5 &&*/ minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 50);
+        || (minersSpawned < sagesSpawned / 3)
+//        || (minersSpawned < initialMinersToSpawn + Cache.PerTurn.ROUND_NUM / 100)
+        || (Cache.PerTurn.ROUND_NUM - lastTurnMinerSpawned >= 100);
+//        || (/*minersSpawned < soldiersSpawned / 1.5 &&*/ minersSpawned * rc.getArchonCount() <= 15 + Cache.PerTurn.ROUND_NUM / 50);
 //        || (movingAvgIncome < 3);
 //    return rc.getTeamLeadAmount(rc.getTeam()) < 500 && ( // if we have > 2000Pb, just skip miners
 ////        movingAvgIncome < 10
@@ -592,14 +669,15 @@ public class Archon extends Building {
    * @return boolean of need for builder
    */
   private boolean needBuilder() {
-    return rc.getTeamLeadAmount(rc.getTeam()) > 200 && (  // if lots of lead, make builder to spend that lead
-        rc.getRoundNum() % 11 <= rc.getArchonCount()
-        || buildersSpawned < 5
-    );
+    return rc.getTeamLeadAmount(rc.getTeam()) > MIN_LEAD_FOR_EXTRA_BUILDER;// && (  // if lots of lead, make builder to spend that lead
+//        rc.getRoundNum() % 11 <= rc.getArchonCount()
+//        || buildersSpawned < 5
+//    );
   }
 
   private boolean needSoldier() throws GameActionException {
-    return soldiersSpawned < 3 || soldiersSpawned < sagesSpawned / 3;
+    return false;
+//    return soldiersSpawned < 3 || soldiersSpawned < sagesSpawned / 3;
   }
 
   private int lastHealedID = -1;

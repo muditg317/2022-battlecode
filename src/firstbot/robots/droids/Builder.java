@@ -124,7 +124,7 @@ public class Builder extends Droid {
 //          System.out.println("spawning lab at " + bestLocationToSpawnLab);
           myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dirToBuildLab);
           broadcastLabBuilt();
-          labBuilt = true;
+//          labBuilt = true;
         }
       }
     } else if (myBuilding == null && (moveInDirAvoidRubble(dirToBuild) || moveRandomly())) {
@@ -158,7 +158,7 @@ public class Builder extends Droid {
         if (buildRobot(typeToBuild, dir)) {
           myBuilding = Cache.PerTurn.CURRENT_LOCATION.add(dir);
 //          if (typeToBuild == RobotType.LABORATORY) {
-            labBuilt = true;
+//            labBuilt = true;
             broadcastLabBuilt();
 //          }
         }

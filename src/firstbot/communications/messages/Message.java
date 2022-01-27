@@ -18,12 +18,14 @@ public abstract class Message {
     LEAD_FOUND(LeadFoundMessage.MESSAGE_LENGTH),
     LEAD_REQUEST(LeadRequestMessage.MESSAGE_LENGTH),
     LAB_BUILT(LabBuiltMessage.MESSAGE_LENGTH),
+    BUILDER_SPAWNED(BuilderSpawnedMessage.MESSAGE_LENGTH, true),
     END_FIGHT(EndFightMessage.MESSAGE_LENGTH),
     SAVE_ME(SaveMeMessage.MESSAGE_LENGTH),
     ARCHON_SAVED(ArchonSavedMessage.MESSAGE_LENGTH),
     RUBBLE_AT_LOCATION(RubbleAtLocationMessage.MESSAGE_LENGTH),
     JOIN_THE_FIGHT(JoinTheFightMessage.MESSAGE_LENGTH),
-    ENEMY_FOUND(EnemyFoundMessage.MESSAGE_LENGTH);
+    ENEMY_FOUND(EnemyFoundMessage.MESSAGE_LENGTH),
+    ENEMY_NEAR_ARCHON(EnemyNearArchonMessage.MESSAGE_LENGTH, true);
 
     public final int standardSize;
     public final int ordinal;
@@ -34,6 +36,11 @@ public abstract class Message {
     MessageType(int standardSize) {
       this.standardSize = standardSize;
       this.ordinal = ordinal();
+    }
+
+    MessageType(int standardSize, boolean shouldReschedule) {
+      this(standardSize);
+      this.shouldReschedule = shouldReschedule;
     }
   }
 
@@ -136,6 +143,8 @@ public abstract class Message {
     switch (header.type) {
       case ENEMY_FOUND: return new EnemyFoundMessage(header, headerInt);
       case LAB_BUILT: return new LabBuiltMessage(header, headerInt);
+      case BUILDER_SPAWNED: return new BuilderSpawnedMessage(header, headerInt);
+      case ENEMY_NEAR_ARCHON: return new EnemyNearArchonMessage(header, headerInt);
       default: throw new RuntimeException("Provided message type has length != 0 : " + header.type);
     }
   }
