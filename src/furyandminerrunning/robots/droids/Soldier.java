@@ -1,9 +1,9 @@
-package firstbot.robots.droids;
+package furyandminerrunning.robots.droids;
 
 import battlecode.common.*;
-import firstbot.communications.messages.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import furyandminerrunning.communications.messages.*;
+import furyandminerrunning.utils.Cache;
+import furyandminerrunning.utils.Utils;
 
 public class Soldier extends Droid {
   private final int HALF_RANGE_TO_CHASE_FROM;
@@ -41,9 +41,9 @@ public class Soldier extends Droid {
       && !isMovementDisabled
       && !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(archonToSave, Cache.Permanent.VISION_RADIUS_SQUARED)
       && (!offensiveEnemiesNearby() || !Cache.PerTurn.CURRENT_LOCATION.isWithinDistanceSquared(communicator.archonInfo.getNearestFriendlyArchon(Cache.PerTurn.CURRENT_LOCATION), RobotType.ARCHON.actionRadiusSquared))) {
-//      Printer.cleanPrint();
-//      Printer.print("archonToSave: " + archonToSave);
-//      Printer.submitPrint();
+//      //Printer.cleanPrint();
+//      //Printer.print("archonToSave: " + archonToSave);
+//      //Printer.submitPrint();
       if (moveOptimalTowards(archonToSave) && checkDoneSaving()) {
         finishSaving();
       }
@@ -87,7 +87,7 @@ public class Soldier extends Droid {
       lastAttackedEnemy = best;
     } else if (!isMovementDisabled) {
       if (lastAttackedEnemy != null && lastAttackedEnemy.type.damage <= 0) {
-//        Printer.print("robotToChase: " + robotToChase);
+//        //Printer.print("robotToChase: " + robotToChase);
         attackAtAndMoveTo(lastAttackedEnemy.location, lastAttackedEnemy.location, true);
         if (lastAttackedEnemy.location.isWithinDistanceSquared(Cache.PerTurn.CURRENT_LOCATION, HALF_RANGE_TO_CHASE_FROM)) {
           lastAttackedEnemy = null;
@@ -117,11 +117,11 @@ public class Soldier extends Droid {
   protected boolean attackEnemies() throws GameActionException {
     MicroInfo best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
-//    Printer.cleanPrint();
-//    Printer.print("isMovementDisabled: " + isMovementDisabled);
-//    Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-//    Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
-//    Printer.submitPrint();
+//    //Printer.cleanPrint();
+//    //Printer.print("isMovementDisabled: " + isMovementDisabled);
+//    //Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//    //Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
+//    //Printer.submitPrint();
     for (Direction dir : Utils.directionsNine) {
       if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue;
 //      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
@@ -130,7 +130,7 @@ public class Soldier extends Droid {
 //          continue;
 //        }
 //      }
-//      Printer.cleanPrint();
+//      //Printer.cleanPrint();
       MicroInfo curr = new MicroInfo.MicroInfoSoldiers(this, dir);
       switch (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length) {
         case 10:
@@ -158,7 +158,7 @@ public class Soldier extends Droid {
           for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //            int s = Clock.getBytecodeNum();
             curr.update(enemy);
-//            Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
+//            //Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
           }
       }
       curr.finalizeInfo();
@@ -213,7 +213,7 @@ public class Soldier extends Droid {
         ? Direction.CENTER
         : (usePathing) ? getOptimalDirectionTowards(whereToMove) : Cache.PerTurn.CURRENT_LOCATION.directionTo(whereToMove);
     if (dirToMove == null) {
-//      System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
+//      //System.out.printf("Can't move\n%s -> %s!\n", Cache.PerTurn.CURRENT_LOCATION, whereToMove);
       dirToMove = Direction.CENTER;
     }
     int rubbleHere = rc.senseRubble(Cache.PerTurn.CURRENT_LOCATION);

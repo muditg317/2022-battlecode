@@ -1,14 +1,14 @@
-package firstbot.robots.buildings;
+package furyandminerrunning.robots.buildings;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotMode;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import furyandminerrunning.utils.Cache;
+import furyandminerrunning.utils.Utils;
 
 public class Laboratory extends Building {
-  public static int MIN_LEAD_TO_TRANSMUTE = 0;
+  public static final int MIN_LEAD_TO_TRANSMUTE = 0;
   private int rate;
 
   public Laboratory(RobotController rc) throws GameActionException {
@@ -19,15 +19,6 @@ public class Laboratory extends Building {
   protected void runTurn() throws GameActionException {
     rate = rc.getTransmutationRate();
 
-    switch (Cache.PerTurn.ROUND_NUM % 100) {
-      case 0:
-        MIN_LEAD_TO_TRANSMUTE = 50;
-        break;
-      case 25:
-        MIN_LEAD_TO_TRANSMUTE = 0;
-        break;
-    }
-
     // I am now spawned,
     // if I am in portiable
     if (rc.getMode() == RobotMode.PROTOTYPE) {
@@ -37,9 +28,9 @@ public class Laboratory extends Building {
     }
 
 //    if (rate > 2) {
-//      System.out.println("Not optimal rate: " + rate);
+//      //System.out.println("Not optimal rate: " + rate);
 //    } else {
-//      System.out.println("Transmuting optimally");
+//      //System.out.println("Transmuting optimally");
 //    }
 
 
@@ -85,7 +76,7 @@ public class Laboratory extends Building {
   private boolean shouldMoveToBetterLocation() throws GameActionException {
     MapLocation findBetterRubbleSquare = findBetterRubbleSquare();
     if (findBetterRubbleSquare != null) {
-      rc.setIndicatorString("I want to move to better rubble square " + findBetterRubbleSquare);
+      //rc.setIndicatorString("I want to move to better rubble square " + findBetterRubbleSquare);
       int currentGold = rc.getTeamGoldAmount(Cache.Permanent.OUR_TEAM);
       if (currentGold <= 15 || currentGold >= 20) {
         whereToGo = findBetterRubbleSquare;

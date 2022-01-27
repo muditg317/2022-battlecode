@@ -1,8 +1,8 @@
-package firstbot.robots.droids;
+package furyandminerrunning.robots.droids;
 
 import battlecode.common.*;
-import firstbot.utils.Cache;
-import firstbot.utils.Utils;
+import furyandminerrunning.utils.Cache;
+import furyandminerrunning.utils.Utils;
 
 public class Sage extends Soldier {
   public Sage(RobotController rc) throws GameActionException {
@@ -14,18 +14,18 @@ public class Sage extends Soldier {
     MicroInfo.MicroInfoSages best = null;
 //    Cache.PerTurn.cacheEnemyInfos();
 //    if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
-//      Printer.cleanPrint();
-//      Printer.print("isMovementDisabled: " + isMovementDisabled);
-//      Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
-//      Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
-//      Printer.submitPrint();
+//      //Printer.cleanPrint();
+//      //Printer.print("isMovementDisabled: " + isMovementDisabled);
+//      //Printer.print("needToRunHomeForSaving: " + needToRunHomeForSaving,"needToRunHomeForSuicide: " + needToRunHomeForSuicide);
+//      //Printer.print("movementCooldown: " + rc.getMovementCooldownTurns(), "actionCooldown: " + rc.getActionCooldownTurns());
+//      //Printer.submitPrint();
 //    }
     for (Direction dir : Utils.directionsNine) {
 //      if (Cache.Permanent.ID == 10532 && Cache.PerTurn.ROUND_NUM == 259) {
-//        Printer.cleanPrint();
-//        Printer.print("test move in dir: " + dir);
-//        Printer.print("rc.canMove: " + rc.canMove(dir));
-//        Printer.submitPrint();
+//        //Printer.cleanPrint();
+//        //Printer.print("test move in dir: " + dir);
+//        //Printer.print("rc.canMove: " + rc.canMove(dir));
+//        //Printer.submitPrint();
 //      }
       if (dir != Direction.CENTER && (isMovementDisabled || !rc.canMove(dir))) continue;
 //      MapLocation newLoc = Cache.PerTurn.CURRENT_LOCATION.add(dir);
@@ -34,7 +34,7 @@ public class Sage extends Soldier {
 //          continue;
 //        }
 //      }
-//      Printer.cleanPrint();
+//      //Printer.cleanPrint();
       MicroInfo.MicroInfoSages curr = new MicroInfo.MicroInfoSages(this, dir);
       switch (Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS.length) {
         case 10:
@@ -62,7 +62,7 @@ public class Sage extends Soldier {
           for (RobotInfo enemy : Cache.PerTurn.ALL_NEARBY_ENEMY_ROBOTS) {
 //            int s = Clock.getBytecodeNum();
             curr.update(enemy);
-//            Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
+//            //Printer.print("Bytecode for 1 update: " + (Clock.getBytecodeNum() - s));
           }
       }
       curr.finalizeInfo();
