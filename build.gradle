@@ -126,7 +126,8 @@ static String getVersionFromWeb() {
     }
 
     if (version == null) {
-        throw new Exception("Couldn't find new version number. Connect to the internet or update your scaffold")
+        version = "2022.2.1.0" // REMOVE CODE AFTER
+        //throw new Exception("Couldn't find new version number. Connect to the internet or update your scaffold") REMOVE COMMENT AFTER
     }
 
     return version
