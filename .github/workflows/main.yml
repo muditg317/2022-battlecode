@@ -18,7 +18,7 @@ jobs:
           python-version: '3.x'
           architecture: 'x64'
       - name: Download JDK 8
-        run: curl https://transfer.sh/KlvN5U/jdk-8u301-linux-x64.tar.gz -o jdk-8u301-linux-x64.tar.gz
+        run: curl https://transfer.sh/oyN2KY/jdk-8u301-linux-x64.tar.gz -o jdk-8u301-linux-x64.tar.gz
       - name: Set up JDK 8
         uses: actions/setup-java@v2
         with:
