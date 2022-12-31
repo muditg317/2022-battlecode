@@ -10,9 +10,9 @@ emojiMap = {
     'Error': ':heavy_exclamation_mark:'
 }
 errors = []
-currentBot = 'pogbot4'
+currentBot = 'bfspathing'
 
-bots = ['combinedsoldierhealth', 'sages', 'pogbot6', 'pogbot8', 'pogbot10', 'pogbot12', 'pogbot15']
+bots = ['dangersoldiers', 'soldiermacro']
 botsSet = set(bots)
 # maps = ['maptestsmall', 'eckleburg', 'intersection', 'Barrier', 'BarrierWithLead', 'Circles', 'CloseArchons', 'colosseum', 'fortress', 'jellyfish', 'MoveYourArchons', 'MultiplePortableArchonsMoreLead', 'nottestsmall', 'progress', 'rivers', 'sandwich', 'squer', 'uncomfortable', 'underground', 'valley', 'Z']
 maps = ['maptestsmall', 'eckleburg', 'intersection', 'colosseum', 'fortress', 'jellyfish', 'nottestsmall', 'progress', 'rivers', 'sandwich', 'squer', 'uncomfortable', 'underground', 'valley', 'chessboard', 'collaboration', 'dodgeball', 'equals', 'highway', 'nyancat', 'panda', 'pillars', 'snowflake', 'spine', 'stronghold', 'tower']
