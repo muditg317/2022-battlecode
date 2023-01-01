@@ -28,8 +28,6 @@ jobs:
           architecture: x64
       - name: Java Version
         run: java -version
-      - name: testing
-        run: echo "${{ github.sha }}"
       - name: Make Executable
         run: chmod +x gradlew
       - name: Validate Gradle wrapper
@@ -89,7 +87,7 @@ jobs:
           # comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ env.ISSUE_NUMBER }}
           body: |
-            Build Output (updated for ${{ github.event.pull_request.head.sha }})
+            Build Output (updated for pr ${{ github.event.pull_request.head.sha }} and commit ${{ github.sha }})
             Workflow Run (#${{ github.run_number }}): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             ${{ steps.get-comment-body.outputs.body }}
           edit-mode: replace
