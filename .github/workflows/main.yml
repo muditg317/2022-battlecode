@@ -54,14 +54,7 @@ jobs:
           name: matches-summary
           path: matches-summary.txt
           retention-days: 90
-      # Post results on github comments - https://github.com/marketplace/actions/create-or-update-comment
-      #- name: Find Comment
-      #  uses: peter-evans/find-comment@v2
-      #  id: fc
-      #  with:
-      #    issue-number: ${{ github.event.pull_request.number }}
-      #    comment-author: 'github-actions[bot]'
-      #    body-includes: Build Output
+      
       - name: Generate Comment
         id: get-comment-body
         run: |
@@ -70,11 +63,29 @@ jobs:
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}" 
           echo "::set-output name=body::$body"
+
+      # Create new issue - https://github.com/marketplace/actions/create-an-issue
+      - name: "Workflow run manually, new issue created"
+        if: ${{ github.event.pull_request.number == '' }}
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: create-issue    
+        
+      - run: |
+          echo "ISSUE_NUMBER=${{ steps.create-issue.outputs.number }}" >> $GITHUB_ENV
+        if: ${{ github.event.pull_request.number == '' }}
+
+      - run: |
+          echo "ISSUE_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+        if: ${{ github.event.pull_request.number != '' }}
+              
+      # Post results on github comments - https://github.com/marketplace/actions/create-or-update-comment              
       - name: Create or update comment
         uses: peter-evans/create-or-update-comment@v2
         with:
           # comment-id: ${{ steps.fc.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
+          issue-number: ${{ env.ISSUE_NUMBER }}
           body: |
             Build Output (updated for ${{ github.event.pull_request.head.sha }})
             Workflow Run (#${{ github.run_number }}): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
