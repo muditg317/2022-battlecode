@@ -28,6 +28,8 @@ jobs:
           architecture: x64
       - name: Java Version
         run: java -version
+      - name: testing
+        run: echo "${{ github.sha }}"
       - name: Make Executable
         run: chmod +x gradlew
       - name: Validate Gradle wrapper
