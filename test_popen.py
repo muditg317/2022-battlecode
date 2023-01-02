@@ -33,8 +33,8 @@ def run_match(pr):
     start_time = time.time()
     try:
         for _ in range(pr):
-        out = subprocess.check_output(["python", "helloworld.py"])
-        print('here: ', time.time())
+            out = subprocess.check_output(["python", "helloworld.py"])
+            print('here: ', time.time())
     except subprocess.CalledProcessError as exc:
         print("Status: FAIL", exc.returncode, exc.output)
         return 'Error'
@@ -45,5 +45,5 @@ def run_match(pr):
 
 # Run matches
 pr = 15
-# run_match(pr)
+run_match(pr)
 run_match_popen(pr)
