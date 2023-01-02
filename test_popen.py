@@ -42,6 +42,6 @@ def run_match(pr):
         # print(outputB)
 
 # Run matches
-pr = 5
+pr = 15
 run_match(pr)
 run_match_popen(pr)
