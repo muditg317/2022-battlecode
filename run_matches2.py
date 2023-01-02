@@ -46,7 +46,7 @@ def run_match(bot, map):
         procs = [subprocess.Popen(i, stdout=subprocess.PIPE) for i in commands]
         for p in procs:
             out, err = p.communicate()
-            outputs.append(out)
+            outputs.append(str(out))
         testing = str(subprocess.check_output(['./gradlew', 'run', '-PteamA=' + currentBot, '-PteamB=' + bot, '-Pmaps=' + map]))
     except subprocess.CalledProcessError as exc:
         print("Status: FAIL", exc.returncode, exc.output)
@@ -61,11 +61,11 @@ def run_match(bot, map):
         outputA = outputs[0]
         outputB = outputs[1]
 
-        print("testing type: {}".format(type(testing)))
+        # print("testing type: {}".format(type(testing)))
         print("outputaA type: {}".format(type(outputA)))
         
-        print("testing: {}".format(testing))
-        print("outputaA: {}".format(outputA))
+        # print("testing: {}".format(testing))
+        # print("outputaA: {}".format(outputA))
         gameLengthA = retrieveGameLength(outputA)
         gameLengthB = retrieveGameLength(outputB)
         
