@@ -57,7 +57,8 @@ def run_match(bot, map):
         loseBString = '{} (A) wins'.format(bot)
         
         numWins = 0
-        
+        outputA = outputs[0]
+        outputB = outputs[1]
         gameLengthA = retrieveGameLength(outputA)
         gameLengthB = retrieveGameLength(outputB)
         
