@@ -58,7 +58,7 @@ def run_match(bot, map):
         winBString = '{} (B) wins'.format(currentBot)
         loseAString = '{} (B) wins'.format(bot)
         loseBString = '{} (A) wins'.format(bot)
-        
+        print('else: ', time.time() - start_time)
         numWins = 0
         outputA = outputs[0]
         outputB = outputs[1]
