@@ -38,8 +38,8 @@ def retrieveGameLength(output):
 
 def run_match(bot, map):
     print("Running {} vs {} on {}".format(currentBot, bot, map))
-    command1 = ['./gradlew', 'run', '-PteamA=' + currentBot, '-PteamB=' + bot, '-Pmaps=' + map]
-    command2 = ['./gradlew', 'run', '-PteamA=' + bot, '-PteamB=' + currentBot, '-Pmaps=' + map]
+    command1 = ['./gradlew', 'run', '-PteamA=' + currentBot, '-PteamB=' + bot, '-Pmaps=' + map, '-Pport=60000']
+    command2 = ['./gradlew', 'run', '-PteamA=' + bot, '-PteamB=' + currentBot, '-Pmaps=' + map, '-Pport=60001']
     commands = [command1, command2]
     outputs = []
     try:
