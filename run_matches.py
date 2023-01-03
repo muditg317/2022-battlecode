@@ -15,8 +15,8 @@ currentBot = 'bfspathing'
 
 bots = ['dangersoldiers', 'soldiermacro']
 botsSet = set(bots)
-# maps = ['maptestsmall', 'eckleburg', 'intersection', 'Barrier', 'BarrierWithLead', 'Circles', 'CloseArchons', 'colosseum', 'fortress', 'jellyfish', 'MoveYourArchons', 'MultiplePortableArchonsMoreLead', 'nottestsmall', 'progress', 'rivers', 'sandwich', 'squer', 'uncomfortable', 'underground', 'valley', 'Z']
-maps = ['maptestsmall', 'eckleburg', 'intersection']
+maps = ['maptestsmall', 'eckleburg', 'intersection', 'Barrier', 'BarrierWithLead', 'Circles', 'CloseArchons', 'colosseum', 'fortress', 'jellyfish', 'MoveYourArchons', 'MultiplePortableArchonsMoreLead', 'nottestsmall', 'progress', 'rivers', 'sandwich', 'squer', 'uncomfortable', 'underground', 'valley', 'Z']
+# maps = ['maptestsmall', 'eckleburg', 'intersection']
 mapsSet = set(maps)
 
 matches = set(product(bots, maps))
@@ -53,7 +53,7 @@ def run_match(bot, map):
         winBString = '{} (B) wins'.format(currentBot)
         loseAString = '{} (B) wins'.format(bot)
         loseBString = '{} (A) wins'.format(bot)
-        print("outputaA type: {}, {}".format(type(outputA), outputA))
+        # print("outputaA type: {}, {}".format(type(outputA), outputA))
         
         numWins = 0
         

@@ -15,8 +15,8 @@ currentBot = 'bfspathing'
 
 bots = ['dangersoldiers', 'soldiermacro']
 botsSet = set(bots)
-# maps = ['maptestsmall', 'eckleburg', 'intersection', 'Barrier', 'BarrierWithLead', 'Circles', 'CloseArchons', 'colosseum', 'fortress', 'jellyfish', 'MoveYourArchons', 'MultiplePortableArchonsMoreLead', 'nottestsmall', 'progress', 'rivers', 'sandwich', 'squer', 'uncomfortable', 'underground', 'valley', 'Z']
-maps = ['maptestsmall', 'eckleburg', 'intersection']
+maps = ['maptestsmall', 'eckleburg', 'intersection', 'Barrier', 'BarrierWithLead', 'Circles', 'CloseArchons', 'colosseum', 'fortress', 'jellyfish', 'MoveYourArchons', 'MultiplePortableArchonsMoreLead', 'nottestsmall', 'progress', 'rivers', 'sandwich', 'squer', 'uncomfortable', 'underground', 'valley', 'Z']
+# maps = ['maptestsmall', 'eckleburg', 'intersection']
 mapsSet = set(maps)
 
 matches = set(product(bots, maps))
@@ -46,7 +46,7 @@ def run_match(bot, map):
     start_time = time.time()
     try:
         procs = [subprocess.Popen(i, stdout=subprocess.PIPE) for i in commands]
-        print("before: ", time.time() - start_time)
+        # print("before: ", time.time() - start_time)
         for p in procs:     
             out, err = p.communicate()
             print('after: ', time.time() - start_time)
@@ -59,13 +59,13 @@ def run_match(bot, map):
         winBString = '{} (B) wins'.format(currentBot)
         loseAString = '{} (B) wins'.format(bot)
         loseBString = '{} (A) wins'.format(bot)
-        print('else: ', time.time() - start_time)
+        # print('else: ', time.time() - start_time)
         numWins = 0
         outputA = outputs[0]
         outputB = outputs[1]
 
         # print("testing type: {}".format(type(testing)))
-        print("outputaA type: {}, {}".format(type(outputA), outputA))
+        # print("outputaA type: {}, {}".format(type(outputA), outputA))
         
         # print("testing: {}".format(testing))
         # print("outputaA: {}".format(outputA))
@@ -90,9 +90,8 @@ for bot, map in matches:
     # Verify match is valid
     if not bot in botsSet or not map in mapsSet:
         errors.append('Unable to parse bot={}, map={}'.format(bot, map))
-    # run run_match.py
     
-    run_match(bot, map)
+    results[(bot, map)] = run_match(bot, map)
 
 # Construct table
 table = [[results.get((bot, map), 'N/A') for bot in bots] for map in maps]
