@@ -1,5 +1,6 @@
 from itertools import product
 import subprocess
+import time
 
 emojiMode = True
 emojiMap = {
@@ -38,9 +39,12 @@ def retrieveGameLength(output):
 
 def run_match(bot, map):
     print("Running {} vs {} on {}".format(currentBot, bot, map))
+    start_time = time.time()
     try:
         outputA = str(subprocess.check_output(['./gradlew', 'run', '-PteamA=' + currentBot, '-PteamB=' + bot, '-Pmaps=' + map]))
+        print('after: ', time.time() - start_time)
         outputB = str(subprocess.check_output(['./gradlew', 'run', '-PteamA=' + bot, '-PteamB=' + currentBot, '-Pmaps=' + map]))
+        print('after: ', time.time() - start_time)
     except subprocess.CalledProcessError as exc:
         print("Status: FAIL", exc.returncode, exc.output)
         return 'Error'
@@ -49,6 +53,7 @@ def run_match(bot, map):
         winBString = '{} (B) wins'.format(currentBot)
         loseAString = '{} (B) wins'.format(bot)
         loseBString = '{} (A) wins'.format(bot)
+        print("outputaA type: {}, {}".format(type(outputA), outputA))
         
         numWins = 0
         
